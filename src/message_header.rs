@@ -21,26 +21,18 @@ impl HeaderMessage {
     pub fn from_le_bytes(bytes: [u8; 24]) -> Result<Self, Utf8Error> {
         let mut start_string = [0; 4];
         let mut counter = 0;
-        for i in 0..4{
-            start_string[i] = bytes[i];
-        }
+        start_string[..4].copy_from_slice(&bytes[..4]);
         counter += 4;
         let mut command_name_bytes = [0; 12];
-        for i in 0..12 {
-            command_name_bytes[i] = bytes[i + counter];
-        }
+        command_name_bytes[..12].copy_from_slice(&bytes[counter..(12 + counter)]);
         counter += 12;
         let command_name = std::str::from_utf8(&command_name_bytes)?.to_string();
         let mut payload_size_bytes: [u8; 4] = [0; 4];
-        for i in 0..4 {
-            payload_size_bytes[i] = bytes[i + counter];
-        }
+        payload_size_bytes[..4].copy_from_slice(&bytes[counter..(4 + counter)]);
         counter += 4;
         let payload_size = u32::from_le_bytes(payload_size_bytes);
         let mut checksum = [0; 4];
-        for i in 0..4{
-            checksum[i] = bytes[i + counter];
-        }
+        checksum[..4].copy_from_slice(&bytes[counter..(4 + counter)]);
         Ok(HeaderMessage{
             start_string,
             command_name,
