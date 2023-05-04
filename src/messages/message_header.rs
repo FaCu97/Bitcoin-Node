@@ -1,15 +1,17 @@
 use std::str::Utf8Error;
 
 #[derive(Clone, Debug)]
+/// Representa el header de cualquier mensaje del protocolo bitcoin
 pub struct HeaderMessage {
-    start_string: [u8; 4],
-    command_name: String,
-    payload_size: u32,
-    checksum: [u8; 4],
+    pub start_string: [u8; 4],
+    pub command_name: String,
+    pub payload_size: u32,
+    pub checksum: [u8; 4],
 }
 
-
 impl HeaderMessage {
+    /// Convierte el struct que representa el header de cualquier mensaje a bytes segun las reglas de 
+    /// serializacion del protocolo bitcoin 
     pub fn to_le_bytes(&self) -> [u8; 24] {
         let mut header_message_bytes: [u8; 24] = [0; 24];
         header_message_bytes[0..4].copy_from_slice(&self.start_string);
@@ -18,6 +20,8 @@ impl HeaderMessage {
         header_message_bytes[20..24].copy_from_slice(&self.checksum);
         header_message_bytes
     }
+    // recibe los bytes de un header de un mensaje y los convierte a un struct HeaderMessage
+    // de acuerdo al protocolo de bitcoin
     pub fn from_le_bytes(bytes: [u8; 24]) -> Result<Self, Utf8Error> {
         let mut start_string = [0; 4];
         let mut counter = 0;
@@ -33,7 +37,7 @@ impl HeaderMessage {
         let payload_size = u32::from_le_bytes(payload_size_bytes);
         let mut checksum = [0; 4];
         checksum[..4].copy_from_slice(&bytes[counter..(4 + counter)]);
-        Ok(HeaderMessage{
+        Ok(HeaderMessage {
             start_string,
             command_name,
             payload_size,
@@ -41,7 +45,6 @@ impl HeaderMessage {
         })
     }
 }
-
 
 /// Recibe un String que representa el nombre del comando del Header Message
 /// y devuelve los bytes que representan ese string (ASCII) seguido de 0x00 para
@@ -56,17 +59,15 @@ fn command_name_to_bytes(command: &String) -> [u8; 12] {
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use super::*;
 
     #[test]
     fn header_message_bytes_from_verack_message_unmarshalling_correctly() {
         // GIVEN : un header messege del mensaje verack en bytes
         let header_message_bytes: [u8; 24] = [
-            11, 17, 9, 7,
-            118, 101, 114, 97, 99, 107, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0,
-            93, 246, 224, 226
+            11, 17, 9, 7, 118, 101, 114, 97, 99, 107, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 93, 246, 224,
+            226,
         ];
         // WHEN: se ejecuta la funcion form_le_bytes del struct HeaderMessage con los bytes pasados por parametro
         let header = HeaderMessage::from_le_bytes(header_message_bytes).unwrap();
@@ -80,10 +81,8 @@ mod tests{
     fn header_message_bytes_from_version_message_unmarshalling_correctly() {
         // GIVEN : un header messege del mensaje version en bytes
         let header_message_bytes: [u8; 24] = [
-            11, 17, 9, 7,
-            118, 101, 114, 115, 105, 111, 110, 0, 0, 0, 0, 0,
-            100, 0, 0, 0,
-            152, 16, 0, 0
+            11, 17, 9, 7, 118, 101, 114, 115, 105, 111, 110, 0, 0, 0, 0, 0, 100, 0, 0, 0, 152, 16,
+            0, 0,
         ];
         // WHEN: se ejecuta la funcion form_le_bytes del struct HeaderMessage con los bytes pasados por parametro
         let header = HeaderMessage::from_le_bytes(header_message_bytes).unwrap();
@@ -97,10 +96,8 @@ mod tests{
     fn error_when_command_name_bytes_can_not_be_represented_as_string() {
         // GIVEN : un header messege de un  mensaje con command name erroneo en bytes
         let header_message_bytes: [u8; 24] = [
-            11, 17, 9, 7,
-            12, 101, 114, 13, 240, 111, 110, 1, 0, 0, 0, 11,
-            100, 0, 0, 0,
-            152, 16, 0, 0
+            11, 17, 9, 7, 12, 101, 114, 13, 240, 111, 110, 1, 0, 0, 0, 11, 100, 0, 0, 0, 152, 16,
+            0, 0,
         ];
         // WHEN: se ejecuta la funcion form_le_bytes del struct HeaderMessage con los bytes pasados por parametro
         let header = HeaderMessage::from_le_bytes(header_message_bytes);
@@ -111,7 +108,7 @@ mod tests{
     #[test]
     fn header_message_of_a_verack_message_marshalling_correctly_to_bytes() {
         // GIVEN: un struct HeaderMessage de un mensaje verack
-        let verack_header_message = HeaderMessage{
+        let verack_header_message = HeaderMessage {
             start_string: [11, 17, 9, 7],
             command_name: "verack".to_string(),
             payload_size: 0,
@@ -121,17 +118,18 @@ mod tests{
         let header_message_bytes = verack_header_message.to_le_bytes();
         // THEN: se convierte a los bytes correctos segun el mensaje verack
         let expected_bytes_from_verack_header_messege: [u8; 24] = [
-            11, 17, 9, 7,
-            118, 101, 114, 97, 99, 107, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0,
-            93, 246, 224, 226
+            11, 17, 9, 7, 118, 101, 114, 97, 99, 107, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 93, 246, 224,
+            226,
         ];
-        assert_eq!(expected_bytes_from_verack_header_messege, header_message_bytes);
+        assert_eq!(
+            expected_bytes_from_verack_header_messege,
+            header_message_bytes
+        );
     }
     #[test]
     fn header_message_of_a_version_message_marshalling_correctly_to_bytes() {
         // GIVEN: un struct HeaderMessage de un mensaje version
-        let vesrion_header_message = HeaderMessage{
+        let vesrion_header_message = HeaderMessage {
             start_string: [11, 17, 9, 7],
             command_name: "version".to_string(),
             payload_size: 100,
@@ -141,13 +139,12 @@ mod tests{
         let header_message_bytes = vesrion_header_message.to_le_bytes();
         // THEN: se convierte a los bytes correctos segun el mensaje version
         let expected_bytes_from_version_header_messege: [u8; 24] = [
-            11, 17, 9, 7,
-            118, 101, 114, 115, 105, 111, 110, 0, 0, 0, 0, 0,
-            100, 0, 0, 0,
-            152, 16, 0, 0
+            11, 17, 9, 7, 118, 101, 114, 115, 105, 111, 110, 0, 0, 0, 0, 0, 100, 0, 0, 0, 152, 16,
+            0, 0,
         ];
-        assert_eq!(expected_bytes_from_version_header_messege, header_message_bytes);
+        assert_eq!(
+            expected_bytes_from_version_header_messege,
+            header_message_bytes
+        );
     }
-
-    
 }
