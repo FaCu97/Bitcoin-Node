@@ -3,6 +3,7 @@ use super::version_payload::*;
 use std::io::Error;
 use std::io::{Read, Write};
 use std::str::Utf8Error;
+// todo: implementar tests usando mocking, simulando una conexion con un nodo y viendo si se escriben/leen correctamente los mensajes version.
 
 #[derive(Clone, Debug)]
 pub struct VersionMessage {

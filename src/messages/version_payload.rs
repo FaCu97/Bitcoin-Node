@@ -1,9 +1,8 @@
 //use crate::compact_size_uint::CompactSizeUint;
 //todo: CAMBIAR ESE u8 POR compact_size_uint
+use std::net::SocketAddr;
 use std::str::Utf8Error;
 use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
-use std::net::SocketAddr;
-
 
 #[derive(Clone, Debug)]
 pub struct VersionPayload {
@@ -166,9 +165,6 @@ impl VersionPayload {
     }
 }
 
-
-
-
 /// devuelve el timepo acutal segun EPOCH como un i64 o error en caso de que no se pueda obtener
 pub fn get_current_unix_epoch_time() -> Result<i64, SystemTimeError> {
     let current_time = SystemTime::now();
@@ -191,48 +187,284 @@ pub fn get_ipv6_address_ip(socket_addr: SocketAddr) -> [u8; 16] {
     addr_recv_ip
 }
 
+
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    /*
-        #[test]
-        fn a_version_payload_is_correctly_converted_to_le_bytes() {
-                let version = PROTOCOL_VERSION;
-                let services: u64 = 0;
-                let timestamp: i64 = match get_current_unix_epoch_time() {
-                    Err(e) => {
-                        println!("ERROR: {}", e);
-                        exit(-1)
-                    },
-                    Ok(timestamp) => timestamp,
-                };
-                let addr_recv_service: u64 = 1;
-                let addr_recv_ip = get_ipv6_address_ip(socket_addr);
-                let addr_recv_port: u16 = 18333;
-                let addr_trans_service: u64 = 0;
-                let addr_trans_ip = get_ipv6_address_ip(local_ip_addr);
-                let addr_trans_port: u16 = 18333;
-                let nonce: u64 = rand::thread_rng().gen();
-                let user_agent_bytes: u8 = 15u8; // ??????
-                let user_agent: String = "/Satoshi:23.0.0/".to_string();
-                let start_height: i32 = 1;
-                let relay: bool = true;
-                let version_payload = VersionPayload {
-                    version,
-                    services,
-                    timestamp,
-                    addr_recv_service,
-                    addr_recv_ip,
-                    addr_recv_port,
-                    addr_trans_service,
-                    addr_trans_ip,
-                    addr_trans_port,
-                    nonce,
-                    user_agent_bytes,
-                    user_agent,
-                    start_height,
-                    relay,
-                };
-            }
-    */
+    #[test]
+    fn get_version_from_payload_bytes_returns_the_correct_i32() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 15, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_version_from_bytes con los bytes pasados por parametro
+        let version = get_version_from_bytes(&payload_bytes, &mut 0);
+        // THEN: el numero de version es el correcto
+        assert_eq!(70015 as i32, version);
+    }
+    #[test]
+    fn get_services_from_payload_bytes_returns_the_correct_u64() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 15, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_services_from_bytes con los bytes pasados por parametro
+        let services = get_services_from_bytes(&payload_bytes, &mut 4);
+        // THEN: el numero de services es el correcto
+        assert_eq!(0 as u64, services);
+    }
+    #[test]
+    fn get_timestamp_from_payload_bytes_returns_the_correct_i64() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 15, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_timestamp_from_bytes con los bytes pasados por parametro
+        let timestamp = get_timestamp_from_bytes(&payload_bytes, &mut 12);
+        let mut timestamp_bytes: [u8; 8] = [0; 8];
+        timestamp_bytes[..8].copy_from_slice(&payload_bytes[12..20]);
+        // THEN: el numero del timestamp es el correcto
+        assert_eq!(i64::from_le_bytes(timestamp_bytes), timestamp);
+    }
+    #[test]
+    fn get_addr_recv_service_from_payload_bytes_returns_the_correct_u64() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 15, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_addr_services_from_bytes con los bytes pasados por parametro
+        let addr_recv_service = get_addr_services_from_bytes(&payload_bytes, &mut 20);
+        // THEN: el numero de addr_recv_services es el correcto
+        assert_eq!(1u64, addr_recv_service);
+    }
+    #[test]
+    fn get_addr_recv_ip_from_payload_bytes_returns_the_correct_16_bytes_of_ip_direction() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 15, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_addr_ip_from_bytes con los bytes pasados por parametro
+        let addr_recv_ip = get_addr_ip_from_bytes(&payload_bytes, &mut 28);
+        let mut addr_recv_ip_bytes: [u8; 16] = [0; 16];
+        addr_recv_ip_bytes[..16].copy_from_slice(&payload_bytes[28..44]);
+        // THEN: el vector de addr_recv_ip es el correcto
+        assert_eq!(addr_recv_ip_bytes, addr_recv_ip);
+    }
+    #[test]
+    fn get_addr_recv_port_from_payload_bytes_returns_the_correct_u16() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 15, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_addr_port_from_bytes con los bytes pasados por parametro
+        let addr_recv_port = get_addr_port_from_bytes(&payload_bytes, &mut 44);
+        // THEN: el numero de addr_recv_port es el correcto
+        assert_eq!(18333u16, addr_recv_port);
+    }
+    #[test]
+    fn get_addr_trans_service_from_payload_bytes_returns_the_correct_u64() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 15, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_addr_services_from_bytes con los bytes pasados por parametro
+        let addr_trans_service = get_addr_services_from_bytes(&payload_bytes, &mut 46);
+        // THEN: el numero de addr_trans_services es el correcto
+        assert_eq!(0u64, addr_trans_service);
+    }
+    #[test]
+    fn get_addr_trans_ip_from_payload_bytes_returns_the_correct_16_bytes_of_ip_direction() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 15, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_addr_ip_from_bytes con los bytes pasados por parametro
+        let addr_trans_ip = get_addr_ip_from_bytes(&payload_bytes, &mut 54);
+        let mut addr_trans_ip_bytes: [u8; 16] = [0; 16];
+        addr_trans_ip_bytes[..16].copy_from_slice(&payload_bytes[54..70]);
+        // THEN: el vector de addr_trans_ip es el correcto
+        assert_eq!(addr_trans_ip_bytes, addr_trans_ip);
+    }
+    #[test]
+    fn get_addr_trans_port_from_payload_bytes_returns_the_correct_u16() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 15, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_addr_port_from_bytes con los bytes pasados por parametro
+        let addr_trans_port = get_addr_port_from_bytes(&payload_bytes, &mut 70);
+        // THEN: el numero de addr_trans_port es el correcto
+        assert_eq!(18333u16, addr_trans_port);
+    }
+    #[test]
+    fn get_nonce_from_payload_bytes_returns_the_correct_u64() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 15, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_nonce_from_bytes con los bytes pasados por parametro
+        let nonce = get_nonce_from_bytes(&payload_bytes, &mut 72);
+        let mut nonce_bytes: [u8; 8] = [0; 8];
+        nonce_bytes[0..8].copy_from_slice(&payload_bytes[72..80]);
+        // THEN: el numero de nonce es el correcto
+        assert_eq!(u64::from_le_bytes(nonce_bytes), nonce);
+    }
+    #[test]
+    fn get_user_agent_bytes_from_payload_bytes_returns_the_correct_u8() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 16, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_user_agent_bytes_from_bytes con los bytes pasados por parametro
+        let user_agent_bytes = get_user_agent_bytes_from_bytes(&payload_bytes, &mut 80);
+        // THEN: el numero de user_agent_bytes es el correcto
+        assert_eq!(16u8, user_agent_bytes);
+    }
+    #[test]
+    fn get_user_agent_from_payload_bytes_returns_the_correct_string() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 16, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_user_agent_from_bytes con los bytes pasados por parametro
+        let user_agent = get_user_agent_from_bytes(&payload_bytes, &mut 81, 16u8);
+        // THEN: el string de user_agent es el correcto
+        assert_eq!("/Satoshi:23.0.0/".to_string(), user_agent.unwrap());
+    }
+    #[test]
+    fn get_start_height_from_payload_bytes_returns_the_correct_i32() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 16, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_start_height_from_bytes con los bytes pasados por parametro
+        let start_height = get_start_height_from_bytes(&payload_bytes, &mut 97);
+        // THEN: el numero de star_height es el correcto
+        assert_eq!(1i32, start_height);
+    }
+    #[test]
+    fn get_relay_from_payload_bytes_returns_the_correct_bool() {
+        // GIVEN: Payload bytes de un mensaje version
+        let payload_bytes: [u8; 102] = [
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 54, 89, 113, 236, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 51, 165, 53,
+            24, 235, 29, 226, 36, 16, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        // WHEN: se ejecuta la funcion get_relay_from_bytes con los bytes pasados por parametro
+        let relay = get_relay_from_bytes(&payload_bytes, 101);
+        // THEN: el booleano de relay es el correcto
+        assert_eq!(true, relay);
+    }
+    #[test]
+    fn version_payload_to_le_bytes_returns_the_correct_bytes() {
+        // GIVEN: un struct VersionPayload con todos los campos completos
+        let version = 70015;
+        let services: u64 = 0;
+        let timestamp: i64 = 1683229476; // simulo valor para test
+        let addr_recv_service: u64 = 1;
+        let socket_addr = "3.34.119.199:18333".to_string().parse().unwrap();
+        let addr_recv_ip = get_ipv6_address_ip(socket_addr);
+        let addr_recv_port: u16 = 18333;
+        let addr_trans_service: u64 = 0;
+        let addr_trans_ip = get_ipv6_address_ip("192.168.0.58:52417".to_string().parse().unwrap());
+        let addr_trans_port: u16 = 18333;
+        let nonce: u64 = 7954216226337911560; // simulo valor para test
+        let user_agent_bytes: u8 = 16u8; // ??????
+        let user_agent: String = "/Satoshi:23.0.0/".to_string();
+        let start_height: i32 = 1;
+        let relay: bool = true;
+        let version_payload = VersionPayload {
+            version,
+            services,
+            timestamp,
+            addr_recv_service,
+            addr_recv_ip,
+            addr_recv_port,
+            addr_trans_service,
+            addr_trans_ip,
+            addr_trans_port,
+            nonce,
+            user_agent_bytes,
+            user_agent,
+            start_height,
+            relay,
+        };
+        // WHEN: serializo los campos del struct VersionPayload segun protocolo bitcoin
+        let version_payload_bytes = version_payload.to_le_bytes();
+        // THEN: obtengo los bytes en el orden y posicion correcta para poder ser enviados junto al header del mensaje
+        let expected_bytes: Vec<u8> = vec![
+            127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 36, 11, 84, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 3, 34, 119, 199, 71, 157, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 192, 168, 0, 58, 71, 157, 8, 243, 132,
+            189, 131, 13, 99, 110, 16, 47, 83, 97, 116, 111, 115, 104, 105, 58, 50, 51, 46, 48, 46,
+            48, 47, 1, 0, 0, 0, 1,
+        ];
+        assert_eq!(expected_bytes, version_payload_bytes);
+    }
+    #[test]
+    fn get_ipv6_address_ip_returns_a_correct_vector_of_16_bytes_representing_ipv6_address_ip() {
+        // GIVEN: a String representing an address ip
+        let add_ip = "3.34.119.199:18333".to_string();
+        // WHEN: se ejecuta la funcion get_ipv6_address_ip pasandole el socket address del string
+        let ipv6_add_ip = get_ipv6_address_ip(add_ip.parse().unwrap());
+        // THEN: devuelve un vector de 16 bytes que representa a la direccion ip serializada segun protocolo bitcoin
+        let expected_bytes: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 3, 34, 119, 199];
+        assert_eq!(expected_bytes, ipv6_add_ip);
+    }
 }

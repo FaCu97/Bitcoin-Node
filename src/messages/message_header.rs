@@ -10,8 +10,8 @@ pub struct HeaderMessage {
 }
 
 impl HeaderMessage {
-    /// Convierte el struct que representa el header de cualquier mensaje a bytes segun las reglas de 
-    /// serializacion del protocolo bitcoin 
+    /// Convierte el struct que representa el header de cualquier mensaje a bytes segun las reglas de
+    /// serializacion del protocolo bitcoin
     pub fn to_le_bytes(&self) -> [u8; 24] {
         let mut header_message_bytes: [u8; 24] = [0; 24];
         header_message_bytes[0..4].copy_from_slice(&self.start_string);
