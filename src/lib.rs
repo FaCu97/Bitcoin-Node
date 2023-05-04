@@ -1,8 +1,5 @@
-
-mod compact_size_uint;
 mod config;
+mod compact_size_uint;
 mod message_header;
-mod version_payload;
-mod version_message;
-mod address;
-
+mod block_header;
+mod outpoint;
