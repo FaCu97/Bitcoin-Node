@@ -8,6 +8,7 @@ pub struct BlockHeader {
     pub n_bits: u32,
     pub nonce: u32,
     pub hash: [u8; 32],
+
 }
 
 impl BlockHeader {

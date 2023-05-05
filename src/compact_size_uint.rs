@@ -1,4 +1,5 @@
-struct CompactSizeUint {
+#[derive(Clone, Debug)]
+pub struct CompactSizeUint {
     value: u128,
 }
 
