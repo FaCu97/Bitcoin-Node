@@ -1,6 +1,6 @@
-mod config;
-mod compact_size_uint;
-mod message_header;
-mod block_header;
-mod outpoint;
-mod headers;
+pub mod block_header;
+pub mod compact_size_uint;
+pub mod config;
+pub mod message_header;
+pub mod messages;
+pub mod outpoint;
