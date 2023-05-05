@@ -5,7 +5,7 @@ use std::str::Utf8Error;
 use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
 
 #[derive(Clone, Debug)]
-///  representa el payload de un mensaje Version segun el protocolo bitcoin, con todos sus respectivos campos 
+///  representa el payload de un mensaje Version segun el protocolo bitcoin, con todos sus respectivos campos
 /// (corresponde a la version del protocolo 70015)
 pub struct VersionPayload {
     pub version: i32,            // highest protocol version.
@@ -214,9 +214,6 @@ pub fn get_ipv6_address_ip(socket_addr: SocketAddr) -> [u8; 16] {
     }
     addr_recv_ip
 }
-
-
-
 
 #[cfg(test)]
 mod tests {
