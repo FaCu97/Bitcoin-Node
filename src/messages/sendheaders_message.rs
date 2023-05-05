@@ -2,6 +2,7 @@ use super::message_header::HeaderMessage;
 use std::io::Error;
 use std::io::{Read, Write};
 use std::str::Utf8Error;
+// todo: implementar tests usando mocking, simulando una conexion con un nodo y viendo si se escriben/leen correctamente los mensajes sin payload.
 #[derive(Clone, Debug)]
 /// Representa cualquier mensaje que solo tenga header y no necesite payload segun el protocolo bitcoin
 pub struct NonePayloadMessage {
