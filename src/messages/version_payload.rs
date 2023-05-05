@@ -5,6 +5,8 @@ use std::str::Utf8Error;
 use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
 
 #[derive(Clone, Debug)]
+///  representa el payload de un mensaje Version segun el protocolo bitcoin, con todos sus respectivos campos 
+/// (corresponde a la version del protocolo 70015)
 pub struct VersionPayload {
     pub version: i32,            // highest protocol version.
     pub services: u64,           // services supported by our node.
@@ -22,6 +24,9 @@ pub struct VersionPayload {
     pub relay: bool,       // Transaction relay flag.
 }
 
+/// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
+/// un i32 deserializado de los bytes, que representa el campo "version" del payload del mensaje version e incrementa el contador en la cantidad
+/// de bytes leidos (4)
 fn get_version_from_bytes(bytes: &[u8], counter: &mut usize) -> i32 {
     let mut version_bytes = [0; 4];
     version_bytes[..4].copy_from_slice(&bytes[..4]);
@@ -29,6 +34,9 @@ fn get_version_from_bytes(bytes: &[u8], counter: &mut usize) -> i32 {
     *counter += 4;
     version
 }
+/// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
+/// un u64 deserializado de los bytes, que representa el campo "services" del payload del mensaje version e incrementa el contador en la cantidad
+/// de bytes leidos (8)
 fn get_services_from_bytes(bytes: &[u8], counter: &mut usize) -> u64 {
     let mut services_bytes: [u8; 8] = [0; 8];
     services_bytes[..8].copy_from_slice(&bytes[*counter..(8 + *counter)]);
@@ -36,7 +44,9 @@ fn get_services_from_bytes(bytes: &[u8], counter: &mut usize) -> u64 {
     *counter += 8;
     services
 }
-
+/// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
+/// un i64 deserializado de los bytes, que representa el campo "timestamp" del payload del mensaje version e incrementa el contador en la cantidad
+/// de bytes leidos (8)
 fn get_timestamp_from_bytes(bytes: &[u8], counter: &mut usize) -> i64 {
     let mut timestamp_bytes: [u8; 8] = [0; 8];
     timestamp_bytes[..8].copy_from_slice(&bytes[*counter..(8 + *counter)]);
@@ -44,7 +54,9 @@ fn get_timestamp_from_bytes(bytes: &[u8], counter: &mut usize) -> i64 {
     *counter += 8;
     timestamp
 }
-
+/// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
+/// un u64 deserializado de los bytes, que representa el campo "addr_services" (tanto para recv como para trans nodes) del payload del mensaje version e incrementa el contador en la cantidad
+/// de bytes leidos (8)
 fn get_addr_services_from_bytes(bytes: &[u8], counter: &mut usize) -> u64 {
     let mut addr_recv_services_bytes: [u8; 8] = [0; 8];
     addr_recv_services_bytes[..8].copy_from_slice(&bytes[*counter..(8 + *counter)]);
@@ -52,14 +64,18 @@ fn get_addr_services_from_bytes(bytes: &[u8], counter: &mut usize) -> u64 {
     *counter += 8;
     addr_recv_service
 }
-
+/// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
+/// un vector de 16 bytes , que representa el campo "addr_ip" (tanto para recv como para trans nodes) del payload del mensaje version e incrementa el contador en la cantidad
+/// de bytes leidos (16)
 fn get_addr_ip_from_bytes(bytes: &[u8], counter: &mut usize) -> [u8; 16] {
     let mut addr_recv_ip: [u8; 16] = [0; 16];
     addr_recv_ip[..16].copy_from_slice(&bytes[*counter..(16 + *counter)]); // ya deberian estar en big endian
     *counter += 16;
     addr_recv_ip
 }
-
+/// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
+/// un u16 deserializado de los bytes, que representa el campo "addr_port" (tanto para recv como para trans nodes) del payload del mensaje version e incrementa el contador en la cantidad
+/// de bytes leidos (2)
 fn get_addr_port_from_bytes(bytes: &[u8], counter: &mut usize) -> u16 {
     let mut addr_recv_port_bytes: [u8; 2] = [0; 2];
     addr_recv_port_bytes[..2].copy_from_slice(&bytes[*counter..(2 + *counter)]);
@@ -67,7 +83,9 @@ fn get_addr_port_from_bytes(bytes: &[u8], counter: &mut usize) -> u16 {
     *counter += 2;
     addr_recv_port
 }
-
+/// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
+/// un u64 deserializado de los bytes, que representa el campo "nonce" del payload del mensaje version e incrementa el contador en la cantidad
+/// de bytes leidos (8)
 fn get_nonce_from_bytes(bytes: &[u8], counter: &mut usize) -> u64 {
     let mut nonce_bytes: [u8; 8] = [0; 8];
     nonce_bytes[..8].copy_from_slice(&bytes[*counter..(8 + *counter)]);
@@ -75,7 +93,9 @@ fn get_nonce_from_bytes(bytes: &[u8], counter: &mut usize) -> u64 {
     *counter += 8;
     nonce
 }
-
+/// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
+/// un u8 deserializado de los bytes, que representa el campo "user_agent_bytes" del payload del mensaje version e incrementa el contador en la cantidad
+/// de bytes leidos (1)
 fn get_user_agent_bytes_from_bytes(bytes: &[u8], counter: &mut usize) -> u8 {
     let mut u_agent_bytes: [u8; 1] = [0; 1];
     u_agent_bytes[..1].copy_from_slice(&bytes[*counter..(1 + *counter)]);
@@ -83,7 +103,9 @@ fn get_user_agent_bytes_from_bytes(bytes: &[u8], counter: &mut usize) -> u8 {
     *counter += 1;
     user_agent_bytes
 }
-
+/// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
+/// un i32 deserializado de los bytes, que representa el campo "start_height" del payload del mensaje version e incrementa el contador en la cantidad
+/// de bytes leidos (4)
 fn get_start_height_from_bytes(bytes: &[u8], counter: &mut usize) -> i32 {
     let mut start_height_bytes: [u8; 4] = [0; 4];
     start_height_bytes[..4].copy_from_slice(&bytes[*counter..(4 + *counter)]);
@@ -91,12 +113,15 @@ fn get_start_height_from_bytes(bytes: &[u8], counter: &mut usize) -> i32 {
     *counter += 4;
     start_height
 }
-
+/// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
+/// un bool deserializado del byte leido, que representa el campo "relay" del payload del mensaje version
 fn get_relay_from_bytes(bytes: &[u8], counter: usize) -> bool {
     let relay_byte = bytes[counter];
     matches!(relay_byte, 1u8)
 }
-
+/// recibe un vector de bytes, un contador que representa las posiciones leidas del vector y la cantidad de bytes a leer del vector y devuelve
+/// un String deserializado de los bytes leidos, que representa el campo "user_agent" del payload del mensaje version,  en caso de poder ser transformado
+/// de bytes a string o devuelve un error en caso contrario
 fn get_user_agent_from_bytes(
     bytes: &[u8],
     counter: &mut usize,
@@ -110,6 +135,8 @@ fn get_user_agent_from_bytes(
 }
 
 impl VersionPayload {
+    /// Convierte el struct que representa el payload del  mensaje "version" a bytes segun las reglas de
+    /// serializacion del protocolo bitcoin
     pub fn to_le_bytes(&self) -> Vec<u8> {
         let mut version_payload_bytes: Vec<u8> = vec![];
         version_payload_bytes.extend_from_slice(&self.version.to_le_bytes());
@@ -128,10 +155,11 @@ impl VersionPayload {
         version_payload_bytes.push(self.relay as u8);
         version_payload_bytes
     }
-
+    /// recibe los bytes de un payload de un mensaje "version" y los convierte a un struct VersionPayload
+    /// de acuerdo al protocolo de bitcoin. Devuelve error en caso que no se puedan transformar los bytes correspondiente
+    /// al campo user_agent a string.
     pub fn from_le_bytes(bytes: &[u8]) -> Result<Self, Utf8Error> {
         let mut counter = 0;
-
         let version = get_version_from_bytes(bytes, &mut counter);
         let services = get_services_from_bytes(bytes, &mut counter);
         let timestamp = get_timestamp_from_bytes(bytes, &mut counter);
