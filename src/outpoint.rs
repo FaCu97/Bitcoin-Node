@@ -1,10 +1,19 @@
+
+#[derive(PartialEq)]
+#[derive(Debug)]
 pub struct Outpoint {
     tx_id: [u8; 32],
     index: u32,
 }
 
 impl Outpoint {
-    pub fn unmarshaling(bytes: [u8; 36]) -> Outpoint {
+
+    pub fn new(tx_id:[u8;32],index:u32)->Self{
+        Outpoint { tx_id, index }
+    }
+
+
+    pub fn unmarshaling(bytes: &Vec<u8>) -> Outpoint {
         let mut offset: usize = 0;
         let mut tx_id: [u8; 32] = [0; 32];
         for x in 0..32 {
@@ -19,15 +28,13 @@ impl Outpoint {
         Outpoint { tx_id, index }
     }
 
-    pub fn marshaling(&self, bytes: &mut [u8]) {
-        let mut offset: usize = 0;
+    pub fn marshaling(&self, bytes: &mut Vec<u8>) {
         for i in 0..32 {
-            bytes[i] = self.tx_id[i];
+            bytes.push(self.tx_id[i]);
         }
-        offset += 32;
         let index_bytes: [u8; 4] = self.index.to_le_bytes();
         for i in 0..4 {
-            bytes[offset + i] = index_bytes[i];
+            bytes.push(index_bytes[i]);
         }
     }
 }
@@ -39,44 +46,44 @@ mod test {
 
     #[test]
     fn test_unmarshaling_del_outpoint_produce_tx_id_esperado() {
-        let bytes: [u8; 36] = [1; 36];
+        let bytes: Vec<u8> = vec![1; 36];
         let tx_id_esperado: [u8; 32] = [1; 32];
-        let outpoint: Outpoint = Outpoint::unmarshaling(bytes);
+        let outpoint: Outpoint = Outpoint::unmarshaling(&bytes);
         assert_eq!(outpoint.tx_id, tx_id_esperado);
     }
 
     #[test]
     fn test_unmarshaling_del_outpoint_produce_index_esperado() {
-        let mut bytes: [u8; 36] = [0; 36];
+        let mut bytes: Vec<u8> = vec![0; 36];
         for x in 0..4 {
             bytes[32 + x] = x as u8;
         }
         let index_esperado: u32 = 0x03020100;
-        let outpoint: Outpoint = Outpoint::unmarshaling(bytes);
+        let outpoint: Outpoint = Outpoint::unmarshaling(&bytes);
         assert_eq!(outpoint.index, index_esperado);
     }
 
     #[test]
     fn test_marshaling_del_outpoint_produce_tx_id_esperado() {
-        let mut marshaling_outpoint: [u8; 36] = [0; 36];
+        let mut marshaling_outpoint: Vec<u8> = Vec::new();
         let tx_id: [u8; 32] = [2; 32];
         let outpoint_to_marshaling: Outpoint = Outpoint {
             tx_id,
             index: 0x03020100,
         };
         outpoint_to_marshaling.marshaling(&mut marshaling_outpoint);
-        let outpoint_unmarshaled: Outpoint = Outpoint::unmarshaling(marshaling_outpoint);
+        let outpoint_unmarshaled: Outpoint = Outpoint::unmarshaling(&marshaling_outpoint);
         assert_eq!(outpoint_unmarshaled.tx_id, tx_id);
     }
 
     #[test]
     fn test_marshaling_del_outpoint_produce_index_esperado() {
-        let mut marshaling_outpoint: [u8; 36] = [0; 36];
+        let mut marshaling_outpoint: Vec<u8> = Vec::new();
         let tx_id: [u8; 32] = [2; 32];
         let index: u32 = 0x03020100;
         let outpoint_to_marshaling: Outpoint = Outpoint { tx_id, index };
         outpoint_to_marshaling.marshaling(&mut marshaling_outpoint);
-        let outpoint_unmarshaled: Outpoint = Outpoint::unmarshaling(marshaling_outpoint);
+        let outpoint_unmarshaled: Outpoint = Outpoint::unmarshaling(&marshaling_outpoint);
         assert_eq!(outpoint_unmarshaled.index, index);
     }
 }
