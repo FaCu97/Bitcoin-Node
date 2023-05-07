@@ -7,8 +7,8 @@ use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
 ///  representa el payload de un mensaje Version segun el protocolo bitcoin, con todos sus respectivos campos
 /// (corresponde a la version del protocolo 70015)
 pub struct VersionPayload {
-    pub version: i32,            // highest protocol version.
-    pub services: u64,           // services supported by our node.
+    pub version: i32,                      // highest protocol version.
+    pub services: u64,                     // services supported by our node.
     pub timestamp: i64, // The current Unix epoch time according to the transmitting node’s clock.
     pub addr_recv_service: u64, // The services supported by the receiving node as perceived by the transmitting node.
     pub addr_recv_ip: [u8; 16], // The IPv6 address of the receiving node as perceived by the transmitting node in big endian byte order.
@@ -170,7 +170,8 @@ impl VersionPayload {
         let addr_trans_port = get_addr_port_from_bytes(bytes, &mut counter);
         let nonce = get_nonce_from_bytes(bytes, &mut counter);
         let user_agent_bytes = get_user_agent_bytes_from_bytes(bytes, &mut counter);
-        let user_agent = get_user_agent_from_bytes(bytes, &mut counter, user_agent_bytes.decoded_value())?;
+        let user_agent =
+            get_user_agent_from_bytes(bytes, &mut counter, user_agent_bytes.decoded_value())?;
         let start_height = get_start_height_from_bytes(bytes, &mut counter);
         let relay = get_relay_from_bytes(bytes, counter);
         Ok(VersionPayload {

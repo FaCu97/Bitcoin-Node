@@ -1,17 +1,13 @@
-
-#[derive(PartialEq)]
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub struct Outpoint {
     tx_id: [u8; 32],
     index: u32,
 }
 
 impl Outpoint {
-
-    pub fn new(tx_id:[u8;32],index:u32)->Self{
+    pub fn new(tx_id: [u8; 32], index: u32) -> Self {
         Outpoint { tx_id, index }
     }
-
 
     pub fn unmarshaling(bytes: &Vec<u8>) -> Outpoint {
         let mut offset: usize = 0;
