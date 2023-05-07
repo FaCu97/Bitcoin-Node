@@ -1,3 +1,5 @@
+#[derive(Clone, Debug)]
+#[derive(PartialEq)]
 pub struct CompactSizeUint {
     bytes: Vec<u8>,
 }
@@ -9,13 +11,13 @@ impl CompactSizeUint {
         }
     }
     fn generate_compact_size_uint(value: u128) -> Vec<u8> {
-        if 253 <= value && value <= 0xffff {
+        if (253..=0xffff).contains(&value) {
             return Self::get_compact_size_uint(0xfd, 3, value);
         }
-        if 0x10000 <= value && value <= 0xffffffff {
+        if (0x10000..=0xffffffff).contains(&value) {
             return Self::get_compact_size_uint(0xfe, 5, value);
         }
-        if 0x100000000 <= value && value <= 0xffffffffffffffff {
+        if (0x100000000..=0xffffffffffffffff).contains(&value) {
             return Self::get_compact_size_uint(0xff, 9, value);
         }
         vec![value as u8]
@@ -29,19 +31,15 @@ impl CompactSizeUint {
         let mut bytes:[u8;8] = [0;8];
         bytes[0] = self.bytes[0];
         if bytes[0] == 0xfd {
-            for x in 0..2 {
-                bytes[x] = self.bytes[x + 1];
-            }
+            bytes[..2].copy_from_slice(&self.bytes[1..(2 + 1)]);
             return u64::from_le_bytes(bytes);
         }
         if bytes[0] == 0xfe {
-            for x in 0..4 {
-                bytes[x] = self.bytes[x + 1];
-            }
+            bytes[..4].copy_from_slice(&self.bytes[1..(4 + 1)]);
             return u64::from_le_bytes(bytes);
         }
         if bytes[0] == 0xff {
-            bytes.copy_from_slice(&self.bytes[1..9]);
+            bytes[..8].copy_from_slice(&self.bytes[1..(8 + 1)]);
             return u64::from_le_bytes(bytes);
         }
         u64::from_le_bytes(bytes)
@@ -62,7 +60,12 @@ impl CompactSizeUint {
         bytes
     }
 
-    pub fn unmarshaling(bytes: &Vec<u8>, offset: &mut usize) -> CompactSizeUint {
+    pub fn marshalling(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.extend(self.value());
+        bytes
+    }
+    pub fn unmarshaling(bytes: &[u8], offset: &mut usize) -> CompactSizeUint {
         let first_byte = bytes[*offset];
         *offset += 1;
         let mut value: Vec<u8> = Vec::new();

@@ -50,9 +50,7 @@ impl BlockHeader {
         }
     }
     fn read_bytes(block_header_message: &[u8], amount: usize, aux_bytes: &mut [u8], offset: usize) {
-        for byte in 0..amount {
-            aux_bytes[byte] = block_header_message[byte + offset];
-        }
+        aux_bytes[..amount].copy_from_slice(&block_header_message[offset..(amount + offset)]);
     }
     fn write_bytes(
         block_header_message: &mut [u8],
@@ -60,9 +58,7 @@ impl BlockHeader {
         aux_bytes: &[u8],
         offset: usize,
     ) {
-        for byte in 0..amount {
-            block_header_message[byte + offset] = aux_bytes[byte];
-        }
+        block_header_message[offset..(amount + offset)].copy_from_slice(&aux_bytes[..amount]);
     }
     pub fn marshaling(&self, marshaled_block_header: &mut [u8]) {
         let mut offset = 0;

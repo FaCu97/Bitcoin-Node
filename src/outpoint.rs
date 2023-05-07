@@ -1,21 +1,29 @@
-#[derive(PartialEq, Debug)]
+
+#[derive(PartialEq)]
+#[derive(Debug)]
 pub struct Outpoint {
     tx_id: [u8; 32],
     index: u32,
 }
 
 impl Outpoint {
-    pub fn new(tx_id: [u8; 32], index: u32) -> Self {
+
+    pub fn new(tx_id:[u8;32],index:u32)->Self{
         Outpoint { tx_id, index }
     }
-    // esta funcion se encarga de deserializar un outpoint dado un determindo array de bytes
+
+
     pub fn unmarshaling(bytes: &Vec<u8>) -> Outpoint {
         let mut offset: usize = 0;
         let mut tx_id: [u8; 32] = [0; 32];
-        tx_id.copy_from_slice(&bytes[0..32]);
+        for x in 0..32 {
+            tx_id[x] = bytes[x];
+        }
         offset += 32;
         let mut index_bytes: [u8; 4] = [0; 4];
-        index_bytes.copy_from_slice(&bytes[offset..(offset + 4)]);
+        for x in 0..4 {
+            index_bytes[x] = bytes[x + offset];
+        }
         let index = u32::from_le_bytes(index_bytes);
         Outpoint { tx_id, index }
     }
@@ -23,7 +31,9 @@ impl Outpoint {
     pub fn marshaling(&self, bytes: &mut Vec<u8>) {
         bytes.extend_from_slice(&self.tx_id[0..32]); // se cargan los elementos del tx_id
         let index_bytes: [u8; 4] = self.index.to_le_bytes();
-        bytes.extend_from_slice(&index_bytes[0..4]); // se cargan los elementos del index
+        for i in 0..4 {
+            bytes.push(index_bytes[i]);
+        }
     }
 }
 
