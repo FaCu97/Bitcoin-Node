@@ -21,7 +21,7 @@ impl CompactSizeUint {
         vec![value as u8]
     }
 
-    fn value(&self) -> &Vec<u8> {
+    pub fn value(&self) -> &Vec<u8> {
         &self.bytes
     }
 
