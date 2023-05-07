@@ -1,5 +1,4 @@
-//use crate::compact_size_uint::CompactSizeUint;
-//todo: CAMBIAR ESE u8 POR compact_size_uint
+use crate::compact_size_uint::CompactSizeUint;
 use std::net::SocketAddr;
 use std::str::Utf8Error;
 use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
@@ -18,7 +17,7 @@ pub struct VersionPayload {
     pub addr_trans_ip: [u8; 16], // The IPv6 address of the transmitting node in big endian byte order.
     pub addr_trans_port: u16, // The port number of the transmitting node in big endian byte order.
     pub nonce: u64,           // A random nonce which can help a node detect a connection to itself.
-    pub user_agent_bytes: u8, // Number of bytes in following user_agent field.
+    pub user_agent_bytes: CompactSizeUint, // Number of bytes in following user_agent field.
     pub user_agent: String,   // User agent as defined by BIP14.
     pub start_height: i32, // The height of the transmitting node’s best block chain or, in the case of an SPV client, best block header chain.
     pub relay: bool,       // Transaction relay flag.
@@ -94,14 +93,14 @@ fn get_nonce_from_bytes(bytes: &[u8], counter: &mut usize) -> u64 {
     nonce
 }
 /// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
-/// un u8 deserializado de los bytes, que representa el campo "user_agent_bytes" del payload del mensaje version e incrementa el contador en la cantidad
-/// de bytes leidos (1)
-fn get_user_agent_bytes_from_bytes(bytes: &[u8], counter: &mut usize) -> u8 {
-    let mut u_agent_bytes: [u8; 1] = [0; 1];
-    u_agent_bytes[..1].copy_from_slice(&bytes[*counter..(1 + *counter)]);
-    let user_agent_bytes = u8::from_le_bytes(u_agent_bytes);
-    *counter += 1;
-    user_agent_bytes
+/// un CompactSizeUint deserializado de los bytes, que representa el campo "user_agent_bytes" del payload del mensaje version e incrementa el contador en la cantidad
+/// de bytes leidos (variable)
+fn get_user_agent_bytes_from_bytes(bytes: &[u8], counter: &mut usize) -> CompactSizeUint {
+    let mut u_agent_bytes: Vec<u8> = vec![];
+    u_agent_bytes.extend(&bytes[*counter..]);
+    let cmct_size = CompactSizeUint::unmarshaling(&u_agent_bytes, &mut 0);
+    *counter += cmct_size.get_offset() as usize;
+    cmct_size
 }
 /// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
 /// un i32 deserializado de los bytes, que representa el campo "start_height" del payload del mensaje version e incrementa el contador en la cantidad
@@ -125,7 +124,7 @@ fn get_relay_from_bytes(bytes: &[u8], counter: usize) -> bool {
 fn get_user_agent_from_bytes(
     bytes: &[u8],
     counter: &mut usize,
-    user_agent_bytes: u8,
+    user_agent_bytes: u64,
 ) -> Result<String, Utf8Error> {
     let mut user_agent_b = vec![0; user_agent_bytes as usize];
     user_agent_b.copy_from_slice(&bytes[*counter..(user_agent_bytes as usize + *counter)]);
@@ -149,7 +148,7 @@ impl VersionPayload {
         version_payload_bytes.extend_from_slice(&self.addr_trans_ip); // big endian bytes
         version_payload_bytes.extend_from_slice(&self.addr_trans_port.to_be_bytes()); // big endian bytes
         version_payload_bytes.extend_from_slice(&self.nonce.to_le_bytes());
-        version_payload_bytes.extend_from_slice(&self.user_agent_bytes.to_le_bytes());
+        version_payload_bytes.extend_from_slice(&self.user_agent_bytes.marshalling());
         version_payload_bytes.extend_from_slice(self.user_agent.as_bytes()); // little -> depende arq de computadora ??
         version_payload_bytes.extend_from_slice(&self.start_height.to_le_bytes());
         version_payload_bytes.push(self.relay as u8);
@@ -171,7 +170,7 @@ impl VersionPayload {
         let addr_trans_port = get_addr_port_from_bytes(bytes, &mut counter);
         let nonce = get_nonce_from_bytes(bytes, &mut counter);
         let user_agent_bytes = get_user_agent_bytes_from_bytes(bytes, &mut counter);
-        let user_agent = get_user_agent_from_bytes(bytes, &mut counter, user_agent_bytes)?;
+        let user_agent = get_user_agent_from_bytes(bytes, &mut counter, user_agent_bytes.decoded_value())?;
         let start_height = get_start_height_from_bytes(bytes, &mut counter);
         let relay = get_relay_from_bytes(bytes, counter);
         Ok(VersionPayload {
@@ -377,7 +376,7 @@ mod tests {
         assert_eq!(u64::from_le_bytes(nonce_bytes), nonce);
     }
     #[test]
-    fn get_user_agent_bytes_from_payload_bytes_returns_the_correct_u8() {
+    fn get_user_agent_bytes_from_payload_bytes_returns_the_correct_compactsizeuint() {
         // GIVEN: Payload bytes de un mensaje version
         let payload_bytes: [u8; 102] = [
             127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
@@ -389,7 +388,7 @@ mod tests {
         // WHEN: se ejecuta la funcion get_user_agent_bytes_from_bytes con los bytes pasados por parametro
         let user_agent_bytes = get_user_agent_bytes_from_bytes(&payload_bytes, &mut 80);
         // THEN: el numero de user_agent_bytes es el correcto
-        assert_eq!(16u8, user_agent_bytes);
+        assert_eq!(16u64, user_agent_bytes.decoded_value());
     }
     #[test]
     fn get_user_agent_from_payload_bytes_returns_the_correct_string() {
@@ -402,7 +401,7 @@ mod tests {
             48, 47, 1, 0, 0, 0, 1,
         ];
         // WHEN: se ejecuta la funcion get_user_agent_from_bytes con los bytes pasados por parametro
-        let user_agent = get_user_agent_from_bytes(&payload_bytes, &mut 81, 16u8);
+        let user_agent = get_user_agent_from_bytes(&payload_bytes, &mut 81, 16u64);
         // THEN: el string de user_agent es el correcto
         assert_eq!("/Satoshi:23.0.0/".to_string(), user_agent.unwrap());
     }
@@ -450,7 +449,7 @@ mod tests {
         let addr_trans_ip = get_ipv6_address_ip("192.168.0.58:52417".to_string().parse().unwrap());
         let addr_trans_port: u16 = 18333;
         let nonce: u64 = 7954216226337911560; // simulo valor para test
-        let user_agent_bytes: u8 = 16u8; // ??????
+        let user_agent_bytes: CompactSizeUint = CompactSizeUint::new(16u128);
         let user_agent: String = "/Satoshi:23.0.0/".to_string();
         let start_height: i32 = 1;
         let relay: bool = true;
