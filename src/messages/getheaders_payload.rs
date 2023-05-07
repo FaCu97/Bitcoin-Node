@@ -13,14 +13,16 @@ impl GetHeadersPayload {
     pub fn to_le_bytes(&self) -> Vec<u8> {
         let mut getheaders_payload_bytes: Vec<u8> = vec![];
         getheaders_payload_bytes.extend_from_slice(&self.version.to_le_bytes());
-        getheaders_payload_bytes.extend_from_slice(&self.hash_count.to_le_bytes());
-        for hash in self.locator_hashes {
+        getheaders_payload_bytes.extend_from_slice(&self.hash_count.marshalling());
+        for hash in &self.locator_hashes {
             getheaders_payload_bytes.extend(hash);
         }
         getheaders_payload_bytes.extend(self.stop_hash);
         getheaders_payload_bytes
     }
 }
+
+
 
 
 

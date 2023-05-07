@@ -1,3 +1,4 @@
+#[derive(Clone, Debug)]
 pub struct CompactSizeUint {
     bytes: Vec<u8>,
 }
@@ -25,6 +26,11 @@ impl CompactSizeUint {
         &self.bytes
     }
 
+    pub fn marshalling(&self) -> Vec<u8> {
+        let mut bytes = vec![];
+        bytes.extend(self.value());
+        bytes
+    }
     pub fn decoded_value(&self) -> u64 {
         let mut bytes: [u8; 8] = [0; 8];
         bytes[0] = self.bytes[0];
@@ -63,7 +69,7 @@ impl CompactSizeUint {
         }
         bytes
     }
-
+    
     pub fn unmarshaling(bytes: &Vec<u8>, offset: &mut usize) -> CompactSizeUint {
         let first_byte = bytes[*offset];
         *offset += 1;
