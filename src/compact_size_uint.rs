@@ -59,18 +59,7 @@ impl CompactSizeUint {
         }
         bytes
     }
-    pub fn get_offset(&self) -> u8 {
-        let first_byte = self.bytes[0];
-        let mut offset = 1;
-        if first_byte == 0xfd {
-            offset += 2;
-        } else if first_byte == 0xfe {
-            offset += 4;
-        } else if first_byte == 0xff {
-            offset += 8;
-        }
-        offset
-    }
+
     pub fn marshalling(&self) -> Vec<u8> {
         let mut bytes = vec![];
         bytes.extend(self.value());
