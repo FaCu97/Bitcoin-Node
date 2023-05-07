@@ -1,9 +1,9 @@
 use crate::compact_size_uint::CompactSizeUint;
 
 pub struct TxOut {
-    value: i64,                       // Number of satoshis to spend
-    pk_script_bytes: CompactSizeUint, // de 1 a 10.000 bytes
-    pk_script: Vec<u8>, // Defines the conditions which must be satisfied to spend this output.
+    pub value: i64,                       // Number of satoshis to spend
+    pub pk_script_bytes: CompactSizeUint, // de 1 a 10.000 bytes
+    pub pk_script: Vec<u8>, // Defines the conditions which must be satisfied to spend this output.
 }
 
 impl TxOut {
