@@ -9,17 +9,13 @@ impl Outpoint {
         Outpoint { tx_id, index }
     }
 
-    pub fn unmarshaling(bytes: &Vec<u8>) -> Outpoint {
+    pub fn unmarshaling(bytes: &[u8]) -> Outpoint {
         let mut offset: usize = 0;
         let mut tx_id: [u8; 32] = [0; 32];
-        for x in 0..32 {
-            tx_id[x] = bytes[x];
-        }
+        tx_id[..32].copy_from_slice(&bytes[..32]);
         offset += 32;
         let mut index_bytes: [u8; 4] = [0; 4];
-        for x in 0..4 {
-            index_bytes[x] = bytes[x + offset];
-        }
+        index_bytes[..4].copy_from_slice(&bytes[offset..(4 + offset)]);
         let index = u32::from_le_bytes(index_bytes);
         Outpoint { tx_id, index }
     }
@@ -29,8 +25,8 @@ impl Outpoint {
             bytes.push(self.tx_id[i]);
         }
         let index_bytes: [u8; 4] = self.index.to_le_bytes();
-        for i in 0..4 {
-            bytes.push(index_bytes[i]);
+        for byte in &index_bytes {
+            bytes.push(*byte);
         }
     }
 }
