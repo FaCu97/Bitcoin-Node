@@ -6,9 +6,12 @@ use std::io::BufReader;
 use std::io::Read;
 use std::str::FromStr;
 pub struct Config {
-    pub var1: u16,
-    pub var2: String,
-    pub var3: u32,
+    pub NUMBER_OF_NODES: usize,
+    pub DNS_SEED: String,
+    pub TESTNET_PORT: String,
+    pub TESTNET_START_STRING: [u8;4],
+    pub PROTOCOL_VERSION: i32,
+    pub USER_AGENT: String
 }
 impl Config {
     /// Crea un config leyendo un archivo de configuracion ubicado en la
@@ -41,9 +44,12 @@ impl Config {
         let reader = BufReader::new(content);
 
         let mut cfg = Self {
-            var1: 0,
-            var2: String::new(),
-            var3: 0,
+            NUMBER_OF_NODES: 0,
+            DNS_SEED: String::new(),
+            TESTNET_PORT: String::new(),
+            TESTNET_START_STRING: [0;4],
+            PROTOCOL_VERSION: 0,
+            USER_AGENT: String::new()
         };
 
         for line in reader.lines() {
@@ -63,9 +69,14 @@ impl Config {
 
     fn load_setting(&mut self, name: &str, value: &str) -> Result<(), Box<dyn Error>> {
         match name {
-            "CONFIG_EJEMPLO1" => self.var1 = u16::from_str(value)?,
-            "CONFIG_EJEMPLO2" => self.var2 = String::from(value),
-            "CONFIG_EJEMPLO3" => self.var3 = u32::from_str(value)?,
+            "NUMBER_OF_NODES" => self.NUMBER_OF_NODES = usize::from_str(value)?,
+            "DNS_SEED" => self.DNS_SEED = String::from(value),
+            "TESTNET_PORT" => self.TESTNET_PORT = String::from(value),
+            "TESTNET_START_STRING" => {
+                self.TESTNET_START_STRING = i32::from_str(value)?.to_le_bytes();
+            }
+            "PROTOCOL_VERSION" => self.PROTOCOL_VERSION = i32::from_str(value)?,
+            "USER_AGENT" => self.USER_AGENT = String::from(value),
             _ => {
                 return Err(Box::new(io::Error::new(
                     io::ErrorKind::InvalidInput,
@@ -97,18 +108,21 @@ mod tests {
     #[test]
     fn config_sin_valores_requeridos() -> Result<(), Box<dyn Error>> {
         // GIVEN: un reader con contenido de configuracion completo
-        let content = "CONFIG_EJEMPLO2=prueba\n\
-        CONFIG_EJEMPLO1=9876\n\
-        CONFIG_EJEMPLO3=65536"
+        let content = "NUMBER_OF_NODES=8\n\
+        DNS_SEED=prueba\n\
+        TESTNET_PORT=65536\n
+        TESTNET_START_STRING=123456\n
+        PROTOCOL_VERSION=70015\n
+        USER_AGENT=/satoshi/"
             .as_bytes();
 
         // WHEN: se ejecuta la funcion from_reader con ese reader
         let cfg = Config::from_reader(content)?;
 
         // THEN: la funcion devuelve Ok y los parametros de configuracion tienen los valores esperados
-        assert_eq!(9876, cfg.var1);
-        assert_eq!("prueba", cfg.var2);
-        assert_eq!(65536, cfg.var3);
+        assert_eq!(8, cfg.NUMBER_OF_NODES);
+        assert_eq!("prueba", cfg.DNS_SEED);
+        assert_eq!("65536", cfg.TESTNET_PORT);
         Ok(())
     }
 
