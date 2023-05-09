@@ -9,7 +9,6 @@ use rand::Rng;
 use std::result::Result;
 use std::net::{SocketAddr, TcpStream};
 use std::error::Error;
-const START_STRING: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -31,6 +30,7 @@ fn main() {
         };
     
     println!("{:?}", active_nodes);
+    println!("{:?}",&config);
     let active_nodes_lock = Arc::new(Mutex::new(active_nodes));
     let configuracion_lock = Arc::new(config);
  //   let active_nodes_lock_ref = active_nodes_lock.clone();
@@ -77,7 +77,7 @@ fn connect_to_node(config:&Config, node_ip: &String) -> Result<TcpStream, Box<dy
     version_message.write_to(&mut stream)?;
     let v = VersionMessage::read_from(&mut stream)?;
     println!("ME DEVUELVE MENSAJE VERSION: {:?}\n", v);
-    let verack_message = get_verack_message();
+    let verack_message = get_verack_message(config);
     verack_message.write_to(&mut stream)?;
     let ve = NonePayloadMessage::read_from(&mut stream)?;
     println!("ME DEVUELVE MENSAJE VERACK: {:?}\n", ve);
@@ -85,10 +85,10 @@ fn connect_to_node(config:&Config, node_ip: &String) -> Result<TcpStream, Box<dy
 }
 
 
-fn get_verack_message() -> NonePayloadMessage {
+fn get_verack_message(config:&Config) -> NonePayloadMessage {
     NonePayloadMessage {
         header: HeaderMessage {
-            start_string: START_STRING,
+            start_string: config.testnet_start_string,
             command_name: "verack".to_string(),
             payload_size: 0,
             checksum:  [0x5d, 0xf6, 0xe0, 0xe2],
@@ -99,7 +99,7 @@ fn get_verack_message() -> NonePayloadMessage {
 fn get_version_payload(config:&Config, socket_addr: SocketAddr, local_ip_addr: SocketAddr) -> Result<VersionPayload, Box<dyn Error>> {
     let timestamp: i64 = get_current_unix_epoch_time()?;
     Ok(VersionPayload {
-        version: config.PROTOCOL_VERSION,
+        version: config.protocol_version,
         services: 0u64,
         timestamp,
         addr_recv_service: 1u64,
@@ -110,7 +110,7 @@ fn get_version_payload(config:&Config, socket_addr: SocketAddr, local_ip_addr: S
         addr_trans_port: 18333,
         nonce: rand::thread_rng().gen(),
         user_agent_bytes: CompactSizeUint::new(16u128),
-        user_agent: config.USER_AGENT.to_string(),
+        user_agent: config.user_agent.to_string(),
         start_height: 1,
         relay: true,
     })
@@ -118,7 +118,7 @@ fn get_version_payload(config:&Config, socket_addr: SocketAddr, local_ip_addr: S
 fn get_version_message(config:&Config, socket_addr: SocketAddr, local_ip_addr: SocketAddr) -> Result<VersionMessage, Box<dyn Error>> {
     let version_payload = get_version_payload(config, socket_addr, local_ip_addr)?;
     let version_header = HeaderMessage {
-        start_string: START_STRING,
+        start_string: config.testnet_start_string,
         command_name: "version".to_string(),
         payload_size: version_payload.to_le_bytes().len() as u32,
         checksum: get_checksum(&version_payload.to_le_bytes()),
@@ -128,10 +128,7 @@ fn get_version_message(config:&Config, socket_addr: SocketAddr, local_ip_addr: S
         payload: version_payload,
     })
 }
-/* 
 
-
-*/
 
 
 

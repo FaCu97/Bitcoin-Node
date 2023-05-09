@@ -5,13 +5,15 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Read;
 use std::str::FromStr;
+
+#[derive(Debug)]
 pub struct Config {
     pub number_of_nodes: usize,
     pub dns_seed: String,
-    pub TESTNET_PORT: String,
-    pub TESTNET_START_STRING: [u8;4],
-    pub PROTOCOL_VERSION: i32,
-    pub USER_AGENT: String
+    pub testnet_port: String,
+    pub testnet_start_string: [u8;4],
+    pub protocol_version: i32,
+    pub user_agent: String
 }
 impl Config {
     /// Crea un config leyendo un archivo de configuracion ubicado en la
@@ -46,10 +48,10 @@ impl Config {
         let mut cfg = Self {
             number_of_nodes: 0,
             dns_seed: String::new(),
-            TESTNET_PORT: String::new(),
-            TESTNET_START_STRING: [0;4],
-            PROTOCOL_VERSION: 0,
-            USER_AGENT: String::new()
+            testnet_port: String::new(),
+            testnet_start_string: [0;4],
+            protocol_version: 0,
+            user_agent: String::new()
         };
 
         for line in reader.lines() {
@@ -71,10 +73,10 @@ impl Config {
         match name {
             "NUMBER_OF_NODES" => self.number_of_nodes = usize::from_str(value)?,
             "DNS_SEED" => self.dns_seed = String::from(value),
-            "TESTNET_PORT" => self.TESTNET_PORT = String::from(value),
-            "TESTNET_START_STRING" => self.TESTNET_START_STRING = i32::from_str(value)?.to_le_bytes(),
-            "PROTOCOL_VERSION" => self.PROTOCOL_VERSION = i32::from_str(value)?,
-            "USER_AGENT" => self.USER_AGENT = String::from(value),
+            "TESTNET_PORT" => self.testnet_port = String::from(value),
+            "TESTNET_START_STRING" => self.testnet_start_string = i32::from_str(value)?.to_be_bytes(),
+            "PROTOCOL_VERSION" => self.protocol_version = i32::from_str(value)?,
+            "USER_AGENT" => self.user_agent = String::from(value),
             _ => {
                 return Err(Box::new(io::Error::new(
                     io::ErrorKind::InvalidInput,
@@ -119,8 +121,8 @@ mod tests {
 
         // THEN: la funcion devuelve Ok y los parametros de configuracion tienen los valores esperados
         assert_eq!(8, cfg.number_of_nodes);
-        assert_eq!("prueba", cfg.DNS_SEED);
-        assert_eq!("65536", cfg.TESTNET_PORT);
+        assert_eq!("prueba", cfg.dns_seed);
+        assert_eq!("65536", cfg.testnet_port);
         Ok(())
     }
 
