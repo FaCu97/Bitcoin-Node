@@ -1,6 +1,7 @@
 use std::env;
-use std::process;
+use std::process::exit;
 mod config;
+use bitcoin::network::get_active_nodes_from_dns_seed;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -8,9 +9,17 @@ fn main() {
 
     if let Err(e) = config {
         println!("Application error: {e}");
-        process::exit(1);
+        exit(1);
     }
-    println!("Hello, world!");
+    let active_nodes =
+        match get_active_nodes_from_dns_seed("seed.testnet.bitcoin.sprovoost.nl".to_string()) {
+            Err(e) => {
+                println!("ERROR: {}", e);
+                exit(-1)
+            }
+            Ok(active_nodes) => active_nodes,
+        };
+    println!("{:?}", active_nodes);
 }
 
 #[cfg(test)]
