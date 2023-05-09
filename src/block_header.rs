@@ -11,7 +11,7 @@ pub struct BlockHeader {
 }
 
 impl BlockHeader {
-    pub fn unmarshaling(block_header_message: [u8; 80]) -> BlockHeader {
+    pub fn unmarshalling(block_header_message: [u8; 80]) -> BlockHeader {
         let mut offset: usize = 0;
         let mut version_bytes: [u8; 4] = [0; 4];
         Self::read_bytes(&block_header_message, 4, &mut version_bytes, offset);
@@ -60,7 +60,7 @@ impl BlockHeader {
     ) {
         block_header_message[offset..(amount + offset)].copy_from_slice(&aux_bytes[..amount]);
     }
-    pub fn marshaling(&self, marshaled_block_header: &mut [u8]) {
+    pub fn marshalling(&self, marshaled_block_header: &mut [u8]) {
         let mut offset = 0;
         let version_bytes = self.version.to_le_bytes();
         Self::write_bytes(marshaled_block_header, 4, &version_bytes, offset);
@@ -85,7 +85,7 @@ impl BlockHeader {
     }
     pub fn hash(&mut self) {
         let mut block_header_marshaled: [u8; 80] = [0; 80];
-        self.marshaling(&mut block_header_marshaled);
+        self.marshalling(&mut block_header_marshaled);
         let hash_block = sha256::Hash::hash(&block_header_marshaled);
         self.hash = *hash_block.as_byte_array();
     }
@@ -102,7 +102,7 @@ mod tests {
         for i in 0..80 {
             message_header[i] = i as u8;
         }
-        let blockeheader = BlockHeader::unmarshaling(message_header);
+        let blockeheader = BlockHeader::unmarshalling(message_header);
         let expected_value = 0x3020100;
         assert_eq!(blockeheader.version, expected_value);
     }
@@ -113,7 +113,7 @@ mod tests {
         for i in 0..80 {
             message_header[i] = i as u8;
         }
-        let blockeheader = BlockHeader::unmarshaling(message_header);
+        let blockeheader = BlockHeader::unmarshalling(message_header);
         let expected_value = [
             4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
             27, 28, 29, 30, 31, 32, 33, 34, 35,
@@ -127,7 +127,7 @@ mod tests {
         for i in 0..80 {
             message_header[i] = i as u8;
         }
-        let blockeheader = BlockHeader::unmarshaling(message_header);
+        let blockeheader = BlockHeader::unmarshalling(message_header);
         let expected_value = [
             36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
             58, 59, 60, 61, 62, 63, 64, 65, 66, 67,
@@ -141,7 +141,7 @@ mod tests {
         for i in 0..80 {
             message_header[i] = i as u8;
         }
-        let blockeheader = BlockHeader::unmarshaling(message_header);
+        let blockeheader = BlockHeader::unmarshalling(message_header);
         let expected_value = 0x47464544;
         assert_eq!(blockeheader.time, expected_value);
     }
@@ -152,7 +152,7 @@ mod tests {
         for i in 0..80 {
             message_header[i] = i as u8;
         }
-        let blockeheader = BlockHeader::unmarshaling(message_header);
+        let blockeheader = BlockHeader::unmarshalling(message_header);
         let expected_value = 0x4B4A4948;
         assert_eq!(blockeheader.n_bits, expected_value);
     }
@@ -163,7 +163,7 @@ mod tests {
         for i in 0..80 {
             message_header[i] = i as u8;
         }
-        let blockeheader = BlockHeader::unmarshaling(message_header);
+        let blockeheader = BlockHeader::unmarshalling(message_header);
         let expected_value = 0x4F4E4D4C;
         assert_eq!(blockeheader.nonce, expected_value);
     }
@@ -180,8 +180,8 @@ mod tests {
             nonce: 0,
             hash: [0; 32],
         };
-        block.marshaling(&mut block_header_message);
-        let expected_block = BlockHeader::unmarshaling(block_header_message);
+        block.marshalling(&mut block_header_message);
+        let expected_block = BlockHeader::unmarshalling(block_header_message);
         let expected_value = 0x3020100;
         assert_eq!(expected_block.version, expected_value);
     }
@@ -198,8 +198,8 @@ mod tests {
             nonce: 0,
             hash: [0; 32],
         };
-        block.marshaling(&mut block_header_message);
-        let expected_block = BlockHeader::unmarshaling(block_header_message);
+        block.marshalling(&mut block_header_message);
+        let expected_block = BlockHeader::unmarshalling(block_header_message);
         assert_eq!(expected_block.previous_block_header_hash, value);
     }
     #[test]
@@ -215,8 +215,8 @@ mod tests {
             nonce: 0,
             hash: [0; 32],
         };
-        block.marshaling(&mut block_header_message);
-        let expected_block = BlockHeader::unmarshaling(block_header_message);
+        block.marshalling(&mut block_header_message);
+        let expected_block = BlockHeader::unmarshalling(block_header_message);
         assert_eq!(expected_block.merkle_root_hash, value);
     }
     #[test]
@@ -232,8 +232,8 @@ mod tests {
             nonce: 0,
             hash: [0; 32],
         };
-        block.marshaling(&mut block_header_message);
-        let expected_block = BlockHeader::unmarshaling(block_header_message);
+        block.marshalling(&mut block_header_message);
+        let expected_block = BlockHeader::unmarshalling(block_header_message);
         assert_eq!(expected_block.time, value);
     }
     #[test]
@@ -249,8 +249,8 @@ mod tests {
             nonce: 0,
             hash: [0; 32],
         };
-        block.marshaling(&mut block_header_message);
-        let expected_block = BlockHeader::unmarshaling(block_header_message);
+        block.marshalling(&mut block_header_message);
+        let expected_block = BlockHeader::unmarshalling(block_header_message);
         assert_eq!(expected_block.n_bits, value);
     }
     #[test]
@@ -266,8 +266,8 @@ mod tests {
             nonce: value,
             hash: [0; 32],
         };
-        block.marshaling(&mut block_header_message);
-        let expected_block = BlockHeader::unmarshaling(block_header_message);
+        block.marshalling(&mut block_header_message);
+        let expected_block = BlockHeader::unmarshalling(block_header_message);
         assert_eq!(expected_block.nonce, value);
     }
     #[test]

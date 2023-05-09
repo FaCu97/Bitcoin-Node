@@ -22,7 +22,7 @@ impl TxOut {
         byte_value.copy_from_slice(&bytes[*offset..*offset+8]);
         *offset += 8;
         let value = i64::from_le_bytes(byte_value);
-        let pk_script_bytes = CompactSizeUint::unmarshaling(bytes,offset);
+        let pk_script_bytes = CompactSizeUint::unmarshalling(bytes,offset);
         let mut pk_script: Vec<u8> = Vec::new();
         let amount_bytes:usize=pk_script_bytes.decoded_value() as usize;
         pk_script.extend_from_slice(&bytes[*offset..(*offset+amount_bytes)]);
@@ -56,7 +56,7 @@ impl TxOut {
 mod tests {
     use crate::{compact_size_uint::CompactSizeUint, tx_out::TxOut};
     #[test]
-    fn test_unmarshaling_tx_out_invalido() {
+    fn test_unmarshalling_tx_out_invalido() {
         let bytes: Vec<u8> = vec![0; 3];
         let mut offset :usize=0;
         let tx_out = TxOut::unmarshalling(&bytes,&mut offset);
@@ -64,7 +64,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unmarshaling_tx_out_con_value_valido_y_0_pkscript() -> Result<(), &'static str> {
+    fn test_unmarshalling_tx_out_con_value_valido_y_0_pkscript() -> Result<(), &'static str> {
         let bytes: Vec<u8> = vec![0; 9];
         let mut offset :usize=0;
         let tx_out = TxOut::unmarshalling(&bytes, &mut offset)?;
@@ -74,7 +74,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unmarshaling_tx_out_con_value_valido_y_1_pkscript() -> Result<(), &'static str> {
+    fn test_unmarshalling_tx_out_con_value_valido_y_1_pkscript() -> Result<(), &'static str> {
         let mut bytes: Vec<u8> = vec![0; 8];
         bytes[0] = 1; //Está en little endian
         let pk_script_compact_size = CompactSizeUint::new(1);
@@ -93,7 +93,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unmarshaling_con_2_tx_out_devuelve_offset_esperado() -> Result<(), &'static str> {
+    fn test_unmarshalling_con_2_tx_out_devuelve_offset_esperado() -> Result<(), &'static str> {
         let bytes: Vec<u8> = vec![0; 18];
         let mut offset :usize=0;
         let _tx_out = TxOut::unmarshalling_txouts(&bytes,2, &mut offset)?;
@@ -101,7 +101,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_unmarshaling_con_menos_bytes_de_los_esperados_devuelve_error() -> Result<(), &'static str> {
+    fn test_unmarshalling_con_menos_bytes_de_los_esperados_devuelve_error() -> Result<(), &'static str> {
         let bytes: Vec<u8> = vec![0; 14];
         let mut offset :usize=0;
         let tx_out: Result<Vec<TxOut>,&'static str>= TxOut::unmarshalling_txouts(&bytes,2, &mut offset);
@@ -110,7 +110,7 @@ mod tests {
     }
     
     #[test]
-    fn test_marshaling_de_tx_out_devuelve_value_esperado()-> Result<(), &'static str>{
+    fn test_marshalling_de_tx_out_devuelve_value_esperado()-> Result<(), &'static str>{
         let mut bytes : Vec<u8> = Vec::new();
         let value: i64 = 0x302010;
         let compact_size : CompactSizeUint = CompactSizeUint::new(1);
@@ -124,7 +124,7 @@ mod tests {
     }
 
     #[test]
-    fn test_marshaling_de_tx_out_devuelve_pk_script_bytes_esperado()-> Result<(), &'static str>{
+    fn test_marshalling_de_tx_out_devuelve_pk_script_bytes_esperado()-> Result<(), &'static str>{
         let mut bytes : Vec<u8> = Vec::new();
         let value: i64 = 0x302010;
         let compact_size : CompactSizeUint = CompactSizeUint::new(1);
@@ -138,7 +138,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_marshaling_de_tx_out_devuelve_pk_script_esperado()-> Result<(), &'static str>{
+    fn test_marshalling_de_tx_out_devuelve_pk_script_esperado()-> Result<(), &'static str>{
         let mut bytes : Vec<u8> = Vec::new();
         let value: i64 = 0x302010;
         let compact_size : CompactSizeUint = CompactSizeUint::new(1);
