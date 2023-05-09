@@ -6,7 +6,7 @@ use std::io::BufReader;
 use std::io::Read;
 use std::str::FromStr;
 pub struct Config {
-    pub NUMBER_OF_NODES: usize,
+    pub number_of_nodes: usize,
     pub DNS_SEED: String,
     pub TESTNET_PORT: String,
     pub TESTNET_START_STRING: [u8;4],
@@ -44,7 +44,7 @@ impl Config {
         let reader = BufReader::new(content);
 
         let mut cfg = Self {
-            NUMBER_OF_NODES: 0,
+            number_of_nodes: 0,
             DNS_SEED: String::new(),
             TESTNET_PORT: String::new(),
             TESTNET_START_STRING: [0;4],
@@ -69,12 +69,10 @@ impl Config {
 
     fn load_setting(&mut self, name: &str, value: &str) -> Result<(), Box<dyn Error>> {
         match name {
-            "NUMBER_OF_NODES" => self.NUMBER_OF_NODES = usize::from_str(value)?,
+            "NUMBER_OF_NODES" => self.number_of_nodes = usize::from_str(value)?,
             "DNS_SEED" => self.DNS_SEED = String::from(value),
             "TESTNET_PORT" => self.TESTNET_PORT = String::from(value),
-            "TESTNET_START_STRING" => {
-                self.TESTNET_START_STRING = i32::from_str(value)?.to_le_bytes();
-            }
+            "TESTNET_START_STRING" => self.TESTNET_START_STRING = i32::from_str(value)?.to_le_bytes(),
             "PROTOCOL_VERSION" => self.PROTOCOL_VERSION = i32::from_str(value)?,
             "USER_AGENT" => self.USER_AGENT = String::from(value),
             _ => {
@@ -110,9 +108,9 @@ mod tests {
         // GIVEN: un reader con contenido de configuracion completo
         let content = "NUMBER_OF_NODES=8\n\
         DNS_SEED=prueba\n\
-        TESTNET_PORT=65536\n
-        TESTNET_START_STRING=123456\n
-        PROTOCOL_VERSION=70015\n
+        TESTNET_PORT=65536\n\
+        TESTNET_START_STRING=123456\n\
+        PROTOCOL_VERSION=70015\n\
         USER_AGENT=/satoshi/"
             .as_bytes();
 
