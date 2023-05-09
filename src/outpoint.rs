@@ -13,17 +13,17 @@ impl Outpoint {
     }
 
 
-    pub fn unmarshaling(bytes: &Vec<u8>) -> Outpoint {
-        let mut offset: usize = 0;
+    pub fn unmarshaling(bytes: &Vec<u8>,offset : &mut usize) -> Outpoint {
         let mut tx_id: [u8; 32] = [0; 32];
         for x in 0..32 {
-            tx_id[x] = bytes[x];
+            tx_id[x] = bytes[x + (*offset)];
         }
-        offset += 32;
+        *offset += 32;
         let mut index_bytes: [u8; 4] = [0; 4];
         for x in 0..4 {
-            index_bytes[x] = bytes[x + offset];
+            index_bytes[x] = bytes[x + (*offset)];
         }
+        *offset += 4;
         let index = u32::from_le_bytes(index_bytes);
         Outpoint { tx_id, index }
     }
@@ -46,7 +46,8 @@ mod test {
     fn test_unmarshaling_del_outpoint_produce_tx_id_esperado() {
         let bytes: Vec<u8> = vec![1; 36];
         let tx_id_esperado: [u8; 32] = [1; 32];
-        let outpoint: Outpoint = Outpoint::unmarshaling(&bytes);
+        let mut offset : usize = 0;
+        let outpoint: Outpoint = Outpoint::unmarshaling(&bytes,&mut offset);
         assert_eq!(outpoint.tx_id, tx_id_esperado);
     }
 
@@ -57,7 +58,8 @@ mod test {
             bytes[32 + x] = x as u8;
         }
         let index_esperado: u32 = 0x03020100;
-        let outpoint: Outpoint = Outpoint::unmarshaling(&bytes);
+        let mut offset : usize = 0;
+        let outpoint: Outpoint = Outpoint::unmarshaling(&bytes,&mut offset);
         assert_eq!(outpoint.index, index_esperado);
     }
 
@@ -70,7 +72,8 @@ mod test {
             index: 0x03020100,
         };
         outpoint_to_marshaling.marshaling(&mut marshaling_outpoint);
-        let outpoint_unmarshaled: Outpoint = Outpoint::unmarshaling(&marshaling_outpoint);
+        let mut offset : usize = 0;
+        let outpoint_unmarshaled: Outpoint = Outpoint::unmarshaling(&marshaling_outpoint,&mut offset);
         assert_eq!(outpoint_unmarshaled.tx_id, tx_id);
     }
 
@@ -81,7 +84,8 @@ mod test {
         let index: u32 = 0x03020100;
         let outpoint_to_marshaling: Outpoint = Outpoint { tx_id, index };
         outpoint_to_marshaling.marshaling(&mut marshaling_outpoint);
-        let outpoint_unmarshaled: Outpoint = Outpoint::unmarshaling(&marshaling_outpoint);
+        let mut offset : usize = 0;
+        let outpoint_unmarshaled: Outpoint = Outpoint::unmarshaling(&marshaling_outpoint,&mut offset);
         assert_eq!(outpoint_unmarshaled.index, index);
     }
 }
