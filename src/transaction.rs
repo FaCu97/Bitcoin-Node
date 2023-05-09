@@ -24,10 +24,10 @@ impl Transaction{
         version_bytes.copy_from_slice(&bytes[0..4]);
         offset += 4;
         let version = i32::from_le_bytes(version_bytes);
-        let txin_count : CompactSizeUint = CompactSizeUint::unmarshaling(bytes, &mut offset);
+        let txin_count : CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut offset);
         let amount_txin : u64 = txin_count.decoded_value();
         let tx_in : Vec<TxIn> = TxIn::unmarshalling_txins(bytes,amount_txin,&mut offset)?; // aca se actualizaria el offset tambien
-        let txout_count : CompactSizeUint = CompactSizeUint::unmarshaling(bytes, &mut offset);
+        let txout_count : CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut offset);
         let amount_txout : u64 = txout_count.decoded_value();
         let tx_out : Vec<TxOut> = TxOut::unmarshalling_txouts(bytes,amount_txout,&mut offset)?; // aca se actualizaria el offset tambien
         let mut lock_time_bytes : [u8;4] = [0;4];
@@ -85,7 +85,7 @@ mod test {
         let signature_script : Vec<u8> = vec![1];
         let sequence : u32 = 0xffffffff;
         let tx_in : TxIn = TxIn::new(outpoint,compact_txin,signature_script,sequence);
-        tx_in.marshaling(&mut bytes);
+        tx_in.marshalling(&mut bytes);
         // tx_out_count settings
         let txout_count = CompactSizeUint::new(1);
         bytes.extend_from_slice(txout_count.value());

@@ -19,8 +19,8 @@ impl TxIn {
                 "Los bytes recibidos no corresponden a un TxIn, el largo es menor a 41 bytes",
             );
         }
-        let previous_output: Outpoint = Outpoint::unmarshaling(bytes,offset);
-        let script_bytes: CompactSizeUint = CompactSizeUint::unmarshaling(bytes,offset);
+        let previous_output: Outpoint = Outpoint::unmarshalling(bytes,offset);
+        let script_bytes: CompactSizeUint = CompactSizeUint::unmarshalling(bytes,offset);
         let mut signature_script: Vec<u8> = Vec::new();
         let amount_bytes_to_read : usize = script_bytes.decoded_value() as usize;
         signature_script.extend_from_slice(&bytes[*offset..(*offset+amount_bytes_to_read)]);
@@ -47,8 +47,8 @@ impl TxIn {
         Ok(tx_in_list)
     }
 
-    pub fn marshaling(&self,bytes: &mut Vec<u8>){
-        self.previous_output.marshaling(bytes);
+    pub fn marshalling(&self,bytes: &mut Vec<u8>){
+        self.previous_output.marshalling(bytes);
         let script_bytes: Vec<u8> = self.script_bytes.marshalling();
         bytes.extend_from_slice(&script_bytes[0..script_bytes.len()]);
         bytes.extend_from_slice(&self.signature_script[0..self.signature_script.len()]);
@@ -64,7 +64,7 @@ mod test {
     use super::TxIn;
 
     #[test]
-    fn test_unmarshaling_tx_in_invalido() {
+    fn test_unmarshalling_tx_in_invalido() {
         let bytes: Vec<u8> = vec![0; 3];
         let mut offset :usize=0;
         let tx_in = TxIn::unmarshalling(&bytes,&mut offset);
@@ -72,10 +72,10 @@ mod test {
     }
  
     #[test]
-    fn test_unmarshaling_de_txin_devuelve_outpoint_esperado() -> Result<(), &'static str>{
+    fn test_unmarshalling_de_txin_devuelve_outpoint_esperado() -> Result<(), &'static str>{
         let mut bytes : Vec<u8> = Vec::new();
         let outpoint : Outpoint = Outpoint::new([1;32],0x30201000);
-        outpoint.marshaling(&mut bytes);
+        outpoint.marshalling(&mut bytes);
         let compact_size : CompactSizeUint = CompactSizeUint::new(1);
         bytes.extend_from_slice(&compact_size.marshalling()[0..1]);
         let signature_script: Vec<u8> = vec![1];
@@ -88,10 +88,10 @@ mod test {
         Ok(())
     }
     #[test]
-    fn test_unmarshaling_de_txin_devuelve_script_bytes_esperado() -> Result<(), &'static str>{
+    fn test_unmarshalling_de_txin_devuelve_script_bytes_esperado() -> Result<(), &'static str>{
         let mut bytes : Vec<u8> = Vec::new();
         let outpoint : Outpoint = Outpoint::new([1;32],0x30201000);
-        outpoint.marshaling(&mut bytes);
+        outpoint.marshalling(&mut bytes);
         let compact_size : CompactSizeUint = CompactSizeUint::new(1);
         bytes.extend_from_slice(&compact_size.marshalling()[0..1]);
         let signature_script: Vec<u8> = vec![1];
@@ -105,10 +105,10 @@ mod test {
     }
 
     #[test]
-    fn test_unmarshaling_de_txin_devuelve_signature_script_esperado() -> Result<(), &'static str>{
+    fn test_unmarshalling_de_txin_devuelve_signature_script_esperado() -> Result<(), &'static str>{
         let mut bytes : Vec<u8> = Vec::new();
         let outpoint : Outpoint = Outpoint::new([1;32],0x30201000);
-        outpoint.marshaling(&mut bytes);
+        outpoint.marshalling(&mut bytes);
         let compact_size : CompactSizeUint = CompactSizeUint::new(1);
         bytes.extend_from_slice(&compact_size.marshalling()[0..1]);
         let signature_script: Vec<u8> = vec![1];
@@ -123,10 +123,10 @@ mod test {
     }
 
     #[test]
-    fn test_unmarshaling_de_txin_devuelve_sequence_esperado() -> Result<(), &'static str>{
+    fn test_unmarshalling_de_txin_devuelve_sequence_esperado() -> Result<(), &'static str>{
         let mut bytes : Vec<u8> = Vec::new();
         let outpoint : Outpoint = Outpoint::new([1;32],0x30201000);
-        outpoint.marshaling(&mut bytes);
+        outpoint.marshalling(&mut bytes);
         let compact_size : CompactSizeUint = CompactSizeUint::new(1);
         bytes.extend_from_slice(&compact_size.marshalling()[0..1]);
         let signature_script: Vec<u8> = vec![1];
@@ -140,10 +140,10 @@ mod test {
     }
 
     #[test]
-    fn test_unmarshaling_de_txin_devuelve_offset_esperado() -> Result<(), &'static str>{
+    fn test_unmarshalling_de_txin_devuelve_offset_esperado() -> Result<(), &'static str>{
         let mut bytes : Vec<u8> = Vec::new();
         let outpoint : Outpoint = Outpoint::new([1;32],0x30201000);
-        outpoint.marshaling(&mut bytes);
+        outpoint.marshalling(&mut bytes);
         let compact_size : CompactSizeUint = CompactSizeUint::new(1);
         bytes.extend_from_slice(&compact_size.marshalling()[0..1]);
         let signature_script: Vec<u8> = vec![1];
@@ -157,10 +157,10 @@ mod test {
     }
 
     #[test]
-    fn test_unmarshaling_de_2_txin_devuelve_offset_esperado() -> Result<(), &'static str>{
+    fn test_unmarshalling_de_2_txin_devuelve_offset_esperado() -> Result<(), &'static str>{
         let mut bytes : Vec<u8> = Vec::new();
         let outpoint_1 : Outpoint = Outpoint::new([1;32],0x30201000);
-        outpoint_1.marshaling(&mut bytes);
+        outpoint_1.marshalling(&mut bytes);
         let compact_size_1 : CompactSizeUint = CompactSizeUint::new(1);
         bytes.extend_from_slice(&compact_size_1.marshalling()[0..1]);
         let signature_script_1: Vec<u8> = vec![1];
@@ -168,7 +168,7 @@ mod test {
         let sequence_1: [u8;4] = [0xff;4];
         bytes.extend_from_slice(&sequence_1[0..4]);
         let outpoint_2 : Outpoint = Outpoint::new([1;32],0x30201000);
-        outpoint_2.marshaling(&mut bytes);
+        outpoint_2.marshalling(&mut bytes);
         let compact_size_2 : CompactSizeUint = CompactSizeUint::new(1);
         bytes.extend_from_slice(&compact_size_2.marshalling()[0..1]);
         let signature_script_2: Vec<u8> = vec![1];
@@ -182,14 +182,14 @@ mod test {
     }
     
     #[test]
-    fn test_marshaling_de_txin_serializa_correctamente_el_campo_previus_outpoint() -> Result<(), &'static str>{
+    fn test_marshalling_de_txin_serializa_correctamente_el_campo_previus_outpoint() -> Result<(), &'static str>{
         let mut bytes_txin:Vec<u8> = Vec::new();
         let previous_output : Outpoint = Outpoint::new([1;32],0x30201000);
         let script_bytes : CompactSizeUint = CompactSizeUint::new(3);
         let signature_script : Vec<u8> = vec![0x30,0x20,0x10];
         let sequence : u32 = 0x30201000;
-        let txin_to_marshaling : TxIn = TxIn { previous_output,script_bytes,signature_script,sequence};
-        txin_to_marshaling.marshaling(&mut bytes_txin);
+        let txin_to_marshalling : TxIn = TxIn { previous_output,script_bytes,signature_script,sequence};
+        txin_to_marshalling.marshalling(&mut bytes_txin);
         let mut offset : usize=0;
         let txin_unmarshaled : TxIn = TxIn::unmarshalling(&bytes_txin,&mut offset)?;
         let expected_previous_output : Outpoint = Outpoint::new([1;32],0x30201000);
@@ -198,14 +198,14 @@ mod test {
     }
 
     #[test]
-    fn test_marshaling_de_txin_serializa_correctamente_el_campo_compact_size_uint() -> Result<(), &'static str>{
+    fn test_marshalling_de_txin_serializa_correctamente_el_campo_compact_size_uint() -> Result<(), &'static str>{
         let mut bytes_txin:Vec<u8> = Vec::new();
         let previous_output : Outpoint = Outpoint::new([1;32],0x30201000);
         let script_bytes : CompactSizeUint = CompactSizeUint::new(3);
         let signature_script : Vec<u8> = vec![0x30,0x20,0x10];
         let sequence : u32 = 0x30201000;
-        let txin_to_marshaling : TxIn = TxIn { previous_output,script_bytes,signature_script,sequence};
-        txin_to_marshaling.marshaling(&mut bytes_txin);
+        let txin_to_marshalling : TxIn = TxIn { previous_output,script_bytes,signature_script,sequence};
+        txin_to_marshalling.marshalling(&mut bytes_txin);
         let mut offset : usize=0;
         let txin_unmarshaled : TxIn = TxIn::unmarshalling(&bytes_txin,&mut offset)?;
         let expected_script_bytes : CompactSizeUint = CompactSizeUint::new(3);
@@ -214,14 +214,14 @@ mod test {
     }
 
     #[test]
-    fn test_marshaling_de_txin_serializa_correctamente_el_campo_signature_script() -> Result<(), &'static str>{
+    fn test_marshalling_de_txin_serializa_correctamente_el_campo_signature_script() -> Result<(), &'static str>{
         let mut bytes_txin:Vec<u8> = Vec::new();
         let previous_output : Outpoint = Outpoint::new([1;32],0x30201000);
         let script_bytes : CompactSizeUint = CompactSizeUint::new(3);
         let signature_script : Vec<u8> = vec![0x30,0x20,0x10];
         let sequence : u32 = 0x30201000;
-        let txin_to_marshaling : TxIn = TxIn { previous_output,script_bytes,signature_script,sequence};
-        txin_to_marshaling.marshaling(&mut bytes_txin);
+        let txin_to_marshalling : TxIn = TxIn { previous_output,script_bytes,signature_script,sequence};
+        txin_to_marshalling.marshalling(&mut bytes_txin);
         let mut offset: usize = 0;
         let txin_unmarshaled : TxIn = TxIn::unmarshalling(&bytes_txin,&mut offset)?;
         let expected_signature_script : Vec<u8> = vec![0x30,0x20,0x10];
@@ -230,15 +230,15 @@ mod test {
     }
 
     #[test]
-    fn test_marshaling_de_txin_serializa_correctamente_el_campo_sequence() -> Result<(), &'static str>{
+    fn test_marshalling_de_txin_serializa_correctamente_el_campo_sequence() -> Result<(), &'static str>{
         let mut bytes_txin:Vec<u8> = Vec::new();
         let previous_output : Outpoint = Outpoint::new([1;32],0x30201000);
         let script_bytes : CompactSizeUint = CompactSizeUint::new(3);
         let signature_script : Vec<u8> = vec![0x30,0x20,0x10];
         let sequence : u32 = 0x30201000;
-        let txin_to_marshaling : TxIn = TxIn { previous_output,script_bytes,signature_script,sequence};
+        let txin_to_marshalling : TxIn = TxIn { previous_output,script_bytes,signature_script,sequence};
         let mut offset : usize = 0;
-        txin_to_marshaling.marshaling(&mut bytes_txin);
+        txin_to_marshalling.marshalling(&mut bytes_txin);
         let txin_unmarshaled : TxIn = TxIn::unmarshalling(&bytes_txin,& mut offset)?;
         assert_eq!(txin_unmarshaled.sequence,sequence);
         Ok(())
