@@ -3,12 +3,11 @@ use bitcoin::config::Config;
 use bitcoin::compact_size_uint::CompactSizeUint;
 use std::process::exit;
 use std::sync::{Arc, Mutex};
-use bitcoin::messages::{message_header::{HeaderMessage, get_checksum},version_payload::{get_ipv6_address_ip, get_current_unix_epoch_time, VersionPayload},version_message::VersionMessage};
+use bitcoin::messages::{none_payload_message::NonePayloadMessage,message_header::{HeaderMessage, get_checksum},version_payload::{get_ipv6_address_ip, get_current_unix_epoch_time, VersionPayload},version_message::VersionMessage};
 use bitcoin::network::{get_active_nodes_from_dns_seed};
 use rand::Rng;
 use std::result::Result;
 use std::net::{SocketAddr, TcpStream};
-//use std::io::Error;
 use std::error::Error;
 const START_STRING: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
 
@@ -33,17 +32,19 @@ fn main() {
     
     println!("{:?}", active_nodes);
     let active_nodes_lock = Arc::new(Mutex::new(active_nodes));
+    let configuracion_lock = Arc::new(config);
  //   let active_nodes_lock_ref = active_nodes_lock.clone();
 
     for _ in 0..8 {
         let active_nodes = Arc::clone(&active_nodes_lock);
+        let configuracion = Arc::clone(&configuracion_lock);
         let handle = thread::spawn(move || {
             if active_nodes.lock().unwrap().is_empty() {
                 println!("ERROR, NO HAY MAS NODOS!");
             } else {
                 let mut node_ip = active_nodes.lock().unwrap().pop_front().unwrap();
                 loop{
-                    let stream = connect_to_node(&node_ip);
+                    let stream = connect_to_node(&configuracion, &node_ip);
                     if stream.is_ok(){
                         println!("Conectado correctamente a: {:?} \n", node_ip);
                         break;
@@ -74,21 +75,23 @@ fn connect_to_node(config:&Config, node_ip: &String) -> Result<TcpStream, Box<dy
     let local_ip_addr = stream.local_addr()?;
     let version_message = get_version_message(config, socket_addr, local_ip_addr)?;
     version_message.write_to(&mut stream)?;
-    VersionMessage::read_from(&mut stream)?;
+    let v = VersionMessage::read_from(&mut stream)?;
+    println!("ME DEVUELVE MENSAJE VERSION: {:?}\n", v);
     let verack_message = get_verack_message();
     verack_message.write_to(&mut stream)?;
-    VerackMessage::read_from(&mut stream)?;
+    let ve = NonePayloadMessage::read_from(&mut stream)?;
+    println!("ME DEVUELVE MENSAJE VERACK: {:?}\n", ve);
     Ok(stream)
 }
 
 
-fn get_verack_message() -> VerackMessage {
-    VerackMessage {
+fn get_verack_message() -> NonePayloadMessage {
+    NonePayloadMessage {
         header: HeaderMessage {
             start_string: START_STRING,
             command_name: "verack".to_string(),
             payload_size: 0,
-            checksum: EMPTY_CHECKSUM,
+            checksum:  [0x5d, 0xf6, 0xe0, 0xe2],
         },
     }
 }
@@ -138,3 +141,5 @@ mod tests {
     #[test]
     fn test_archivo_configuracion() {}
 }
+
+

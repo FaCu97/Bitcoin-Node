@@ -7,7 +7,7 @@ use std::io::Read;
 use std::str::FromStr;
 pub struct Config {
     pub number_of_nodes: usize,
-    pub DNS_SEED: String,
+    pub dns_seed: String,
     pub TESTNET_PORT: String,
     pub TESTNET_START_STRING: [u8;4],
     pub PROTOCOL_VERSION: i32,
@@ -45,7 +45,7 @@ impl Config {
 
         let mut cfg = Self {
             number_of_nodes: 0,
-            DNS_SEED: String::new(),
+            dns_seed: String::new(),
             TESTNET_PORT: String::new(),
             TESTNET_START_STRING: [0;4],
             PROTOCOL_VERSION: 0,
@@ -70,7 +70,7 @@ impl Config {
     fn load_setting(&mut self, name: &str, value: &str) -> Result<(), Box<dyn Error>> {
         match name {
             "NUMBER_OF_NODES" => self.number_of_nodes = usize::from_str(value)?,
-            "DNS_SEED" => self.DNS_SEED = String::from(value),
+            "DNS_SEED" => self.dns_seed = String::from(value),
             "TESTNET_PORT" => self.TESTNET_PORT = String::from(value),
             "TESTNET_START_STRING" => self.TESTNET_START_STRING = i32::from_str(value)?.to_le_bytes(),
             "PROTOCOL_VERSION" => self.PROTOCOL_VERSION = i32::from_str(value)?,
@@ -118,7 +118,7 @@ mod tests {
         let cfg = Config::from_reader(content)?;
 
         // THEN: la funcion devuelve Ok y los parametros de configuracion tienen los valores esperados
-        assert_eq!(8, cfg.NUMBER_OF_NODES);
+        assert_eq!(8, cfg.number_of_nodes);
         assert_eq!("prueba", cfg.DNS_SEED);
         assert_eq!("65536", cfg.TESTNET_PORT);
         Ok(())
