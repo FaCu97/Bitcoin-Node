@@ -2,6 +2,7 @@ use crate::compact_size_uint::CompactSizeUint;
 use std::net::SocketAddr;
 use std::str::Utf8Error;
 use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
+use std::error::Error;
 
 #[derive(Clone, Debug)]
 ///  representa el payload de un mensaje Version segun el protocolo bitcoin, con todos sus respectivos campos
@@ -190,7 +191,7 @@ impl VersionPayload {
 }
 
 /// devuelve el timepo acutal segun EPOCH como un i64 o error en caso de que no se pueda obtener
-pub fn get_current_unix_epoch_time() -> Result<i64, SystemTimeError> {
+pub fn get_current_unix_epoch_time() -> Result<i64, Box<dyn Error>> {
     let current_time = SystemTime::now();
     let unix_epoch = UNIX_EPOCH;
     let unix_time = current_time.duration_since(unix_epoch)?;

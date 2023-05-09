@@ -1,4 +1,5 @@
 use std::str::Utf8Error;
+use bitcoin_hashes::{sha256d, Hash};
 
 #[derive(Clone, Debug)]
 /// Representa el header de cualquier mensaje del protocolo bitcoin
@@ -58,6 +59,13 @@ fn command_name_to_bytes(command: &String) -> [u8; 12] {
     command_name_bytes
 }
 
+pub fn get_checksum(payload: &[u8]) -> [u8; 4] {
+    let sha_hash = sha256d::Hash::hash(payload); // hasheo doble de los bytes del payload
+    let hash_bytes: [u8; 32] = sha_hash.to_byte_array(); // convert Hash to [u8; 32] array
+    let mut checksum: [u8; 4] = [0u8; 4];
+    checksum.copy_from_slice(&hash_bytes[0..4]); // checksum devuelve los primeros 4 bytes de SHA256(SHA256(payload))
+    checksum
+}
 #[cfg(test)]
 mod tests {
     use super::*;
