@@ -11,9 +11,9 @@ pub struct Config {
     pub number_of_nodes: usize,
     pub dns_seed: String,
     pub testnet_port: String,
-    pub testnet_start_string: [u8;4],
+    pub testnet_start_string: [u8; 4],
     pub protocol_version: i32,
-    pub user_agent: String
+    pub user_agent: String,
 }
 impl Config {
     /// Crea un config leyendo un archivo de configuracion ubicado en la
@@ -49,9 +49,9 @@ impl Config {
             number_of_nodes: 0,
             dns_seed: String::new(),
             testnet_port: String::new(),
-            testnet_start_string: [0;4],
+            testnet_start_string: [0; 4],
             protocol_version: 0,
-            user_agent: String::new()
+            user_agent: String::new(),
         };
 
         for line in reader.lines() {
@@ -74,7 +74,9 @@ impl Config {
             "NUMBER_OF_NODES" => self.number_of_nodes = usize::from_str(value)?,
             "DNS_SEED" => self.dns_seed = String::from(value),
             "TESTNET_PORT" => self.testnet_port = String::from(value),
-            "TESTNET_START_STRING" => self.testnet_start_string = i32::from_str(value)?.to_be_bytes(),
+            "TESTNET_START_STRING" => {
+                self.testnet_start_string = i32::from_str(value)?.to_be_bytes()
+            }
             "PROTOCOL_VERSION" => self.protocol_version = i32::from_str(value)?,
             "USER_AGENT" => self.user_agent = String::from(value),
             _ => {

@@ -1,10 +1,13 @@
 use crate::config::Config;
-use std::process::Command;
 use std::collections::VecDeque;
+use std::process::Command;
 //const NUMBER_OF_NODES: usize = 8;
 
-pub fn get_active_nodes_from_dns_seed(config:&Config) -> std::io::Result<VecDeque<String>> {
-    let query_reply = Command::new("dig").arg("+short").arg(&config.dns_seed).output()?;
+pub fn get_active_nodes_from_dns_seed(config: &Config) -> std::io::Result<VecDeque<String>> {
+    let query_reply = Command::new("dig")
+        .arg("+short")
+        .arg(&config.dns_seed)
+        .output()?;
     let active_nodes = String::from_utf8_lossy(&query_reply.stdout);
     let mut nodes_list: VecDeque<String> = VecDeque::new();
     for node in active_nodes.lines() {
@@ -24,7 +27,7 @@ pub fn get_active_nodes_from_dns_seed(config:&Config) -> std::io::Result<VecDequ
     Ok(nodes_list)
 }
 
-/* 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;

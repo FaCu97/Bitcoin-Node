@@ -1,5 +1,5 @@
-use std::str::Utf8Error;
 use bitcoin_hashes::{sha256d, Hash};
+use std::str::Utf8Error;
 
 #[derive(Clone, Debug)]
 /// Representa el header de cualquier mensaje del protocolo bitcoin
