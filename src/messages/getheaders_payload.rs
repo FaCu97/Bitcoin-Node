@@ -24,6 +24,102 @@ impl GetHeadersPayload {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-
-
+    #[test]
+    fn getheaders_payload_returns_the_correct_bytes_when_marshalling_to_bytes_with_one_locator_hash(
+    ) {
+        // GIVEN : un payload del mensaje getheaders en forma de struct GetHeadersPayload con un solo locator hash (genesis)
+        let getheaders_payload = GetHeadersPayload {
+            version: 70015,
+            hash_count: CompactSizeUint::new(1u128),
+            locator_hashes: vec![[
+                0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97,
+                0x79, 0xba, 0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8,
+                0xd7, 0x7f, 0x49, 0x43,
+            ]],
+            stop_hash: [0; 32],
+        };
+        // WHEN: se llama al metodo para serializar el mensaje "to_le_bytes()"
+        let bytes = getheaders_payload.to_le_bytes();
+        // THEN: se obtienen los bytes esperado
+        let expected_bytes: Vec<u8> = vec![
+            127, 17, 1, 0, 1, 0, 0, 0, 0, 9, 51, 234, 1, 173, 14, 233, 132, 32, 151, 121, 186, 174,
+            195, 206, 217, 15, 163, 244, 8, 113, 149, 38, 248, 215, 127, 73, 67, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        assert_eq!(expected_bytes, bytes);
+    }
+    #[test]
+    fn getheaders_payload_returns_the_correct_bytes_when_marshalling_to_bytes_with_more_than_one_locator_hashes(
+    ) {
+        // GIVEN : un payload del mensaje getheaders en forma de struct GetHeadersPayload con mas de un locator hash
+        let getheaders_payload = GetHeadersPayload {
+            version: 70015,
+            hash_count: CompactSizeUint::new(2u128),
+            locator_hashes: vec![
+                [
+                    0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20,
+                    0x97, 0x79, 0xba, 0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95,
+                    0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43,
+                ],
+                [
+                    0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20,
+                    0x97, 0x79, 0xba, 0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95,
+                    0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x44,
+                ],
+            ],
+            stop_hash: [0; 32],
+        };
+        // WHEN: se llama al metodo para serializar el mensaje "to_le_bytes()"
+        let bytes = getheaders_payload.to_le_bytes();
+        // THEN: se obtienen los bytes esperado
+        let expected_bytes: Vec<u8> = vec![
+            127, 17, 1, 0, 2, 0, 0, 0, 0, 9, 51, 234, 1, 173, 14, 233, 132, 32, 151, 121, 186, 174,
+            195, 206, 217, 15, 163, 244, 8, 113, 149, 38, 248, 215, 127, 73, 67, 0, 0, 0, 0, 9, 51,
+            234, 1, 173, 14, 233, 132, 32, 151, 121, 186, 174, 195, 206, 217, 15, 163, 244, 8, 113,
+            149, 38, 248, 215, 127, 73, 68, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        assert_eq!(expected_bytes, bytes);
+    }
+    #[test]
+    fn getheaders_payload_returns_the_correct_bytes_when_marshalling_to_bytes_with_more_than_one_locator_hashes_and_stop_hash(
+    ) {
+        // GIVEN : un payload del mensaje getheaders en forma de struct GetHeadersPayload con mas de un locator hash y un stop hash
+        let getheaders_payload = GetHeadersPayload {
+            version: 70015,
+            hash_count: CompactSizeUint::new(2u128),
+            locator_hashes: vec![
+                [
+                    0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20,
+                    0x97, 0x79, 0xba, 0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95,
+                    0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43,
+                ],
+                [
+                    0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20,
+                    0x97, 0x79, 0xba, 0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95,
+                    0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x44,
+                ],
+            ],
+            stop_hash: [
+                0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97,
+                0x79, 0xba, 0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8,
+                0xd7, 0x7f, 0x49, 0x45,
+            ],
+        };
+        // WHEN: se llama al metodo para serializar el mensaje "to_le_bytes()"
+        let bytes = getheaders_payload.to_le_bytes();
+        // THEN: se obtienen los bytes esperado
+        let expected_bytes: Vec<u8> = vec![
+            127, 17, 1, 0, 2, 0, 0, 0, 0, 9, 51, 234, 1, 173, 14, 233, 132, 32, 151, 121, 186, 174,
+            195, 206, 217, 15, 163, 244, 8, 113, 149, 38, 248, 215, 127, 73, 67, 0, 0, 0, 0, 9, 51,
+            234, 1, 173, 14, 233, 132, 32, 151, 121, 186, 174, 195, 206, 217, 15, 163, 244, 8, 113,
+            149, 38, 248, 215, 127, 73, 68, 0, 0, 0, 0, 9, 51, 234, 1, 173, 14, 233, 132, 32, 151,
+            121, 186, 174, 195, 206, 217, 15, 163, 244, 8, 113, 149, 38, 248, 215, 127, 73, 69,
+        ];
+        assert_eq!(expected_bytes, bytes);
+    }
+}
