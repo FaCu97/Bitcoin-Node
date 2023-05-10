@@ -1,5 +1,5 @@
 use std::str::Utf8Error;
-use std::io::{Read, Error};
+use std::io::{Write, Read, Error};
 // todo: implementar test de read_from usando mocking
 #[derive(Clone, Debug)]
 /// Representa el header de cualquier mensaje del protocolo bitcoin
@@ -44,6 +44,16 @@ impl HeaderMessage {
             payload_size,
             checksum,
         })
+    }
+    /// recibe un struct HeaderMessage que representa un el header de un mensaje segun protocolo de bitcoin
+    /// y un stream que implemente el trait Write (en donde se pueda escribir) y escribe el mensaje serializado
+    /// en bytes en el stream. Devuelve un error en caso de que no se haya podido escribir correctamente o un Ok en caso
+    /// de que se haya escrito correctamente
+    pub fn write_to(&self, stream: &mut dyn Write) -> std::io::Result<()> {
+        let header = self.to_le_bytes();
+        stream.write_all(&header)?;
+        stream.flush()?;
+        Ok(())
     }
     /// Recibe un stream que implemente el trait read (algo desde lo que se pueda leer) y devuelve un 
     /// HeaderMessage si se pudo leer correctamente uno desde el stream o Error si lo leido no corresponde a
