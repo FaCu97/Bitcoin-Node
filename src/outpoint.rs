@@ -9,12 +9,12 @@ impl Outpoint {
         Outpoint { tx_id, index }
     }
 
-    pub fn is_not_a_coinbase_outpoint(&self) -> bool{
-        if self.index != 0xffffffff{
+    pub fn is_a_coinbase_outpoint(&self) -> bool{
+        if self.index == 0xffffffff{
             return  true;
         }
         let null_hash : [u8;32] = [0;32];
-        if self.tx_id != null_hash{
+        if self.tx_id == null_hash{
             return true;
         }
         false
@@ -105,16 +105,16 @@ mod test {
     }
 
     #[test]
-    fn test_outpoint_correspondiente_a_una_coinbase_con_tx_id_no_nulo_devuelve_true(){
+    fn test_outpoint_correspondiente_a_una_coinbase_con_tx_id_nulo_devuelve_true(){
         let coinbase_outpoint: Outpoint=Outpoint::new([1;32],0xffffffff);
-        assert!(coinbase_outpoint.is_not_a_coinbase_outpoint())
+        assert!(coinbase_outpoint.is_a_coinbase_outpoint())
 
     }
 
     #[test]
-    fn test_outpoint_correspondiente_a_una_coinbase_con_index_0xff323454_devuelve_true(){
-        let coinbase_outpoint: Outpoint=Outpoint::new([1;32],0xff323454);
-        assert!(coinbase_outpoint.is_not_a_coinbase_outpoint())
+    fn test_outpoint_correspondiente_a_una_coinbase_con_index_0xffffffff_devuelve_true(){
+        let coinbase_outpoint: Outpoint=Outpoint::new([1;32],0xffffffff);
+        assert!(coinbase_outpoint.is_a_coinbase_outpoint())
 
     }
 }
