@@ -28,8 +28,8 @@ impl TxIn {
                 "Los bytes recibidos no corresponden a un TxIn, el largo es menor a 41 bytes",
             );
         }
-        let previous_output: Outpoint = Outpoint::unmarshalling(bytes, offset);
-        let script_bytes: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, offset);
+        let previous_output: Outpoint = Outpoint::unmarshalling(bytes,offset)?;
+        let script_bytes: CompactSizeUint = CompactSizeUint::unmarshalling(bytes,offset);
         let mut signature_script: Vec<u8> = Vec::new();
         let amount_bytes_to_read: usize = script_bytes.decoded_value() as usize;
         signature_script.extend_from_slice(&bytes[*offset..(*offset + amount_bytes_to_read)]);
