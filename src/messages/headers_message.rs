@@ -6,10 +6,12 @@ pub struct HeadersMessage;
 impl HeadersMessage {
     /// Recibe en bytes la respuesta del mensaje headers.
     /// Devuelve un vector con los block headers contenidos
-    pub fn unmarshalling(headers_message_bytes: &Vec<u8>) -> Result<Vec<BlockHeader>, &'static str> {
+    pub fn unmarshalling(
+        headers_message_bytes: &Vec<u8>,
+    ) -> Result<Vec<BlockHeader>, &'static str> {
         let mut block_header_vec = Vec::new();
         let mut offset: usize = 0;
-        let count = CompactSizeUint::unmarshalling(&headers_message_bytes, &mut offset);
+        let count = CompactSizeUint::unmarshalling(headers_message_bytes, &mut offset);
         let headers_size = headers_message_bytes.len();
         let mut i = 0;
         while i < count.decoded_value() {

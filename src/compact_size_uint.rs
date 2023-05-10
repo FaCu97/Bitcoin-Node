@@ -1,5 +1,4 @@
-#[derive(Clone, Debug)]
-#[derive(PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CompactSizeUint {
     bytes: Vec<u8>,
 }
@@ -28,7 +27,7 @@ impl CompactSizeUint {
     }
 
     pub fn decoded_value(&self) -> u64 {
-        let mut bytes:[u8;8] = [0;8];
+        let mut bytes: [u8; 8] = [0; 8];
         bytes[0] = self.bytes[0];
         if bytes[0] == 0xfd {
             bytes[..2].copy_from_slice(&self.bytes[1..(2 + 1)]);
@@ -71,17 +70,17 @@ impl CompactSizeUint {
         let mut value: Vec<u8> = Vec::new();
         value.push(first_byte);
         if first_byte == 0xfd {
-            value.extend_from_slice(&bytes[*offset..(*offset+2)]); 
+            value.extend_from_slice(&bytes[*offset..(*offset + 2)]);
             *offset += 2;
             return Self { bytes: value };
         }
         if first_byte == 0xfe {
-            value.extend_from_slice(&bytes[*offset..(*offset+4)]); 
+            value.extend_from_slice(&bytes[*offset..(*offset + 4)]);
             *offset += 4;
             return Self { bytes: value };
         }
         if first_byte == 0xff {
-            value.extend_from_slice(&bytes[*offset..(*offset+8)]);
+            value.extend_from_slice(&bytes[*offset..(*offset + 8)]);
             *offset += 8;
             return Self { bytes: value };
         }
