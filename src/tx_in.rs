@@ -1,14 +1,14 @@
 use crate::{compact_size_uint::CompactSizeUint, outpoint::Outpoint};
 
 pub struct TxIn {
-    previous_output: Outpoint,
-    script_bytes: CompactSizeUint,
-    signature_script: Vec<u8>,
-    sequence: u32,
+    pub previous_output: Outpoint,
+    pub script_bytes: CompactSizeUint,
+    pub signature_script: Vec<u8>,
+    pub sequence: u32,
 }
 
 impl TxIn {
-    pub fn unmarshaling(bytes: &Vec<u8>) -> TxIn {
+    pub fn unmarshaling(bytes: &[u8]) -> TxIn {
         let mut offset: usize = 0;
         let previous_output: Outpoint = Outpoint::unmarshaling(bytes);
         offset += 36;
@@ -20,9 +20,7 @@ impl TxIn {
         }
         offset+=amount_bytes_to_read as usize;
         let mut sequence_bytes: [u8; 4] = [0; 4];
-        for byte in 0..4 {
-            sequence_bytes[byte] = bytes[byte + offset];
-        }
+        sequence_bytes[..4].copy_from_slice(&bytes[offset..(4 + offset)]);
         let sequence = u32::from_le_bytes(sequence_bytes);
         TxIn {
             previous_output,
@@ -32,7 +30,7 @@ impl TxIn {
         }
     }
 
-    pub fn marshaling(&self,bytes: &mut Vec<u8>){
+    pub fn marshaling(&self, bytes: &mut [u8]){
 
     }
 }

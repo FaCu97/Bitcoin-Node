@@ -1,7 +1,7 @@
 use crate::compact_size_uint::CompactSizeUint;
 use std::net::SocketAddr;
 use std::str::Utf8Error;
-use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::error::Error;
 
 #[derive(Clone, Debug)]

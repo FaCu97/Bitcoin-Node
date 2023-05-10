@@ -9,7 +9,7 @@ impl HeadersMessage {
     pub fn unmarshaling(headers_message_bytes: &Vec<u8>) -> Result<Vec<BlockHeader>, &'static str> {
         let mut block_header_vec = Vec::new();
         let mut offset: usize = 0;
-        let count = CompactSizeUint::unmarshaling(&headers_message_bytes, &mut offset);
+        let count = CompactSizeUint::unmarshaling(headers_message_bytes, &mut offset);
         let headers_size = headers_message_bytes.len();
         let mut i = 0;
         while i < count.decoded_value() {

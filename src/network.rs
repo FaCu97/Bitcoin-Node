@@ -10,8 +10,8 @@ pub fn get_active_nodes_from_dns_seed(config:&Config) -> std::io::Result<VecDequ
     for node in active_nodes.lines() {
         let port = &config.testnet_port;
         let mut node_ip = node.to_string();
-        node_ip.push_str(":");
-        node_ip.push_str(&port); // concateno al final de cada direccion ip ":" + <puerto> (18333)
+        node_ip.push(':');
+        node_ip.push_str(port); // concateno al final de cada direccion ip ":" + <puerto> (18333)
         nodes_list.push_front(node_ip);
     }
     if nodes_list.len() < config.number_of_nodes {

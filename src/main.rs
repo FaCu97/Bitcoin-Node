@@ -69,7 +69,7 @@ fn main() {
 
 
 
-fn connect_to_node(config:&Config, node_ip: &String) -> Result<TcpStream, Box<dyn Error>>{
+fn connect_to_node(config:&Config, node_ip: &str) -> Result<TcpStream, Box<dyn Error>>{
     let socket_addr: SocketAddr =  node_ip.parse()?;
     let mut stream: TcpStream = TcpStream::connect(socket_addr)?;
     let local_ip_addr = stream.local_addr()?;
