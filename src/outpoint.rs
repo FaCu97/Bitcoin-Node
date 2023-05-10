@@ -1,14 +1,11 @@
-
-#[derive(PartialEq)]
-#[derive(Debug)]
+#[derive(PartialEq, Debug)]
 pub struct Outpoint {
     tx_id: [u8; 32],
     index: u32,
 }
 
 impl Outpoint {
-
-    pub fn new(tx_id:[u8;32],index:u32)->Self{
+    pub fn new(tx_id: [u8; 32], index: u32) -> Self {
         Outpoint { tx_id, index }
     }
 
@@ -58,8 +55,8 @@ mod test {
     fn test_unmarshalling_del_outpoint_produce_tx_id_esperado()-> Result<(), &'static str>{
         let bytes: Vec<u8> = vec![1; 36];
         let tx_id_esperado: [u8; 32] = [1; 32];
-        let mut offset : usize = 0;
-        let outpoint:Outpoint= Outpoint::unmarshalling(&bytes,&mut offset)?;
+        let mut offset: usize = 0;
+        let outpoint:Outpoint = Outpoint::unmarshalling(&bytes,&mut offset)?;
         assert_eq!(outpoint.tx_id, tx_id_esperado);
         Ok(())
     }
@@ -71,7 +68,7 @@ mod test {
             bytes[32 + x] = x as u8;
         }
         let index_esperado: u32 = 0x03020100;
-        let mut offset : usize = 0;
+        let mut offset: usize = 0;
         let outpoint: Outpoint = Outpoint::unmarshalling(&bytes,&mut offset)?;
         assert_eq!(outpoint.index, index_esperado);
         Ok(())
@@ -86,8 +83,9 @@ mod test {
             index: 0x03020100,
         };
         outpoint_to_marshalling.marshalling(&mut marshalling_outpoint);
-        let mut offset : usize = 0;
-        let outpoint_unmarshaled: Outpoint = Outpoint::unmarshalling(&marshalling_outpoint,&mut offset)?;
+        let mut offset: usize = 0;
+        let outpoint_unmarshaled: Outpoint = 
+            Outpoint::unmarshalling(&marshalling_outpoint,&mut offset)?;
         assert_eq!(outpoint_unmarshaled.tx_id, tx_id);
         Ok(())
     }
@@ -99,8 +97,9 @@ mod test {
         let index: u32 = 0x03020100;
         let outpoint_to_marshalling: Outpoint = Outpoint { tx_id, index };
         outpoint_to_marshalling.marshalling(&mut marshalling_outpoint);
-        let mut offset : usize = 0;
-        let outpoint_unmarshaled: Outpoint = Outpoint::unmarshalling(&marshalling_outpoint,&mut offset)?;
+        let mut offset: usize = 0;
+        let outpoint_unmarshaled: Outpoint =
+            Outpoint::unmarshalling(&marshalling_outpoint,&mut offset)?;
         assert_eq!(outpoint_unmarshaled.index, index);
         Ok(())
     }
