@@ -1,5 +1,6 @@
 use std::str::Utf8Error;
-
+use std::io::{Read, Error};
+// todo: implementar test de read_from usando mocking
 #[derive(Clone, Debug)]
 /// Representa el header de cualquier mensaje del protocolo bitcoin
 pub struct HeaderMessage {
@@ -20,8 +21,8 @@ impl HeaderMessage {
         header_message_bytes[20..24].copy_from_slice(&self.checksum);
         header_message_bytes
     }
-    // recibe los bytes de un header de un mensaje y los convierte a un struct HeaderMessage
-    // de acuerdo al protocolo de bitcoin
+    /// recibe los bytes de un header de un mensaje y los convierte a un struct HeaderMessage
+    /// de acuerdo al protocolo de bitcoin
     pub fn from_le_bytes(bytes: [u8; 24]) -> Result<Self, Utf8Error> {
         let mut start_string = [0; 4];
         let mut counter = 0;
@@ -43,6 +44,17 @@ impl HeaderMessage {
             payload_size,
             checksum,
         })
+    }
+    /// Recibe un stream que implemente el trait read (algo desde lo que se pueda leer) y devuelve un 
+    /// HeaderMessage si se pudo leer correctamente uno desde el stream o Error si lo leido no corresponde a
+    /// el header de un mensaje del protocolo de bitcoin
+    pub fn read_from(stream: &mut dyn Read) -> Result<Self, Error> {
+        let mut buffer_num = [0; 24];
+        stream.read_exact(&mut buffer_num)?;
+        let header = HeaderMessage::from_le_bytes(buffer_num).map_err(|err: Utf8Error| {
+            Error::new(std::io::ErrorKind::InvalidData, err.to_string())
+        })?;
+        Ok(header)
     }
 }
 
