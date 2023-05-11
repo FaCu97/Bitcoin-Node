@@ -3,6 +3,7 @@ use crate::{compact_size_uint::CompactSizeUint, outpoint::Outpoint};
 pub struct TxIn {
     previous_output: Outpoint,
     script_bytes: CompactSizeUint,
+    height : Option<Vec<u8>>,
     signature_script: Vec<u8>,
     sequence: u32,
 }
@@ -11,12 +12,14 @@ impl TxIn {
     pub fn new(
         previous_output: Outpoint,
         script_bytes: CompactSizeUint,
+        height : Option<Vec<u8>>,
         signature_script: Vec<u8>,
         sequence: u32,
     ) -> Self {
         TxIn {
             previous_output,
             script_bytes,
+            height,
             signature_script,
             sequence,
         }
@@ -30,6 +33,17 @@ impl TxIn {
         }
         let previous_output: Outpoint = Outpoint::unmarshalling(bytes,offset)?;
         let script_bytes: CompactSizeUint = CompactSizeUint::unmarshalling(bytes,offset);
+        let mut height : Option<Vec<u8>> = None;
+        if previous_output.is_a_coinbase_outpoint() {
+            if script_bytes.decoded_value() > 100 {
+                return Err(
+                    "Los bytes recibidos no corresponden a un coinbase TxIn, el largo del script es mayor a 100 bytes",
+                );    
+            }
+            let mut height_bytes : Vec<u8> = Vec::new();
+            height_bytes.extend_from_slice(&bytes[*offset..(*offset+4)]); 
+            height = Some(height_bytes);       
+        }
         let mut signature_script: Vec<u8> = Vec::new();
         let amount_bytes_to_read: usize = script_bytes.decoded_value() as usize;
         signature_script.extend_from_slice(&bytes[*offset..(*offset + amount_bytes_to_read)]);
@@ -41,6 +55,7 @@ impl TxIn {
         Ok(TxIn {
             previous_output,
             script_bytes,
+            height,
             signature_script,
             sequence,
         })
@@ -68,12 +83,35 @@ impl TxIn {
         let sequence_bytes: [u8; 4] = self.sequence.to_le_bytes();
         bytes.extend_from_slice(&sequence_bytes[0..4]);
     }
+
+    pub fn is_coinbase(&self) -> bool{
+        self.height.is_some()
+    }
 }
 #[cfg(test)]
 
 mod test {
     use super::TxIn;
     use crate::{compact_size_uint::CompactSizeUint, outpoint::Outpoint};
+
+    fn simular_flujo_de_datos(tx_id : [u8;32],index:u32,compact_size_value:u128,height:Option<Vec<u8>>,sequence:u32) -> Vec<u8>{
+        let mut bytes_txin: Vec<u8> = Vec::new();
+        let previous_output: Outpoint = Outpoint::new(tx_id,index);
+        let script_bytes: CompactSizeUint = CompactSizeUint::new(compact_size_value);
+        let mut signature_script: Vec<u8> = Vec::new();
+        for _x in 0..compact_size_value{
+            signature_script.push(1);
+        }
+        let txin_to_marshalling: TxIn = TxIn {
+            previous_output,
+            script_bytes,
+            height,
+            signature_script,
+            sequence,
+        };
+        txin_to_marshalling.marshalling(&mut bytes_txin);
+        bytes_txin
+    }
 
     #[test]
     fn test_unmarshalling_tx_in_invalido() {
@@ -196,21 +234,12 @@ mod test {
     #[test]
     fn test_marshalling_de_txin_serializa_correctamente_el_campo_previus_outpoint(
     ) -> Result<(), &'static str> {
-        let mut bytes_txin: Vec<u8> = Vec::new();
-        let previous_output: Outpoint = Outpoint::new([1; 32], 0x30201000);
-        let script_bytes: CompactSizeUint = CompactSizeUint::new(3);
-        let signature_script: Vec<u8> = vec![0x30, 0x20, 0x10];
-        let sequence: u32 = 0x30201000;
-        let txin_to_marshalling: TxIn = TxIn {
-            previous_output,
-            script_bytes,
-            signature_script,
-            sequence,
-        };
-        txin_to_marshalling.marshalling(&mut bytes_txin);
+        let tx_id : [u8;32] = [1;32];
+        let index : u32 = 0x30201000;
+        let bytes_txin: Vec<u8>=simular_flujo_de_datos(tx_id,index,2,None,0xffffffff);
         let mut offset: usize = 0;
         let txin_unmarshaled: TxIn = TxIn::unmarshalling(&bytes_txin, &mut offset)?;
-        let expected_previous_output: Outpoint = Outpoint::new([1; 32], 0x30201000);
+        let expected_previous_output: Outpoint = Outpoint::new(tx_id,index);
         assert_eq!(txin_unmarshaled.previous_output, expected_previous_output);
         Ok(())
     }
@@ -218,21 +247,12 @@ mod test {
     #[test]
     fn test_marshalling_de_txin_serializa_correctamente_el_campo_compact_size_uint(
     ) -> Result<(), &'static str> {
-        let mut bytes_txin: Vec<u8> = Vec::new();
-        let previous_output: Outpoint = Outpoint::new([1; 32], 0x30201000);
-        let script_bytes: CompactSizeUint = CompactSizeUint::new(3);
-        let signature_script: Vec<u8> = vec![0x30, 0x20, 0x10];
-        let sequence: u32 = 0x30201000;
-        let txin_to_marshalling: TxIn = TxIn {
-            previous_output,
-            script_bytes,
-            signature_script,
-            sequence,
-        };
-        txin_to_marshalling.marshalling(&mut bytes_txin);
+        let tx_id : [u8;32] = [1;32];
+        let index : u32 = 0x30201000;
+        let bytes_txin: Vec<u8>=simular_flujo_de_datos(tx_id,index,2,None,0xffffffff);      
         let mut offset: usize = 0;
         let txin_unmarshaled: TxIn = TxIn::unmarshalling(&bytes_txin, &mut offset)?;
-        let expected_script_bytes: CompactSizeUint = CompactSizeUint::new(3);
+        let expected_script_bytes: CompactSizeUint = CompactSizeUint::new(2);
         assert_eq!(txin_unmarshaled.script_bytes, expected_script_bytes);
         Ok(())
     }
@@ -240,21 +260,12 @@ mod test {
     #[test]
     fn test_marshalling_de_txin_serializa_correctamente_el_campo_signature_script(
     ) -> Result<(), &'static str> {
-        let mut bytes_txin: Vec<u8> = Vec::new();
-        let previous_output: Outpoint = Outpoint::new([1; 32], 0x30201000);
-        let script_bytes: CompactSizeUint = CompactSizeUint::new(3);
-        let signature_script: Vec<u8> = vec![0x30, 0x20, 0x10];
-        let sequence: u32 = 0x30201000;
-        let txin_to_marshalling: TxIn = TxIn {
-            previous_output,
-            script_bytes,
-            signature_script,
-            sequence,
-        };
-        txin_to_marshalling.marshalling(&mut bytes_txin);
+        let tx_id : [u8;32] = [1;32];
+        let index : u32 = 0x30201000;
+        let bytes_txin: Vec<u8>=simular_flujo_de_datos(tx_id,index,2,None,0xffffffff);
         let mut offset: usize = 0;
         let txin_unmarshaled: TxIn = TxIn::unmarshalling(&bytes_txin, &mut offset)?;
-        let expected_signature_script: Vec<u8> = vec![0x30, 0x20, 0x10];
+        let expected_signature_script: Vec<u8> = vec![1,1];
         assert_eq!(txin_unmarshaled.signature_script, expected_signature_script);
         Ok(())
     }
@@ -262,19 +273,11 @@ mod test {
     #[test]
     fn test_marshalling_de_txin_serializa_correctamente_el_campo_sequence(
     ) -> Result<(), &'static str> {
-        let mut bytes_txin: Vec<u8> = Vec::new();
-        let previous_output: Outpoint = Outpoint::new([1; 32], 0x30201000);
-        let script_bytes: CompactSizeUint = CompactSizeUint::new(3);
-        let signature_script: Vec<u8> = vec![0x30, 0x20, 0x10];
-        let sequence: u32 = 0x30201000;
-        let txin_to_marshalling: TxIn = TxIn {
-            previous_output,
-            script_bytes,
-            signature_script,
-            sequence,
-        };
+        let tx_id : [u8;32] = [1;32];
+        let index : u32 = 0x30201000;
+        let sequence: u32 = 0x302010;
+        let bytes_txin: Vec<u8>=simular_flujo_de_datos(tx_id,index,2,None,sequence);
         let mut offset: usize = 0;
-        txin_to_marshalling.marshalling(&mut bytes_txin);
         let txin_unmarshaled: TxIn = TxIn::unmarshalling(&bytes_txin, &mut offset)?;
         assert_eq!(txin_unmarshaled.sequence, sequence);
         Ok(())
