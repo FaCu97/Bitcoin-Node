@@ -18,31 +18,31 @@ impl Transaction {
         Transaction { version, txin_count, tx_in, txout_count, tx_out, lock_time}
     }
 
-    pub fn unmarshalling(bytes: &Vec<u8>) -> Result<Transaction, &'static str> {
+    pub fn unmarshalling(bytes: &Vec<u8>,offset:&mut usize) -> Result<Transaction, &'static str> {
         // en teoria se lee el coinbase transaccion primero
         if bytes.len() < 10 {
             return Err(
                 "Los bytes recibidos no corresponden a un Transaction, el largo es menor a 10 bytes",
             );
         }
-        let mut offset: usize = 0;
         let mut version_bytes: [u8; 4] = [0; 4];
         version_bytes.copy_from_slice(&bytes[0..4]);
-        offset += 4;
+        *offset += 4;
         let version = i32::from_le_bytes(version_bytes);
-        let txin_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut offset);
+        let txin_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut *offset);
         let amount_txin: u64 = txin_count.decoded_value();
-        let tx_in: Vec<TxIn> = TxIn::unmarshalling_txins(bytes, amount_txin, &mut offset)?; // aca se actualizaria el offset tambien
+        let tx_in: Vec<TxIn> = TxIn::unmarshalling_txins(bytes, amount_txin, &mut *offset)?; // aca se actualizaria el *offset tambien
         if tx_in[0].is_coinbase() && txin_count.decoded_value() != 1{
             return Err(
                 "una coinbase transaction no puede tener mas de un input",
             );         
         }
-        let txout_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut offset);
+        let txout_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut *offset);
         let amount_txout: u64 = txout_count.decoded_value();
-        let tx_out: Vec<TxOut> = TxOut::unmarshalling_txouts(bytes, amount_txout, &mut offset)?; // aca se actualizaria el offset tambien
+        let tx_out: Vec<TxOut> = TxOut::unmarshalling_txouts(bytes, amount_txout, &mut *offset)?; // aca se actualizaria el *offset tambien
         let mut lock_time_bytes: [u8; 4] = [0; 4];
-        lock_time_bytes.copy_from_slice(&bytes[offset..(offset + 4)]);
+        lock_time_bytes.copy_from_slice(&bytes[*offset..(*offset + 4)]);
+        *offset += 4;
         let lock_time = u32::from_le_bytes(lock_time_bytes);
         Ok(Transaction {
             version,
@@ -74,6 +74,16 @@ impl Transaction {
         self.marshalling(&mut raw_transaction_bytes);
         let hash_transaction = sha256::Hash::hash(&raw_transaction_bytes);
         *hash_transaction.as_byte_array()
+    }
+
+    pub fn unmarshalling_transactions(bytes: &Vec<u8>,amount_transactions:u64,offset: &mut usize)->Result<Vec<Transaction>,&'static str>{
+        let mut transactions_list :Vec<Transaction> = Vec::new();
+        let mut i = 0;
+        while i < amount_transactions {
+            transactions_list.push(Self::unmarshalling(bytes,offset)?);
+            i += 1;            
+        }
+        Ok(transactions_list)
     }
 
 }
@@ -152,7 +162,8 @@ mod test {
     #[test]
     fn test_unmarshalling_transaction_invalida(){
         let bytes : Vec<u8> = vec![0;5];
-        let transaction = Transaction::unmarshalling(&bytes);
+       
+       let mut offset:usize = 0; let transaction = Transaction::unmarshalling(&bytes,&mut offset);
         assert!(transaction.is_err());
     }
 
@@ -190,7 +201,8 @@ mod test {
         //lock_time settings
         let lock_time: [u8; 4] = [0; 4];
         bytes.extend_from_slice(&lock_time);
-        let transaction : Result<Transaction, &'static str> = Transaction::unmarshalling(&bytes);
+       
+       let mut offset:usize = 0; let transaction : Result<Transaction, &'static str> = Transaction::unmarshalling(&bytes,&mut offset);
         assert!(transaction.is_err());
     }
 
@@ -201,7 +213,8 @@ mod test {
         let version : i32 = -34;
         let lock_time : u32 = 3;
         let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
-        let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
+        let mut offset:usize = 0;
+        let transaction : Transaction = Transaction::unmarshalling(&bytes,&mut offset)?;
         assert_eq!(transaction.version,version);
         Ok(())
     }
@@ -213,7 +226,8 @@ mod test {
         let version : i32 = -34;
         let lock_time : u32 = 3;
         let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
-        let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
+        let mut offset:usize = 0;
+        let transaction : Transaction = Transaction::unmarshalling(&bytes,&mut offset)?;
         let tx_count_expected : CompactSizeUint = CompactSizeUint::new(tx_in_count);
         assert_eq!(transaction.txin_count,tx_count_expected);
         Ok(())
@@ -226,7 +240,8 @@ mod test {
         let version : i32 = -34;
         let lock_time : u32 = 3;
         let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
-        let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
+        let mut offset:usize = 0;
+        let transaction : Transaction = Transaction::unmarshalling(&bytes,&mut offset)?;
         let tx_in : Vec<TxIn> = crear_txins(tx_in_count);
         assert_eq!(transaction.tx_in,tx_in);
         Ok(())
@@ -239,7 +254,8 @@ mod test {
         let version : i32 = -34;
         let lock_time : u32 = 3;
         let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
-        let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
+        let mut offset:usize = 0;
+        let transaction : Transaction = Transaction::unmarshalling(&bytes,&mut offset)?;
         let tx_count_expected : CompactSizeUint = CompactSizeUint::new(tx_out_count);
         assert_eq!(transaction.txout_count,tx_count_expected);
         Ok(())
@@ -252,7 +268,8 @@ mod test {
         let version : i32 = -34;
         let lock_time : u32 = 3;
         let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
-        let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
+        let mut offset:usize = 0;
+        let transaction : Transaction = Transaction::unmarshalling(&bytes,&mut offset)?;
         let tx_out : Vec<TxOut> = crear_txouts(tx_out_count);
         assert_eq!(transaction.tx_out[0],tx_out[0]);
         Ok(())
@@ -265,7 +282,8 @@ mod test {
         let version : i32 = -34;
         let lock_time : u32 = 3;
         let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
-        let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
+        let mut offset:usize = 0;
+        let transaction : Transaction = Transaction::unmarshalling(&bytes,&mut offset)?;
         assert_eq!(transaction.lock_time,lock_time);
         Ok(())
     }
@@ -277,7 +295,8 @@ mod test {
         let version : i32 = -34;
         let lock_time : u32 = 3;
         let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
-        let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
+        let mut offset:usize = 0;
+        let transaction : Transaction = Transaction::unmarshalling(&bytes,&mut offset)?;
         assert_eq!(transaction.tx_in.len(),tx_in_count as usize);
         Ok(())
     }
@@ -289,7 +308,8 @@ mod test {
         let version : i32 = -34;
         let lock_time : u32 = 3;
         let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
-        let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
+        let mut offset:usize = 0;
+        let transaction : Transaction = Transaction::unmarshalling(&bytes,&mut offset)?;
         let tx_in : Vec<TxIn> = crear_txins(tx_in_count);
         assert_eq!(transaction.tx_in,tx_in);
         Ok(())
@@ -302,9 +322,26 @@ mod test {
         let version : i32 = -34;
         let lock_time : u32 = 3;
         let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
-        let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
+        let mut offset:usize = 0;
+        let transaction : Transaction = Transaction::unmarshalling(&bytes,&mut offset)?;
         let tx_out : Vec<TxOut> = crear_txouts(tx_out_count);
         assert_eq!(transaction.tx_out,tx_out);
         Ok(())
     }
+
+    #[test]
+    fn test_unmarshalling_de_2_transactions_devuelve_longitud_esperada() -> Result<(), &'static str> {
+        let tx_in_count :u128 = 1;
+        let tx_out_count :u128 = 1;
+        let version : i32 = -34;
+        let lock_time : u32 = 3;
+        let mut bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
+        let bytes2 = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
+        bytes.extend_from_slice(&bytes2[0..bytes2.len()]);
+        let mut offset:usize = 0;
+        let transaction : Vec<Transaction> = Transaction::unmarshalling_transactions(&bytes,2,&mut offset)?;
+        assert_eq!(transaction.len(),2);
+        Ok(())
+    }
+
 }
