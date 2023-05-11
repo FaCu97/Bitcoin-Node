@@ -1,21 +1,20 @@
 use crate::config::Config;
-use std::collections::VecDeque;
 use std::process::Command;
 //const NUMBER_OF_NODES: usize = 8;
 
-pub fn get_active_nodes_from_dns_seed(config: &Config) -> std::io::Result<VecDeque<String>> {
+pub fn get_active_nodes_from_dns_seed(config: &Config) -> std::io::Result<Vec<String>> {
     let query_reply = Command::new("dig")
         .arg("+short")
         .arg(&config.dns_seed)
         .output()?;
     let active_nodes = String::from_utf8_lossy(&query_reply.stdout);
-    let mut nodes_list: VecDeque<String> = VecDeque::new();
+    let mut nodes_list: Vec<String> = Vec::new();
     for node in active_nodes.lines() {
         let port = &config.testnet_port;
         let mut node_ip = node.to_string();
         node_ip.push(':');
         node_ip.push_str(port); // concateno al final de cada direccion ip ":" + <puerto> (18333)
-        nodes_list.push_front(node_ip);
+        nodes_list.push(node_ip);
     }
     if nodes_list.len() < config.number_of_nodes {
         return Err(std::io::Error::new(

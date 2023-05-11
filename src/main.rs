@@ -5,10 +5,8 @@ use bitcoin::messages::{
     version_message::{get_version_message, VersionMessage},
 };
 use bitcoin::network::get_active_nodes_from_dns_seed;
-use std::collections::VecDeque;
 use std::error::Error;
 use std::net::{SocketAddr, TcpStream};
-use std::ops::DerefMut;
 use std::process::exit;
 use std::result::Result;
 use std::sync::{Arc, Mutex};
@@ -33,101 +31,66 @@ fn main() {
         Ok(active_nodes) => active_nodes,
     };
 
-    /*
-      let vec: Vec<i32> = vec![0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-
-      let chunk_size = (vec.len() as f64 / 4 as f64).ceil() as usize;
-      let chunks = vec.chunks(chunk_size).collect::<Vec<_>>();
-
-     // let largo = vec.len()/8 ;
-      println!("chunk_size: {:?}",chunk_size);
-    //  let output = vec.split_off(3);
-      //let output: Vec<&[i32]> = vec.chunks(largo).collect();
-
-      println!("Chunks: {:?}", chunks);
-      println!("{:?}", active_nodes);
-     */
-    let mut sockets: Vec<TcpStream> = handshake(config.clone(), active_nodes);
+    let sockets: Vec<TcpStream> = handshake(config.clone(), &active_nodes);
 
     println!("Sockets: {:?}", sockets);
-
+    println!("CANTIDAD SOCKETS: {:?}", sockets.len());
+    println!("{:?}", config.user_agent);
     // Acá iría la descarga de los headers
 }
 
-fn handshake(config: Config, active_nodes: VecDeque<String>) -> Vec<TcpStream> {
-    let mut sockets = Vec::new();
-    let active_nodes_lock = Arc::new(Mutex::new(active_nodes.clone()));
-    //let configuracion_lock = Arc::new(config.clone());
-    // let active_nodes_lock_ref = active_nodes_lock.clone();
+fn handshake(config: Config, active_nodes: &[String]) -> Vec<TcpStream> {
+    let NTHREADS = 8; // pasar a Config
+    let lista_nodos = Arc::new(active_nodes);
+    let chunk_size = (lista_nodos.len() as f64 / NTHREADS as f64).ceil() as usize;
+    let active_nodes_chunks = Arc::new(Mutex::new(
+        lista_nodos
+            .chunks(chunk_size)
+            .map(|chunk| chunk.to_vec())
+            .collect::<Vec<_>>(),
+    ));
+    let sockets = vec![];
     let sockets_lock = Arc::new(Mutex::new(sockets));
     let mut thread_handles = vec![];
 
-    let NTHREADS = 8; // pasar a Config
-    for _ in 0..NTHREADS {
+    for i in 0..NTHREADS {
+        let chunk = active_nodes_chunks.lock().unwrap()[i].clone();
         let configuracion = config.clone();
-        let active_nodes = Arc::clone(&active_nodes_lock);
-        //let configuracion = Arc::clone(&configuracion_lock);
         let sockets: Arc<Mutex<Vec<TcpStream>>> = Arc::clone(&sockets_lock);
         thread_handles.push(thread::spawn(move || {
-            conectar_a_nodo(configuracion, &active_nodes, sockets)
+            conectar_a_nodo(configuracion, sockets, &chunk);
         }));
     }
     println!("{:?}", sockets_lock.lock().unwrap().len());
     for handle in thread_handles {
         handle.join().unwrap();
+        //  sockets.extend(result);
     }
-
-    let sockets = Arc::try_unwrap(sockets_lock).unwrap().into_inner().unwrap();
-    sockets
-
-    //let sockets_guard = sockets_lock.lock().unwrap().deref_mut();
-    //sockets_guard
-    //sockets_guard.into_inner()
-    //let sockets_vec = std::mem::replace(sockets_guard, Vec::new());
-    //sockets_vec
-}
+    Arc::try_unwrap(sockets_lock).unwrap().into_inner().unwrap()
+    }
 
 // los threads no pueden manejar un dyn Error
 // En el libro devuelve thread::Result<std::io::Result<()>>
 fn conectar_a_nodo(
     configuracion: Config,
-    active_nodes_ips: &Arc<Mutex<VecDeque<String>>>,
     sockets: Arc<Mutex<Vec<TcpStream>>>,
-) -> thread::Result<std::io::Result<()>> {
-    if active_nodes_ips.lock().unwrap().is_empty() {
-        println!("ERROR, NO HAY MAS NODOS!");
-    } else {
-        let mut node_ip = active_nodes_ips.lock().unwrap().pop_front().unwrap();
-        loop {
-            let stream_result = connect_to_node(&configuracion, &node_ip);
-            match stream_result {
-                Ok(stream) => {
-                    println!("Conectado correctamente a: {:?} \n", node_ip);
-                    sockets.lock().unwrap().push(stream);
-                    // tomo otra ip y conecto a más nodos
-                    if active_nodes_ips.lock().unwrap().is_empty() {
-                        println!("ERROR, NO HAY MAS NODOS!");
-                        break;
-                    }
-                    node_ip = active_nodes_ips.lock().unwrap().pop_front().unwrap();
-                }
-                Err(err) => {
-                    println!(
-                        "No se pudo conectar a: {:?}, voy a intenar conectarme a otro \n",
-                        node_ip
-                    );
-                    if active_nodes_ips.lock().unwrap().is_empty() {
-                        println!("ERROR, NO HAY MAS NODOS!");
-                        break;
-                    }
-                    node_ip = active_nodes_ips.lock().unwrap().pop_front().unwrap();
-                }
-            };
-            //    println!("CANTIDAD SOCKETS: {:?}", sockets.lock().unwrap().len());
-        }
+    nodos: &[String],
+) {
+    for nodo in nodos {
+        match connect_to_node(&configuracion, nodo) {
+            Ok(stream) => {
+                println!("Conectado correctamente a: {:?} \n", nodo);
+                sockets.lock().unwrap().push(stream);
+            }
+            Err(err) => {
+                println!(
+                    "Error {:?}. No se pudo conectar a: {:?}, voy a intenar conectarme a otro \n",
+                    err, nodo
+                );
+            }
+        };
+        //    println!("CANTIDAD SOCKETS: {:?}", sockets.lock().unwrap().len());
     }
-
-    Ok(Ok(()))
 }
 
 fn connect_to_node(config: &Config, node_ip: &str) -> Result<TcpStream, Box<dyn Error>> {
