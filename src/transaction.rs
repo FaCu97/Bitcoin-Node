@@ -1,3 +1,5 @@
+use bitcoin_hashes::{sha256, Hash};
+
 use crate::{compact_size_uint::CompactSizeUint, tx_in::TxIn, tx_out::TxOut};
 
 pub struct Transaction {
@@ -9,7 +11,13 @@ pub struct Transaction {
     lock_time: u32,
 }
 
+
 impl Transaction {
+
+    pub fn new(version:i32,txin_count:CompactSizeUint,tx_in:Vec<TxIn>,txout_count:CompactSizeUint,tx_out:Vec<TxOut>,lock_time:u32) -> Self{
+        Transaction { version, txin_count, tx_in, txout_count, tx_out, lock_time}
+    }
+
     pub fn unmarshalling(bytes: &Vec<u8>) -> Result<Transaction, &'static str> {
         // en teoria se lee el coinbase transaccion primero
         if bytes.len() < 10 {
@@ -59,21 +67,28 @@ impl Transaction {
         }
         let locktime_bytes : [u8;4] = self.lock_time.to_le_bytes();
         bytes.extend_from_slice(&locktime_bytes);
-
-
     }
+
+    pub fn hash(&mut self) ->[u8;32] {
+        let mut raw_transaction_bytes : Vec<u8> = Vec::new();
+        self.marshalling(&mut raw_transaction_bytes);
+        let hash_transaction = sha256::Hash::hash(&raw_transaction_bytes);
+        *hash_transaction.as_byte_array()
+    }
+
 }
 #[cfg(test)]
 
 mod test {
     use super::Transaction;
+    use bitcoin_hashes::{sha256, Hash};
     use crate::{
         compact_size_uint::CompactSizeUint, outpoint::Outpoint, tx_in::TxIn, tx_out::TxOut,
     };
 
-    fn crear_txin_y_pasar_a_bytes(cantidad : u64,bytes: &mut Vec<u8>) -> Vec<TxIn>{
+    fn crear_txins(cantidad : u128,) -> Vec<TxIn>{
         let mut tx_in:Vec<TxIn> = Vec::new();
-        for i in 0..cantidad{
+        for _i in 0..cantidad{
             let tx_id : [u8;32] = [1;32];
             let index_outpoint : u32 = 0x30000000;
             let outpoint : Outpoint = Outpoint::new(tx_id,index_outpoint);
@@ -81,22 +96,57 @@ mod test {
             let signature_script : Vec<u8> = vec![1];
             let sequence : u32 = 0xffffffff;
             tx_in.push(TxIn::new(outpoint,compact_txin,None,signature_script,sequence));
-            tx_in[i as usize].marshalling(bytes);
         }
-        tx_in
-        
+        tx_in   
     }
 
-    fn crear_txout_y_pasar_a_bytes(cantidad: u64,bytes: &mut Vec<u8>) -> Vec<TxOut>{
+    fn crear_txouts(cantidad: u128) -> Vec<TxOut>{
         let mut tx_out:Vec<TxOut> = Vec::new();
-        for i in 0..cantidad{
+        for _i in 0..cantidad{
             let value : i64 = 43;
             let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(0);
             let pk_script: Vec<u8> = Vec::new();
             tx_out.push(TxOut::new(value,pk_script_bytes,pk_script));
-            tx_out[i as usize].marshalling(bytes);
         }
         tx_out
+    }
+
+    fn generar_flujo_de_datos(version:i32,tx_in_count:u128,tx_out_count:u128,lock_time:u32)-> Vec<u8> {
+            //contenedor de bytes
+            let mut bytes : Vec<u8> = Vec::new();
+            // version settings
+            let version : i32 = version;
+            // tx_in_count settings
+            let txin_count = CompactSizeUint::new(tx_in_count);
+            // tx_in settings
+            let tx_in : Vec<TxIn> = crear_txins(tx_in_count);
+            // tx_out_count settings
+            let txout_count = CompactSizeUint::new(tx_out_count);
+            // tx_out settings
+            let tx_out:Vec<TxOut> = crear_txouts(tx_out_count);
+            //lock_time settings
+            let lock_time : u32 = lock_time;
+            let transaction : Transaction = Transaction::new(version, txin_count, tx_in, txout_count, tx_out, lock_time);
+            transaction.marshalling(&mut bytes);
+            bytes
+        }
+
+    #[test]
+    fn test_la_transaccion_se_hashea_correctamente(){
+        let previous_output:Outpoint = Outpoint::new([1;32],0x11111111);
+        let script_bytes:CompactSizeUint = CompactSizeUint::new(0);
+        let mut tx_in :Vec<TxIn> = Vec::new();
+        tx_in.push(TxIn::new(previous_output, script_bytes, None, Vec::new(), 0x11111111));
+        let pk_script_bytes:CompactSizeUint = CompactSizeUint::new(0);
+        let mut tx_out :Vec<TxOut> = Vec::new();
+        tx_out.push(TxOut::new(0x1111111111111111, pk_script_bytes, Vec::new()));
+        let txin_count:CompactSizeUint = CompactSizeUint::new(1);
+        let txout_count:CompactSizeUint = CompactSizeUint::new(1);
+        let mut transaction :Transaction = Transaction::new(0x11111111, txin_count, tx_in, txout_count, tx_out, 0x11111111);
+        let mut vector = Vec::new();
+        transaction.marshalling(& mut vector);
+        let hash_transaction = sha256::Hash::hash(&vector);
+        assert_eq!(transaction.hash(),*hash_transaction.as_byte_array());
     }
 
     #[test]
@@ -127,12 +177,16 @@ mod test {
         let mut tx_in : Vec<TxIn> = Vec::new();
         tx_in.push(TxIn::new(outpoint,compact_txin,None,signature_script,sequence));
         tx_in[0 as usize].marshalling(&mut bytes);
-        let _tx_input : Vec<TxIn> = crear_txin_y_pasar_a_bytes(txin_count.decoded_value(),&mut bytes);
+        let cantidad_txin : u128 = txin_count.decoded_value() as u128;
+        let tx_input : Vec<TxIn> = crear_txins(cantidad_txin);
+        tx_input[0 as usize].marshalling(&mut bytes);
         // tx_out_count settings
         let txout_count = CompactSizeUint::new(1);
         bytes.extend_from_slice(txout_count.value());
         // tx_out settings
-        let _tx_out:Vec<TxOut> = crear_txout_y_pasar_a_bytes(txout_count.decoded_value(),&mut bytes);
+        let cantidad_txout : u128 = txout_count.decoded_value() as u128;
+        let tx_out:Vec<TxOut> = crear_txouts(cantidad_txout);
+        tx_out[0 as usize].marshalling(&mut bytes);
         //lock_time settings
         let lock_time: [u8; 4] = [0; 4];
         bytes.extend_from_slice(&lock_time);
@@ -142,234 +196,114 @@ mod test {
 
     #[test]
     fn test_unmarshalling_transaction_devuelve_version_esperado() -> Result<(), &'static str> {
-        //contenedor de bytes
-        let mut bytes: Vec<u8> = Vec::new();
-        // version settings
-        let version: i32 = 23;
-        let version_bytes = version.to_le_bytes();
-        bytes.extend_from_slice(&version_bytes[0..4]);
-        // tx_in_count settings
-        let txin_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(&txin_count.marshalling()[0..1]);
-        // tx_in settings
-        let _tx_in : Vec<TxIn> = crear_txin_y_pasar_a_bytes(txin_count.decoded_value(),&mut bytes);
-        // tx_out_count settings
-        let txout_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(txout_count.value());
-        // tx_out settings
-        let _tx_out:Vec<TxOut> = crear_txout_y_pasar_a_bytes(txout_count.decoded_value(),&mut bytes);
-        //lock_time settings
-        let lock_time: [u8; 4] = [0; 4];
-        bytes.extend_from_slice(&lock_time);
+        let tx_in_count :u128 = 4;
+        let tx_out_count :u128 = 3;
+        let version : i32 = -34;
+        let lock_time : u32 = 3;
+        let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
         let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
-        assert_eq!(version,transaction.version);
+        assert_eq!(transaction.version,version);
         Ok(())
     }
 
     #[test]
     fn test_unmarshalling_transaction_devuelve_txin_count_esperado() -> Result<(), &'static str> {
-        //contenedor de bytes
-        let mut bytes: Vec<u8> = Vec::new();
-        // version settings
-        let version: i32 = 23;
-        let version_bytes = version.to_le_bytes();
-        bytes.extend_from_slice(&version_bytes[0..4]);
-        // tx_in_count settings
-        let txin_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(&txin_count.marshalling()[0..1]);
-        // tx_in settings
-        let _tx_in : Vec<TxIn> = crear_txin_y_pasar_a_bytes(txin_count.decoded_value(),&mut bytes);
-        // tx_out_count settings
-        let txout_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(txout_count.value());
-        // tx_out settings
-        let _tx_out:Vec<TxOut> = crear_txout_y_pasar_a_bytes(txout_count.decoded_value(),&mut bytes);
-        //lock_time settings
-        let lock_time: [u8; 4] = [0; 4];
-        bytes.extend_from_slice(&lock_time);
+        let tx_in_count :u128 = 4;
+        let tx_out_count :u128 = 3;
+        let version : i32 = -34;
+        let lock_time : u32 = 3;
+        let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
         let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
-        assert_eq!(txin_count,transaction.txin_count);
+        let tx_count_expected : CompactSizeUint = CompactSizeUint::new(tx_in_count);
+        assert_eq!(transaction.txin_count,tx_count_expected);
         Ok(())
     }
     
     #[test]
     fn test_unmarshalling_transaction_devuelve_txin_esperado() -> Result<(), &'static str> {
-        //contenedor de bytes
-        let mut bytes : Vec<u8> = Vec::new();
-        // version settings
-        let version : i32 = 23;
-        let version_bytes = version.to_le_bytes();
-        bytes.extend_from_slice(&version_bytes[0..4]);
-        // tx_in_count settings
-        let txin_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(&txin_count.marshalling()[0..1]);
-        // tx_in settings
-        let tx_in : Vec<TxIn> = crear_txin_y_pasar_a_bytes(txin_count.decoded_value(),&mut bytes);
-        // tx_out_count settings
-        let txout_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(txout_count.value());
-        // tx_out settings
-        let _tx_out:Vec<TxOut> = crear_txout_y_pasar_a_bytes(txout_count.decoded_value(),&mut bytes);
-        //lock_time settings
-        let lock_time : [u8;4] = [0;4];
-        bytes.extend_from_slice(&lock_time);
+        let tx_in_count :u128 = 1;
+        let tx_out_count :u128 = 1;
+        let version : i32 = -34;
+        let lock_time : u32 = 3;
+        let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
         let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
-        assert_eq!(tx_in,transaction.tx_in);
+        let tx_in : Vec<TxIn> = crear_txins(tx_in_count);
+        assert_eq!(transaction.tx_in,tx_in);
         Ok(())
     }
     
     #[test]
     fn test_unmarshalling_transaction_devuelve_txout_count_esperado() -> Result<(), &'static str> {
-        //contenedor de bytes
-        let mut bytes : Vec<u8> = Vec::new();
-        // version settings
-        let version : i32 = 23;
-        let version_bytes = version.to_le_bytes();
-        bytes.extend_from_slice(&version_bytes[0..4]);
-        // tx_in_count settings
-        let txin_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(&txin_count.marshalling()[0..1]);
-        // tx_in settings
-        let _tx_in : Vec<TxIn> = crear_txin_y_pasar_a_bytes(txin_count.decoded_value(),&mut bytes);
-        // tx_out_count settings
-        let txout_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(txout_count.value());
-        // tx_out settings
-        let _tx_out:Vec<TxOut> = crear_txout_y_pasar_a_bytes(txout_count.decoded_value(),&mut bytes);
-        //lock_time settings
-        let lock_time : [u8;4] = [0;4];
-        bytes.extend_from_slice(&lock_time);
+        let tx_in_count :u128 = 4;
+        let tx_out_count :u128 = 3;
+        let version : i32 = -34;
+        let lock_time : u32 = 3;
+        let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
         let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
-        assert_eq!(txout_count,transaction.txout_count);
+        let tx_count_expected : CompactSizeUint = CompactSizeUint::new(tx_out_count);
+        assert_eq!(transaction.txout_count,tx_count_expected);
         Ok(())
     }
 
     #[test]
     fn test_unmarshalling_transaction_devuelve_txout_esperado() -> Result<(), &'static str> {
-        //contenedor de bytes
-        let mut bytes : Vec<u8> = Vec::new();
-        // version settings
-        let version : i32 = 23;
-        let version_bytes = version.to_le_bytes();
-        bytes.extend_from_slice(&version_bytes[0..4]);
-        // tx_in_count settings
-        let txin_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(&txin_count.marshalling()[0..1]);
-        // tx_in settings
-        let _tx_in : Vec<TxIn> = crear_txin_y_pasar_a_bytes(txin_count.decoded_value(),&mut bytes);
-        // tx_out_count settings
-        let txout_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(txout_count.value());
-        // tx_out settings
-        let tx_out:Vec<TxOut> = crear_txout_y_pasar_a_bytes(txout_count.decoded_value(),&mut bytes);
-        //lock_time settings
-        let lock_time : [u8;4] = [0;4];
-        bytes.extend_from_slice(&lock_time);
+        let tx_in_count :u128 = 1;
+        let tx_out_count :u128 = 1;
+        let version : i32 = -34;
+        let lock_time : u32 = 3;
+        let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
         let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
-        assert_eq!(tx_out,transaction.tx_out);
+        let tx_out : Vec<TxOut> = crear_txouts(tx_out_count);
+        assert_eq!(transaction.tx_out[0],tx_out[0]);
         Ok(())
     }
 
     #[test]
     fn test_unmarshalling_transaction_devuelve_lock_time_esperado() -> Result<(), &'static str> {
-        //contenedor de bytes
-        let mut bytes : Vec<u8> = Vec::new();
-        // version settings
-        let version : i32 = 23;
-        let version_bytes = version.to_le_bytes();
-        bytes.extend_from_slice(&version_bytes[0..4]);
-        // tx_in_count settings
-        let txin_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(&txin_count.marshalling()[0..1]);
-        // tx_in settings
-        let _tx_in : Vec<TxIn> = crear_txin_y_pasar_a_bytes(txin_count.decoded_value(),&mut bytes);
-        // tx_out_count settings
-        let txout_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(txout_count.value());
-        // tx_out settings
-        let _tx_out:Vec<TxOut> = crear_txout_y_pasar_a_bytes(txout_count.decoded_value(),&mut bytes);
-        //lock_time settings
-        let lock_time : [u8;4] = [0;4];
-        bytes.extend_from_slice(&lock_time);
+        let tx_in_count :u128 = 4;
+        let tx_out_count :u128 = 3;
+        let version : i32 = -34;
+        let lock_time : u32 = 3;
+        let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
         let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
-        assert_eq!(0x00000000,transaction.lock_time);
+        assert_eq!(transaction.lock_time,lock_time);
         Ok(())
     }
 
     #[test]
     fn test_unmarshalling_transaction_devuelve_tamanio_txin_esperado() -> Result<(), &'static str> {
-        //contenedor de bytes
-        let mut bytes : Vec<u8> = Vec::new();
-        // version settings
-        let version : i32 = 23;
-        let version_bytes = version.to_le_bytes();
-        bytes.extend_from_slice(&version_bytes[0..4]);
-        // tx_in_count settings
-        let txin_count = CompactSizeUint::new(2);
-        bytes.extend_from_slice(&txin_count.marshalling()[0..1]);
-        // tx_in settings
-        let _tx_in : Vec<TxIn> = crear_txin_y_pasar_a_bytes(txin_count.decoded_value(),&mut bytes);
-        // tx_out_count settings
-        let txout_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(txout_count.value());
-        // tx_out settings
-        let _tx_out:Vec<TxOut> = crear_txout_y_pasar_a_bytes(txout_count.decoded_value(),&mut bytes);
-        //lock_time settings
-        let lock_time : [u8;4] = [0;4];
-        bytes.extend_from_slice(&lock_time);
+        let tx_in_count :u128 = 4;
+        let tx_out_count :u128 = 3;
+        let version : i32 = -34;
+        let lock_time : u32 = 3;
+        let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
         let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
-        assert_eq!(transaction.tx_in.len(),2);
+        assert_eq!(transaction.tx_in.len(),tx_in_count as usize);
         Ok(())
     }
 
     #[test]
     fn test_unmarshalling_transaction_devuelve_vector_txin_esperado() -> Result<(), &'static str> {
-        //contenedor de bytes
-        let mut bytes : Vec<u8> = Vec::new();
-        // version settings
-        let version : i32 = 23;
-        let version_bytes = version.to_le_bytes();
-        bytes.extend_from_slice(&version_bytes[0..4]);
-        // tx_in_count settings
-        let txin_count = CompactSizeUint::new(2);
-        bytes.extend_from_slice(&txin_count.marshalling()[0..1]);
-        // tx_in settings
-        let tx_in : Vec<TxIn> = crear_txin_y_pasar_a_bytes(txin_count.decoded_value(),&mut bytes);
-        // tx_out_count settings
-        let txout_count = CompactSizeUint::new(1);
-        bytes.extend_from_slice(txout_count.value());
-        // tx_out settings
-        let _tx_out:Vec<TxOut> = crear_txout_y_pasar_a_bytes(txout_count.decoded_value(),&mut bytes);
-        //lock_time settings
-        let lock_time : [u8;4] = [0;4];
-        bytes.extend_from_slice(&lock_time);
+        let tx_in_count :u128 = 4;
+        let tx_out_count :u128 = 3;
+        let version : i32 = -34;
+        let lock_time : u32 = 3;
+        let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
         let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
+        let tx_in : Vec<TxIn> = crear_txins(tx_in_count);
         assert_eq!(transaction.tx_in,tx_in);
         Ok(())
     }
 
     #[test]
     fn test_unmarshalling_transaction_devuelve_vector_txout_esperado() -> Result<(), &'static str> {
-        //contenedor de bytes
-        let mut bytes : Vec<u8> = Vec::new();
-        // version settings
-        let version : i32 = 23;
-        let version_bytes = version.to_le_bytes();
-        bytes.extend_from_slice(&version_bytes[0..4]);
-        // tx_in_count settings
-        let txin_count = CompactSizeUint::new(2);
-        bytes.extend_from_slice(&txin_count.marshalling()[0..1]);
-        // tx_in settings
-        let _tx_in : Vec<TxIn> = crear_txin_y_pasar_a_bytes(txin_count.decoded_value(),&mut bytes);
-        // tx_out_count settings
-        let txout_count = CompactSizeUint::new(3);
-        bytes.extend_from_slice(txout_count.value());
-        // tx_out settings
-        let tx_out:Vec<TxOut> = crear_txout_y_pasar_a_bytes(txout_count.decoded_value(),&mut bytes);
-        //lock_time settings
-        let lock_time : [u8;4] = [0;4];
-        bytes.extend_from_slice(&lock_time);
+        let tx_in_count :u128 = 4;
+        let tx_out_count :u128 = 3;
+        let version : i32 = -34;
+        let lock_time : u32 = 3;
+        let bytes = generar_flujo_de_datos(version,tx_in_count,tx_out_count,lock_time);
         let transaction : Transaction = Transaction::unmarshalling(&bytes)?;
+        let tx_out : Vec<TxOut> = crear_txouts(tx_out_count);
         assert_eq!(transaction.tx_out,tx_out);
         Ok(())
     }
