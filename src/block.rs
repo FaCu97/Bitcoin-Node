@@ -17,6 +17,10 @@ impl Block{
         let txn: Vec<Transaction> = Transaction::unmarshalling_transactions(bytes,amount_transaction,offset)?;
         Ok(Block { block_header, txn_count, txn })       
     }
+
+    pub fn validate(self){
+        return;
+    }
 }
 
 #[cfg(test)]
@@ -45,7 +49,7 @@ mod test{
             let value : i64 = 43;
             let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(0);
             let pk_script: Vec<u8> = Vec::new();
-            tx_out.push(TxOut::new(value,pk_script_bytes,pk_script));
+            tx_out.push(TxOut::new(value,pk_script_bytes,pk_script,true));
         }
         tx_out
     }

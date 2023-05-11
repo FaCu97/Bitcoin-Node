@@ -1,17 +1,19 @@
 use crate::compact_size_uint::CompactSizeUint;
 #[derive(Debug, PartialEq)]
 pub struct TxOut {
-    pub value: i64,                       // Number of satoshis to spend
-    pub pk_script_bytes: CompactSizeUint, // de 1 a 10.000 bytes
-    pub pk_script: Vec<u8>, // Defines the conditions which must be satisfied to spend this output.
+    value: i64,                       // Number of satoshis to spend
+    pk_script_bytes: CompactSizeUint, // de 1 a 10.000 bytes
+    pk_script: Vec<u8>, // Defines the conditions which must be satisfied to spend this output.
+    utxo : bool // An output can bu utxo or not 
 }
 
 impl TxOut {
-    pub fn new(value: i64, pk_script_bytes: CompactSizeUint, pk_script: Vec<u8>) -> Self {
+    pub fn new(value: i64, pk_script_bytes: CompactSizeUint, pk_script: Vec<u8>,utxo : bool) -> Self {
         TxOut {
             value,
             pk_script_bytes,
             pk_script,
+            utxo,
         }
     }
     /// Recibe una cadena de bytes correspondiente a un TxOut
@@ -35,6 +37,7 @@ impl TxOut {
             value,
             pk_script_bytes,
             pk_script,
+            utxo:true,
         })
     }
     pub fn unmarshalling_txouts(
@@ -72,7 +75,7 @@ mod tests {
         for _x in 0..compact_size_value{
             pk_script.push(1);
         }
-        let tx_out: TxOut = TxOut::new(value, compact_size, pk_script);
+        let tx_out: TxOut = TxOut::new(value, compact_size, pk_script,true);
         tx_out.marshalling(&mut bytes);
         bytes
     }

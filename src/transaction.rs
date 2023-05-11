@@ -116,7 +116,7 @@ mod test {
             let value : i64 = 43;
             let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(0);
             let pk_script: Vec<u8> = Vec::new();
-            tx_out.push(TxOut::new(value,pk_script_bytes,pk_script));
+            tx_out.push(TxOut::new(value,pk_script_bytes,pk_script,true));
         }
         tx_out
     }
@@ -149,7 +149,7 @@ mod test {
         tx_in.push(TxIn::new(previous_output, script_bytes, None, Vec::new(), 0x11111111));
         let pk_script_bytes:CompactSizeUint = CompactSizeUint::new(0);
         let mut tx_out :Vec<TxOut> = Vec::new();
-        tx_out.push(TxOut::new(0x1111111111111111, pk_script_bytes, Vec::new()));
+        tx_out.push(TxOut::new(0x1111111111111111, pk_script_bytes, Vec::new(),true));
         let txin_count:CompactSizeUint = CompactSizeUint::new(1);
         let txout_count:CompactSizeUint = CompactSizeUint::new(1);
         let mut transaction :Transaction = Transaction::new(0x11111111, txin_count, tx_in, txout_count, tx_out, 0x11111111);
