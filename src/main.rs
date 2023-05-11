@@ -40,9 +40,8 @@ fn main() {
 }
 
 fn handshake(config: Config, active_nodes: &[String]) -> Vec<TcpStream> {
-    let NTHREADS = 8; // pasar a Config
     let lista_nodos = Arc::new(active_nodes);
-    let chunk_size = (lista_nodos.len() as f64 / NTHREADS as f64).ceil() as usize;
+    let chunk_size = (lista_nodos.len() as f64 / config.n_threads as f64).ceil() as usize;
     let active_nodes_chunks = Arc::new(Mutex::new(
         lista_nodos
             .chunks(chunk_size)
@@ -53,7 +52,7 @@ fn handshake(config: Config, active_nodes: &[String]) -> Vec<TcpStream> {
     let sockets_lock = Arc::new(Mutex::new(sockets));
     let mut thread_handles = vec![];
 
-    for i in 0..NTHREADS {
+    for i in 0..config.n_threads {
         let chunk = active_nodes_chunks.lock().unwrap()[i].clone();
         let configuracion = config.clone();
         let sockets: Arc<Mutex<Vec<TcpStream>>> = Arc::clone(&sockets_lock);

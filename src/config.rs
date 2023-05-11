@@ -14,6 +14,7 @@ pub struct Config {
     pub testnet_start_string: [u8; 4],
     pub protocol_version: i32,
     pub user_agent: String,
+    pub n_threads: usize
 }
 impl Config {
     /// Crea un config leyendo un archivo de configuracion ubicado en la
@@ -52,6 +53,7 @@ impl Config {
             testnet_start_string: [0; 4],
             protocol_version: 0,
             user_agent: String::new(),
+            n_threads: 0
         };
 
         for line in reader.lines() {
@@ -79,6 +81,7 @@ impl Config {
             }
             "PROTOCOL_VERSION" => self.protocol_version = i32::from_str(value)?,
             "USER_AGENT" => self.user_agent = String::from(value),
+            "N_THREADS" => self.n_threads = usize::from_str(value)?,
             _ => {
                 return Err(Box::new(io::Error::new(
                     io::ErrorKind::InvalidInput,
