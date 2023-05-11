@@ -1,8 +1,12 @@
 use super::message_header::*;
 use super::version_payload::*;
-use std::io::Error;
+//use std::io::Error;
+use crate::config::Config;
+use std::error::Error;
 use std::io::{Read, Write};
+use std::net::SocketAddr;
 use std::str::Utf8Error;
+
 // todo: implementar tests usando mocking, simulando una conexion con un nodo y viendo si se escriben/leen correctamente los mensajes version.
 
 #[derive(Clone, Debug)]
@@ -31,18 +35,36 @@ impl VersionMessage {
     /// mensaje version segun el protocolo de bitcoin. Devuelve error en caso de que se no se haya podido leer correctamente
     /// del stream o en caso de que los bytes leidos no puedan ser deserializados a un struct del VersionMessage, en caso
     /// contrario, devuelve un Ok() con un VersionMessage deserializado de los bytes que leyo del stream.
-    pub fn read_from(stream: &mut dyn Read) -> Result<VersionMessage, Error> {
+    pub fn read_from(stream: &mut dyn Read) -> Result<VersionMessage, std::io::Error> {
         let mut buffer_num = [0; 24];
         stream.read_exact(&mut buffer_num)?;
         let header = HeaderMessage::from_le_bytes(buffer_num).map_err(|err: Utf8Error| {
-            Error::new(std::io::ErrorKind::InvalidData, err.to_string())
+            std::io::Error::new(std::io::ErrorKind::InvalidData, err.to_string())
         })?;
         let payload_large = header.payload_size;
         let mut buffer_num = vec![0; payload_large as usize];
         stream.read_exact(&mut buffer_num)?;
         let payload = VersionPayload::from_le_bytes(&buffer_num).map_err(|err: Utf8Error| {
-            Error::new(std::io::ErrorKind::InvalidData, err.to_string())
+            std::io::Error::new(std::io::ErrorKind::InvalidData, err.to_string())
         })?;
         Ok(VersionMessage { header, payload })
     }
+}
+
+pub fn get_version_message(
+    config: &Config,
+    socket_addr: SocketAddr,
+    local_ip_addr: SocketAddr,
+) -> Result<VersionMessage, Box<dyn Error>> {
+    let version_payload = get_version_payload(config, socket_addr, local_ip_addr)?;
+    let version_header = HeaderMessage {
+        start_string: config.testnet_start_string,
+        command_name: "version".to_string(),
+        payload_size: version_payload.to_le_bytes().len() as u32,
+        checksum: get_checksum(&version_payload.to_le_bytes()),
+    };
+    Ok(VersionMessage {
+        header: version_header,
+        payload: version_payload,
+    })
 }

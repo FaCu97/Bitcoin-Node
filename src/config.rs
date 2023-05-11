@@ -6,7 +6,7 @@ use std::io::BufReader;
 use std::io::Read;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub number_of_nodes: usize,
     pub dns_seed: String,
