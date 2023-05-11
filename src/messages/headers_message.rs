@@ -14,32 +14,27 @@ impl HeadersMessage {
         let count: CompactSizeUint = CompactSizeUint::unmarshalling(headers_message_bytes, &mut offset);
         let headers_size: usize = headers_message_bytes.len();
         let mut i: u64 = 0;
-        println!("count {}",count.decoded_value());
-        println!("headers size{}",headers_size);
-        println!("offset {}",offset);
         while i < count.decoded_value() {
-            let mut header: Vec<u8> = Vec::new();
             if offset + BLOCK_HEADER_SIZE > headers_size {
                 return Err("Fuera de rango");
             }
-            header.extend_from_slice(&headers_message_bytes[(offset)..(offset + BLOCK_HEADER_SIZE)]);
-            //el 1 es el transaction_count que viene como 0x00;
+            //el 1 es el transaction_count que viene como 0x00;);
             i += 1;
-            block_header_vec.push(BlockHeader::unmarshalling(&header,&mut offset));
+            block_header_vec.push(BlockHeader::unmarshalling(&headers_message_bytes,&mut offset));
             offset+=1;
         }
 
         Ok(block_header_vec)
     }
 }
-/* 
+
 #[cfg(test)]
 mod tests {
-   // use crate::{
-       // block_header::BlockHeader, compact_size_uint::CompactSizeUint,
-      //  messages::headers_message::HeadersMessage,
+    use crate::{
+        block_header::BlockHeader, compact_size_uint::CompactSizeUint,
+        messages::headers_message::HeadersMessage,
     };
-/* 
+ 
     #[test]
     fn test_deserializacion_del_headers_message_vacio_no_da_block_headers(
     ) -> Result<(), &'static str> {
@@ -64,7 +59,7 @@ mod tests {
     #[test]
     fn test_deserializacion_del_headers_message_devuelve_2_block_header() -> Result<(), &'static str>
     {
-        let headers_message: Vec<u8> = Vec::new();
+        let headers_message: Vec<u8> = vec![2;163];
         let block_headers = HeadersMessage::unmarshalling(&headers_message)?;
         let expected_value = 2;
         assert_eq!(block_headers.len(), expected_value);
@@ -84,7 +79,7 @@ mod tests {
         let mut expected_block_header_bytes: Vec<u8>= vec![2; 80];
         expected_block_header_bytes.copy_from_slice(&headers_message[1..81]);
         let mut offset:usize=0;
-        let expected_block_header = BlockHeader::unmarshalling(expected_block_header_bytes,&mut offset);
+        let expected_block_header = BlockHeader::unmarshalling(&expected_block_header_bytes,&mut offset);
         let received_block_header = &block_headers[0];
 
         assert_eq!(received_block_header.version, expected_block_header.version);
@@ -118,7 +113,7 @@ mod tests {
         let mut expected_block_header_bytes: Vec<u8> = vec![2; 80];
         expected_block_header_bytes.copy_from_slice(&headers_message[3..83]);
         let mut offset:usize=0;
-        let expected_block_header = BlockHeader::unmarshalling(expected_block_header_bytes,&mut offset);
+        let expected_block_header = BlockHeader::unmarshalling(&expected_block_header_bytes,&mut offset);
         let received_block_header = &block_headers[0];
         let expected_len = 515;
 
@@ -137,5 +132,5 @@ mod tests {
         assert_eq!(received_block_header.nonce, expected_block_header.nonce);
         //assert_eq!(received_block_header.hash, expected_block_header.hash);
         Ok(())
-    }*/
-}*/
+    }
+}
