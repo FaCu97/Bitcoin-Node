@@ -49,7 +49,7 @@ mod tests {
     #[test]
     fn test_deserializacion_del_headers_message_devuelve_1_block_header() -> Result<(), &'static str>
     {
-        let mut headers_message: Vec<u8> = vec![1;82];
+        let headers_message: Vec<u8> = vec![1;82];
         let block_headers = HeadersMessage::unmarshalling(&headers_message)?;
         let expected_value = 1;
         assert_eq!(block_headers.len(), expected_value);

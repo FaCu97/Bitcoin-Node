@@ -87,4 +87,44 @@ mod test{
         assert_eq!(block.block_header,block_header);
         Ok(())
     }
+
+    #[test]
+    fn test_unmarshaling_del_bloque_genera_txn_count_esperado()->Result<(), &'static str>{
+        let mut bytes_to_read: Vec<u8> = Vec::new();
+        let block_header:BlockHeader=BlockHeader { version: (0x30201000), previous_block_header_hash: ([1;32]), merkle_root_hash: ([2;32]), time: (0x90807060), n_bits: (0x04030201), nonce: (0x30) };
+        block_header.marshalling(&mut bytes_to_read);
+        let txn_count_bytes : CompactSizeUint = CompactSizeUint::new(1);
+        let  txn_count : Vec<u8> = txn_count_bytes.marshalling();
+        bytes_to_read.extend_from_slice(&txn_count);
+        let tx_in_count :u128 = 4;
+        let tx_out_count :u128 = 3;
+        let version : i32 = -34;
+        let lock_time : u32 = 3;
+        let tx: Transaction = crear_transaccion(version,tx_in_count,tx_out_count,lock_time);
+        tx.marshalling(&mut bytes_to_read);
+        let mut offset:usize =0;
+        let block : Block = Block::unmarshalling(&bytes_to_read,&mut offset)?;
+        assert_eq!(block.txn_count,txn_count_bytes);
+        Ok(())
+    }
+
+    #[test]
+    fn test_unmarshaling_del_bloque_genera_transaction_esperada()->Result<(), &'static str>{
+        let mut bytes_to_read: Vec<u8> = Vec::new();
+        let block_header:BlockHeader=BlockHeader { version: (0x30201000), previous_block_header_hash: ([1;32]), merkle_root_hash: ([2;32]), time: (0x90807060), n_bits: (0x04030201), nonce: (0x30) };
+        block_header.marshalling(&mut bytes_to_read);
+        let txn_count_bytes : CompactSizeUint = CompactSizeUint::new(1);
+        let  txn_count : Vec<u8> = txn_count_bytes.marshalling();
+        bytes_to_read.extend_from_slice(&txn_count);
+        let tx_in_count :u128 = 1;
+        let tx_out_count :u128 = 1;
+        let version : i32 = 100;
+        let lock_time : u32 = 3;
+        let tx: Transaction = crear_transaccion(version,tx_in_count,tx_out_count,lock_time);
+        tx.marshalling(&mut bytes_to_read);
+        let mut offset:usize =0;
+        let block : Block = Block::unmarshalling(&bytes_to_read,&mut offset)?;
+        assert_eq!(block.txn[0],tx);
+        Ok(())
+    }
 }

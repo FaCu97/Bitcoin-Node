@@ -1,7 +1,7 @@
 use bitcoin_hashes::{sha256, Hash};
 
 use crate::{compact_size_uint::CompactSizeUint, tx_in::TxIn, tx_out::TxOut};
-
+#[derive(Debug, PartialEq)]
 pub struct Transaction {
     version: i32,
     txin_count: CompactSizeUint,
@@ -26,7 +26,7 @@ impl Transaction {
             );
         }
         let mut version_bytes: [u8; 4] = [0; 4];
-        version_bytes.copy_from_slice(&bytes[0..4]);
+        version_bytes.copy_from_slice(&bytes[*offset..(*offset+4)]);
         *offset += 4;
         let version = i32::from_le_bytes(version_bytes);
         let txin_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut *offset);
