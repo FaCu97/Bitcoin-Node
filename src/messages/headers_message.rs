@@ -1,5 +1,7 @@
 use crate::block_header::BlockHeader;
 use crate::compact_size_uint::CompactSizeUint;
+use super::message_header::HeaderMessage;
+use std::io::Read;
 const BLOCK_HEADER_SIZE: usize = 80;
 pub struct HeadersMessage;
 
@@ -20,11 +22,23 @@ impl HeadersMessage {
             }
             //el 1 es el transaction_count que viene como 0x00;);
             i += 1;
-            block_header_vec.push(BlockHeader::unmarshalling(&headers_message_bytes,&mut offset));
+            block_header_vec.push(BlockHeader::unmarshalling(headers_message_bytes,&mut offset));
             offset+=1;
         }
 
         Ok(block_header_vec)
+    }
+    /// Dado un stream que implementa el trait Read (desde donde se puede leer) lee el mensaje headers y devuelve
+    /// un vector con los headers en caso de que se haya podido leer correctamente o un Error en caso contrario
+    pub fn read_from(stream: &mut dyn Read) -> Result<Vec<BlockHeader>, Box<dyn std::error::Error>> {
+        let header = HeaderMessage::read_from(stream, "headers".to_string())?;
+        let payload_size = header.payload_size as usize;
+        let mut buffer_num = vec![0; payload_size];
+        stream.read_exact(&mut buffer_num)?;
+        let mut vec: Vec<u8> = vec![];
+        vec.extend_from_slice(&buffer_num);
+        let headers = Self::unmarshalling(&vec)?;
+        Ok(headers)
     }
 }
 

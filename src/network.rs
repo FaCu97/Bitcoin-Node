@@ -27,6 +27,7 @@ pub fn get_active_nodes_from_dns_seed(config: &Config) -> std::io::Result<Vec<Ip
     }
     Ok(node_ips)
 }
+
 /*
 #[cfg(test)]
 mod tests {
