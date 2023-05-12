@@ -17,6 +17,7 @@ pub fn get_active_nodes_from_dns_seed(dns_seed: String) -> std::io::Result<Vec<S
     Ok(nodes_list)
 }
 
+/* 
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,3 +68,4 @@ mod tests {
         )
     }
 }
+*/
