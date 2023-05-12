@@ -1,17 +1,17 @@
-use std::net::{ToSocketAddrs, SocketAddr, Ipv4Addr};
+use std::net::{Ipv4Addr, SocketAddr, ToSocketAddrs};
 
-use crate::config::{Config};
+use crate::config::Config;
 const NUMBER_OF_NODES: usize = 8;
 
 pub fn get_active_nodes_from_dns_seed(config: &Config) -> std::io::Result<Vec<Ipv4Addr>> {
-    let mut node_ips= Vec::new();
+    let mut node_ips = Vec::new();
     let host = "seed.testnet.bitcoin.sprovoost.nl";
     let port = 8333;
 
     let addrs = match (host, port).to_socket_addrs() {
         Ok(addrs) => addrs,
         Err(e) => {
-         //   println!("Error al resolver {}: {}", host, e);
+            //   println!("Error al resolver {}: {}", host, e);
             return Err(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "No se pudo conectar a la DNS seed!\n",
