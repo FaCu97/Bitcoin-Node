@@ -8,3 +8,4 @@ pub mod tx_in;
 pub mod tx_out;
 pub mod transaction;
 pub mod block;
+pub mod initial_block_download;
