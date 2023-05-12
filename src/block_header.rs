@@ -11,7 +11,7 @@ pub struct BlockHeader {
 }
 
 impl BlockHeader {
-    pub fn unmarshalling(block_header_message: &Vec<u8>,offset: & mut usize)-> BlockHeader {
+    pub fn unmarshalling(block_header_message: &[u8],offset: & mut usize)-> BlockHeader {
         let mut version_bytes: [u8; 4] = [0; 4];
         version_bytes.copy_from_slice(&block_header_message[*offset..(*offset+4)]);
         *offset += 4;
