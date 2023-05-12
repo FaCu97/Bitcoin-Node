@@ -1,5 +1,5 @@
 use bitcoin::config::Config;
-use bitcoin::messages::message_header::write_verack_message;
+use bitcoin::messages::message_header::{write_verack_message, read_verack_message};
 use bitcoin::messages::{
     message_header::HeaderMessage,
     version_message::{get_version_message, VersionMessage},
@@ -102,10 +102,10 @@ fn connect_to_node(config: &Config, node_ip: &Ipv4Addr) -> Result<TcpStream, Box
         node_ip, version_response
     );
     
-    let verack_response = write_verack_message(&mut stream)?;
+    write_verack_message(&mut stream)?;
     println!(
         "RECIBO MENSAJE VERACK DEL NODO {:?}: {:?}\n",
-        node_ip, verack_response
+        node_ip, read_verack_message(&mut stream)
     );
 /* 
     let verack_message = get_verack_message(config);
