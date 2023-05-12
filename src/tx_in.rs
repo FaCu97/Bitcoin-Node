@@ -78,10 +78,14 @@ impl TxIn {
     pub fn marshalling(&self, bytes: &mut Vec<u8>) {
         self.previous_output.marshalling(bytes);
         let script_bytes: Vec<u8> = self.script_bytes.marshalling();
-        bytes.extend_from_slice(&script_bytes[0..script_bytes.len()]);
-        bytes.extend_from_slice(&self.signature_script[0..self.signature_script.len()]);
+        bytes.extend_from_slice(&script_bytes);
+        if self.is_coinbase(){
+            // este unwrap es valido ?? Estamos chequeando previamente que no sea None 
+            bytes.extend_from_slice(&self.height.as_ref().unwrap());
+        }
+        bytes.extend_from_slice(&self.signature_script);
         let sequence_bytes: [u8; 4] = self.sequence.to_le_bytes();
-        bytes.extend_from_slice(&sequence_bytes[0..4]);
+        bytes.extend_from_slice(&sequence_bytes);
     }
 
     pub fn is_coinbase(&self) -> bool{

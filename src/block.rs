@@ -1,3 +1,5 @@
+use bitcoin_hashes::{sha256, Hash};
+
 use crate::{block_header::BlockHeader,compact_size_uint::CompactSizeUint,transaction::Transaction};
 
 
@@ -18,9 +20,75 @@ impl Block{
         Ok(Block { block_header, txn_count, txn })       
     }
 
-    pub fn validate(self){
-        return;
+    pub fn validate(&mut self) ->(bool,& 'static str){
+        if !self.block_header.validate() {
+            return(false,"El bloque no cumple con la dificultad pedida");
+        }
+        let merkle_root_hash : &[u8;32] = &self.generate_merkle_root();
+        if  !self.block_header.is_same_merkle_root_hash(merkle_root_hash) {
+            return (false,"El merkle root generado es distinto al provisto por el block header");
+        }
+        (true,"El bloque es valido")
+        
     }
+    fn concatenar_hash(primer_hash:[u8;32],segundo_hash:[u8;32]) -> [u8;64]{
+        let mut hashs_concatenados:[u8;64] = [0;64];
+        for i in 0..32{
+            hashs_concatenados[i] = primer_hash[i]
+        }
+        for i in 0..32{
+            hashs_concatenados[i + 32] = segundo_hash[i]
+        }
+        hashs_concatenados
+    }
+
+    fn generate_merkle_root_recursivo(vector: Vec<[u8;32]>) -> [u8;32]{
+        if vector.len() == 1{
+            return vector[0];
+        }
+        let vec_lenght : usize = vector.len();
+        let contenedor_de_hashes : Vec<[u8;32]> = Vec::new();
+        let mut amount_hashs:usize=1;
+        let current_position:usize=0;
+        for tx in &vector{
+            if amount_hashs == 2{
+                let hash_concatenados = Self::concatenar_hash(vector[current_position],*tx);
+                let hash_transaction = sha256::Hash::hash(&hash_concatenados);
+
+            }
+        
+            
+        
+
+        }
+
+        let re: [u8;32] = [0;32];
+        re
+    }
+
+    fn generate_merkle_root(&mut self) -> [u8;32]{
+        let mut merkle_transactions :Vec<[u8;32]> = Vec::new();
+        for tx in &mut self.txn{
+            merkle_transactions.push(tx.hash());
+        }
+        Self::generate_merkle_root_recursivo(merkle_transactions)
+    }
+
+
+    
+ /*   fn generate_merkle_root(&self)-> [u8;32]{
+        let mut merkle_transactions :Vec<[u8;32]> = Vec::new();
+        let vector_para_hashear : [u8;64] = Vec::new();
+        for index in 0..self.txn.len(){
+            merkle_transactions.push(self.txn[index].hash());
+            if index%2 != 0{
+                vector_para_hashear.extend_from_slice() 
+            }
+        }
+        let mut i = 0;
+        [0;32]
+
+    }*/
 }
 
 #[cfg(test)]

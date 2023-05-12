@@ -1,4 +1,4 @@
-use bitcoin_hashes::{sha256, Hash};
+use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{compact_size_uint::CompactSizeUint, tx_in::TxIn, tx_out::TxOut};
 #[derive(Debug, PartialEq)]
@@ -72,7 +72,7 @@ impl Transaction {
     pub fn hash(&mut self) ->[u8;32] {
         let mut raw_transaction_bytes : Vec<u8> = Vec::new();
         self.marshalling(&mut raw_transaction_bytes);
-        let hash_transaction = sha256::Hash::hash(&raw_transaction_bytes);
+        let hash_transaction = sha256d::Hash::hash(&raw_transaction_bytes);
         *hash_transaction.as_byte_array()
     }
 
@@ -91,7 +91,7 @@ impl Transaction {
 
 mod test {
     use super::Transaction;
-    use bitcoin_hashes::{sha256, Hash};
+    use bitcoin_hashes::{sha256d, Hash};
     use crate::{
         compact_size_uint::CompactSizeUint, outpoint::Outpoint, tx_in::TxIn, tx_out::TxOut,
     };
@@ -155,7 +155,7 @@ mod test {
         let mut transaction :Transaction = Transaction::new(0x11111111, txin_count, tx_in, txout_count, tx_out, 0x11111111);
         let mut vector = Vec::new();
         transaction.marshalling(& mut vector);
-        let hash_transaction = sha256::Hash::hash(&vector);
+        let hash_transaction = sha256d::Hash::hash(&vector);
         assert_eq!(transaction.hash(),*hash_transaction.as_byte_array());
     }
 
