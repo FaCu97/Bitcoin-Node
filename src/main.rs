@@ -66,15 +66,11 @@ fn handshake(config: Config, active_nodes: &[String]) -> Vec<TcpStream> {
         //  sockets.extend(result);
     }
     Arc::try_unwrap(sockets_lock).unwrap().into_inner().unwrap()
-    }
+}
 
 // los threads no pueden manejar un dyn Error
 // En el libro devuelve thread::Result<std::io::Result<()>>
-fn conectar_a_nodo(
-    configuracion: Config,
-    sockets: Arc<Mutex<Vec<TcpStream>>>,
-    nodos: &[String],
-) {
+fn conectar_a_nodo(configuracion: Config, sockets: Arc<Mutex<Vec<TcpStream>>>, nodos: &[String]) {
     for nodo in nodos {
         match connect_to_node(&configuracion, nodo) {
             Ok(stream) => {
