@@ -1,4 +1,4 @@
-use bitcoin_hashes::{sha256, Hash};
+use bitcoin_hashes::{Hash, sha256d};
 #[derive(Debug)]
 #[derive(PartialEq)]
 pub struct BlockHeader {
@@ -57,10 +57,10 @@ impl BlockHeader {
         let nonce_bytes = self.nonce.to_le_bytes();
         marshaled_block_header.extend_from_slice(&nonce_bytes);
     }
-    pub fn hash(&mut self) -> [u8;32]{
+    pub fn hash(&self) -> [u8;32]{
         let mut block_header_marshaled: Vec<u8> = Vec::new();
         self.marshalling(&mut block_header_marshaled);
-        let hash_block = sha256::Hash::hash(&block_header_marshaled);
+        let hash_block = sha256d::Hash::hash(&block_header_marshaled);
         *hash_block.as_byte_array()
     }
 }
@@ -68,7 +68,7 @@ impl BlockHeader {
 #[cfg(test)]
 mod tests {
     use crate::block_header::BlockHeader;
-    use bitcoin_hashes::{sha256, Hash};
+    use bitcoin_hashes::{Hash, sha256d};
 
     fn generar_block_header() -> BlockHeader{
         let mut message_header :Vec<u8> = Vec::new();
@@ -232,7 +232,7 @@ mod tests {
     }
     #[test]
     fn test_el_header_es_hasheado_correctamente() {
-        let mut block_header = BlockHeader {
+        let block_header = BlockHeader {
             version: 0x03020100,
             previous_block_header_hash: [0; 32],
             merkle_root_hash: [0; 32],
@@ -244,7 +244,7 @@ mod tests {
         for x in 0..4 {
             block_header_message_expected[x] = x as u8;
         }
-        let expected_hash = sha256::Hash::hash(&block_header_message_expected);
+        let expected_hash = sha256d::Hash::hash(&block_header_message_expected);
         let hash: [u8; 32]=block_header.hash();
         assert_eq!(hash, *expected_hash.as_byte_array())
     }
