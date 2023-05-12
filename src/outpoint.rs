@@ -9,20 +9,32 @@ impl Outpoint {
         Outpoint { tx_id, index }
     }
 
-
-    pub fn unmarshalling(bytes: &Vec<u8>,offset : &mut usize) -> Outpoint {
-        let mut tx_id: [u8; 32] = [0; 32];
-        for x in 0..32 {
-            tx_id[x] = bytes[x + (*offset)];
+    pub fn is_a_coinbase_outpoint(&self) -> bool{
+        if self.index == 0xffffffff{
+            return  true;
         }
+        let null_hash : [u8;32] = [0;32];
+        if self.tx_id == null_hash{
+            return true;
+        }
+        false
+    }
+
+
+    pub fn unmarshalling(bytes: &Vec<u8>,offset : &mut usize) -> Result<Outpoint,&'static str> {
+        if bytes.len() - *offset < 36 {
+            return Err(
+                "Los bytes recibidos no corresponden a un Outpoint, el largo es menor a 36 bytes",
+            );
+        }
+        let mut tx_id: [u8; 32] = [0; 32];
+        tx_id.copy_from_slice(&bytes[*offset..(*offset+32)]);     
         *offset += 32;
         let mut index_bytes: [u8; 4] = [0; 4];
-        for x in 0..4 {
-            index_bytes[x] = bytes[x + (*offset)];
-        }
+        index_bytes.copy_from_slice(&bytes[*offset..(*offset+4)]);
         *offset += 4;
         let index = u32::from_le_bytes(index_bytes);
-        Outpoint { tx_id, index }
+        Ok(Outpoint { tx_id, index })
     }
     // esta funcion se encarga de serializar un outpoint y cargarlo en el array bytes
     pub fn marshalling(&self, bytes: &mut Vec<u8>) {
@@ -40,28 +52,30 @@ mod test {
     use super::Outpoint;
 
     #[test]
-    fn test_unmarshalling_del_outpoint_produce_tx_id_esperado() {
+    fn test_unmarshalling_del_outpoint_produce_tx_id_esperado()-> Result<(), &'static str>{
         let bytes: Vec<u8> = vec![1; 36];
         let tx_id_esperado: [u8; 32] = [1; 32];
-        let mut offset : usize = 0;
-        let outpoint: Outpoint = Outpoint::unmarshalling(&bytes,&mut offset);
+        let mut offset: usize = 0;
+        let outpoint:Outpoint = Outpoint::unmarshalling(&bytes,&mut offset)?;
         assert_eq!(outpoint.tx_id, tx_id_esperado);
+        Ok(())
     }
 
     #[test]
-    fn test_unmarshalling_del_outpoint_produce_index_esperado() {
+    fn test_unmarshalling_del_outpoint_produce_index_esperado() -> Result<(), &'static str>{
         let mut bytes: Vec<u8> = vec![0; 36];
         for x in 0..4 {
             bytes[32 + x] = x as u8;
         }
         let index_esperado: u32 = 0x03020100;
-        let mut offset : usize = 0;
-        let outpoint: Outpoint = Outpoint::unmarshalling(&bytes,&mut offset);
+        let mut offset: usize = 0;
+        let outpoint: Outpoint = Outpoint::unmarshalling(&bytes,&mut offset)?;
         assert_eq!(outpoint.index, index_esperado);
+        Ok(())
     }
 
     #[test]
-    fn test_marshalling_del_outpoint_produce_tx_id_esperado() {
+    fn test_marshalling_del_outpoint_produce_tx_id_esperado()-> Result<(), &'static str> {
         let mut marshalling_outpoint: Vec<u8> = Vec::new();
         let tx_id: [u8; 32] = [2; 32];
         let outpoint_to_marshalling: Outpoint = Outpoint {
@@ -69,20 +83,38 @@ mod test {
             index: 0x03020100,
         };
         outpoint_to_marshalling.marshalling(&mut marshalling_outpoint);
-        let mut offset : usize = 0;
-        let outpoint_unmarshaled: Outpoint = Outpoint::unmarshalling(&marshalling_outpoint,&mut offset);
+        let mut offset: usize = 0;
+        let outpoint_unmarshaled: Outpoint = 
+            Outpoint::unmarshalling(&marshalling_outpoint,&mut offset)?;
         assert_eq!(outpoint_unmarshaled.tx_id, tx_id);
+        Ok(())
     }
 
     #[test]
-    fn test_marshalling_del_outpoint_produce_index_esperado() {
+    fn test_marshalling_del_outpoint_produce_index_esperado()-> Result<(), &'static str>{
         let mut marshalling_outpoint: Vec<u8> = Vec::new();
         let tx_id: [u8; 32] = [2; 32];
         let index: u32 = 0x03020100;
         let outpoint_to_marshalling: Outpoint = Outpoint { tx_id, index };
         outpoint_to_marshalling.marshalling(&mut marshalling_outpoint);
-        let mut offset : usize = 0;
-        let outpoint_unmarshaled: Outpoint = Outpoint::unmarshalling(&marshalling_outpoint,&mut offset);
+        let mut offset: usize = 0;
+        let outpoint_unmarshaled: Outpoint =
+            Outpoint::unmarshalling(&marshalling_outpoint,&mut offset)?;
         assert_eq!(outpoint_unmarshaled.index, index);
+        Ok(())
+    }
+
+    #[test]
+    fn test_outpoint_correspondiente_a_una_coinbase_con_tx_id_nulo_devuelve_true(){
+        let coinbase_outpoint: Outpoint=Outpoint::new([1;32],0xffffffff);
+        assert!(coinbase_outpoint.is_a_coinbase_outpoint())
+
+    }
+
+    #[test]
+    fn test_outpoint_correspondiente_a_una_coinbase_con_index_0xffffffff_devuelve_true(){
+        let coinbase_outpoint: Outpoint=Outpoint::new([1;32],0xffffffff);
+        assert!(coinbase_outpoint.is_a_coinbase_outpoint())
+
     }
 }

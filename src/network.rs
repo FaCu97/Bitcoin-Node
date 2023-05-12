@@ -1,29 +1,31 @@
+use std::net::{Ipv4Addr, SocketAddr, ToSocketAddrs};
+
 use crate::config::Config;
-use std::process::Command;
-//const NUMBER_OF_NODES: usize = 8;
+const NUMBER_OF_NODES: usize = 8;
 
-pub fn get_active_nodes_from_dns_seed(config: &Config) -> std::io::Result<Vec<String>> {
-    let query_reply = Command::new("dig")
-        .arg("+short")
-        .arg(&config.dns_seed)
-        .output()?;
-    let active_nodes = String::from_utf8_lossy(&query_reply.stdout);
-    let mut nodes_list: Vec<String> = Vec::new();
-    for node in active_nodes.lines() {
-        let port = &config.testnet_port;
-        let mut node_ip = node.to_string();
-        node_ip.push(':');
-        node_ip.push_str(port); // concateno al final de cada direccion ip ":" + <puerto> (18333)
-        nodes_list.push(node_ip);
-    }
-    if nodes_list.len() < config.number_of_nodes {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "No se obtuvieron la cantidad necesaria de nodos de la DNS seed! \n",
-        ));
-    }
 
-    Ok(nodes_list)
+/// Devuelve una lista de direcciones Ipv4 obtenidas del dns seed
+pub fn get_active_nodes_from_dns_seed(config: &Config) -> std::io::Result<Vec<Ipv4Addr>> {
+    let mut node_ips = Vec::new();
+    let host = "seed.testnet.bitcoin.sprovoost.nl";
+    let port = 8333;
+
+    let addrs = match (host, port).to_socket_addrs() {
+        Ok(addrs) => addrs,
+        Err(e) => {
+            //   println!("Error al resolver {}: {}", host, e);
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "No se pudo conectar a la DNS seed!\n",
+            ));
+        }
+    };
+    for addr in addrs {
+        if let SocketAddr::V4(v4_addr) = addr {
+            node_ips.push(*v4_addr.ip());
+        }
+    }
+    Ok(node_ips)
 }
 
 /*

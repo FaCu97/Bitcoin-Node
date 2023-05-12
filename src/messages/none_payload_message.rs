@@ -23,12 +23,13 @@ impl NonePayloadMessage {
     /// mensaje sin payload segun el protocolo de bitcoin. Devuelve error en caso de que se no se haya podido leer correctamente
     /// del stream o en caso de que los bytes leidos no puedan ser deserializados a un struct de tipo NonePayloadMessage, en caso
     /// contrario, devuelve un Ok() con un NonePayloadMessage deserializado de los bytes que leyo del stream.
-    pub fn read_from(stream: &mut dyn Read) -> Result<Self, Error> {
+
+    pub fn read_from(stream: &mut dyn Read) -> Result<SendheadersMessage, Error> {
         let mut buffer_num = [0; 24];
         stream.read_exact(&mut buffer_num)?;
         let header = HeaderMessage::from_le_bytes(buffer_num).map_err(|err: Utf8Error| {
             Error::new(std::io::ErrorKind::InvalidData, err.to_string())
         })?;
-        Ok(Self { header })
+        Ok(SendheadersMessage { header })
     }
 }
