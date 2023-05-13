@@ -10,7 +10,7 @@ pub fn get_active_nodes_from_dns_seed(config: Config) -> std::io::Result<Vec<Ipv
 
     let addrs = match (host, port).to_socket_addrs() {
         Ok(addrs) => addrs,
-        Err(e) => {
+        Err(_) => {
             //   println!("Error al resolver {}: {}", host, e);
             return Err(std::io::Error::new(
                 std::io::ErrorKind::Other,
