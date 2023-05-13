@@ -1,6 +1,5 @@
 use bitcoin_hashes::{Hash, sha256d};
-#[derive(Debug)]
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct BlockHeader {
     pub version: i32,
     pub previous_block_header_hash: [u8; 32],
