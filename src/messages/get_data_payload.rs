@@ -3,6 +3,7 @@ use crate::compact_size_uint::CompactSizeUint;
 /// Representa el mensaje Inv del protocolo bitcoin.
 /// Transmite uno o varios inventories (hashes).
 /// Puede ser la respuesta al mensaje getdata
+#[derive(Debug)]
 pub struct GetDataPayload {
     count: CompactSizeUint,
     inventories: Vec<[u8; 32]>,

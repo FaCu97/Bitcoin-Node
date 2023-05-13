@@ -1,4 +1,5 @@
 use bitcoin::config::Config;
+use bitcoin::messages::get_data_message::GetDataMessage;
 use bitcoin::messages::message_header::write_verack_message;
 use bitcoin::messages::{
     message_header::HeaderMessage,
@@ -6,9 +7,11 @@ use bitcoin::messages::{
 };
 use bitcoin::network::get_active_nodes_from_dns_seed;
 use std::error::Error;
+use std::io::Read;
 use std::net::{SocketAddr, TcpStream, Ipv4Addr, SocketAddrV4};
 use std::process::exit;
 use std::result::Result;
+use std::str::Utf8Error;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{env, thread};
@@ -40,7 +43,7 @@ fn main() {
 
 fn handshake(config: Config, active_nodes: &[Ipv4Addr]) -> Vec<TcpStream> {
     let lista_nodos = Arc::new(active_nodes);
-    let chunk_size = (lista_nodos.len() as f64 / config.n_threads as f64).ceil() as usize;
+    let chunk_size = (lista_nodos.len() as f64 / 1 as f64).ceil() as usize;
     let active_nodes_chunks = Arc::new(Mutex::new(
         lista_nodos
             .chunks(chunk_size)
@@ -51,7 +54,7 @@ fn handshake(config: Config, active_nodes: &[Ipv4Addr]) -> Vec<TcpStream> {
     let sockets_lock = Arc::new(Mutex::new(sockets));
     let mut thread_handles = vec![];
 
-    for i in 0..config.n_threads {
+    for i in 0..1 {
         let chunk = active_nodes_chunks.lock().unwrap()[i].clone();
         let configuracion = config.clone();
         let sockets: Arc<Mutex<Vec<TcpStream>>> = Arc::clone(&sockets_lock);
@@ -97,16 +100,48 @@ fn connect_to_node(config: &Config, node_ip: &Ipv4Addr) -> Result<TcpStream, Box
     let version_message = get_version_message(config, socket_addr, local_ip_addr)?;
     version_message.write_to(&mut stream)?;
     let version_response = VersionMessage::read_from(&mut stream)?;
-    println!(
-        "RECIBO MENSAJE VERSION DEL NODO {:?}: {:?}\n",
-        node_ip, version_response
-    );
+//    println!(
+//        "RECIBO MENSAJE VERSION DEL NODO {:?}: {:?}\n",
+//        node_ip, version_response
+//    );
     
     let verack_response = write_verack_message(&mut stream)?;
-    println!(
-        "RECIBO MENSAJE VERACK DEL NODO {:?}: {:?}\n",
-        node_ip, verack_response
-    );
+//    println!(
+//        "RECIBO MENSAJE VERACK DEL NODO {:?}: {:?}\n",
+//        node_ip, verack_response
+//    );
+    //f2b614c393c2d428b79021c7a0cf1d0e418a54224856
+    let vec:Vec<[u8;32]> = vec![
+        [
+            0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x13,
+            0x16, 0x2b, 0xf2, 0xb6,
+            0x14, 0xc3, 0x93, 0xc2,
+            0xd4, 0x28, 0xb7, 0x90,
+            0x21, 0xc7, 0xa0, 0xcf,
+            0x1d, 0x0e, 0x41, 0x8a,
+            0x54, 0x22, 0x48, 0x56,
+    ]
+];
+    let get_data_message = GetDataMessage::new(vec);
+    get_data_message.write_to(&mut stream)?;
+    println!("getdata: {:?}", get_data_message);
+    for _ in 0..6 {
+        let mut buffer_num = [0; 24];
+        stream.read_exact(&mut buffer_num)?;
+        let header = HeaderMessage::from_le_bytes(buffer_num).map_err(|err: Utf8Error| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, err.to_string())
+        })?;
+        let payload_large = header.payload_size;
+        let mut buffer_num = vec![0; payload_large as usize];
+        stream.read_exact(&mut buffer_num)?;
+        println!(
+            "RECIBO MENSAJE HEADER DEL NODO {:?}: {:?}\n",
+            node_ip, header
+        );
+    }
+
+    
 /* 
     let verack_message = get_verack_message(config);
     verack_message.write_to(&mut stream)?;

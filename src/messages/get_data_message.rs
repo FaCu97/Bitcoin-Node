@@ -3,15 +3,15 @@ use std::io::Write;
 
 use super::{get_data_payload::GetDataPayload, message_header::HeaderMessage};
 // todo: el write_to es código repetido, es igual que el de getheaders_message.rs. Habría que extraerlos.
-
 /// Implementa el mensaje getdata necesario para solicitar objetos a otro nodo.
 /// Puede usarse para solicitar transacciones, bloques, etc.
 /// El payload es similar al del mensaje Inv.
+#[derive(Debug)]
+
 pub struct GetDataMessage {
     pub header: HeaderMessage,
     pub payload: GetDataPayload,
 }
-
 impl GetDataMessage {
     /// Crea el mensaje getdata a partir de los inventories,
     /// los cuales son los hashes de algún objeto, tal como tx o BlockHeader
