@@ -3,7 +3,6 @@ use std::net::{Ipv4Addr, SocketAddr, ToSocketAddrs};
 use crate::config::Config;
 const NUMBER_OF_NODES: usize = 8;
 
-
 /// Devuelve una lista de direcciones Ipv4 obtenidas del dns seed
 pub fn get_active_nodes_from_dns_seed(config: &Config) -> std::io::Result<Vec<Ipv4Addr>> {
     let mut node_ips = Vec::new();

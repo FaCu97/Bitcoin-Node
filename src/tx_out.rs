@@ -4,11 +4,16 @@ pub struct TxOut {
     value: i64,                       // Number of satoshis to spend
     pk_script_bytes: CompactSizeUint, // de 1 a 10.000 bytes
     pk_script: Vec<u8>, // Defines the conditions which must be satisfied to spend this output.
-    utxo : bool // An output can bu utxo or not 
+    utxo: bool,         // An output can bu utxo or not
 }
 
 impl TxOut {
-    pub fn new(value: i64, pk_script_bytes: CompactSizeUint, pk_script: Vec<u8>,utxo : bool) -> Self {
+    pub fn new(
+        value: i64,
+        pk_script_bytes: CompactSizeUint,
+        pk_script: Vec<u8>,
+        utxo: bool,
+    ) -> Self {
         TxOut {
             value,
             pk_script_bytes,
@@ -37,7 +42,7 @@ impl TxOut {
             value,
             pk_script_bytes,
             pk_script,
-            utxo:true,
+            utxo: true,
         })
     }
     pub fn unmarshalling_txouts(
@@ -62,7 +67,7 @@ impl TxOut {
         bytes.extend_from_slice(&self.pk_script[0..self.pk_script.len()]);
     }
 
-    pub fn value(&self) -> i64{
+    pub fn value(&self) -> i64 {
         self.value
     }
 }
@@ -71,19 +76,17 @@ impl TxOut {
 mod tests {
     use crate::{compact_size_uint::CompactSizeUint, tx_out::TxOut};
 
-
-    fn simular_flujo_de_datos(value : i64,compact_size_value : u128) -> Vec<u8>{
+    fn simular_flujo_de_datos(value: i64, compact_size_value: u128) -> Vec<u8> {
         let mut bytes: Vec<u8> = Vec::new();
         let compact_size: CompactSizeUint = CompactSizeUint::new(compact_size_value);
         let mut pk_script: Vec<u8> = Vec::new();
-        for _x in 0..compact_size_value{
+        for _x in 0..compact_size_value {
             pk_script.push(1);
         }
-        let tx_out: TxOut = TxOut::new(value, compact_size, pk_script,true);
+        let tx_out: TxOut = TxOut::new(value, compact_size, pk_script, true);
         tx_out.marshalling(&mut bytes);
         bytes
     }
-
 
     #[test]
     fn test_unmarshalling_tx_out_invalido() {
@@ -143,8 +146,8 @@ mod tests {
 
     #[test]
     fn test_marshalling_de_tx_out_devuelve_value_esperado() -> Result<(), &'static str> {
-        let expected_value : i64 = 0x302010;
-        let bytes : Vec<u8> = simular_flujo_de_datos(expected_value,3);
+        let expected_value: i64 = 0x302010;
+        let bytes: Vec<u8> = simular_flujo_de_datos(expected_value, 3);
         let mut offset: usize = 0;
         let tx_out_expected: TxOut = TxOut::unmarshalling(&bytes, &mut offset)?;
         assert_eq!(tx_out_expected.value, expected_value);
@@ -153,9 +156,9 @@ mod tests {
 
     #[test]
     fn test_marshalling_de_tx_out_devuelve_pk_script_bytes_esperado() -> Result<(), &'static str> {
-        let compact_size_value : u128 = 43;
-        let value :i64 = 0x302010;
-        let bytes : Vec<u8> = simular_flujo_de_datos(value, compact_size_value);
+        let compact_size_value: u128 = 43;
+        let value: i64 = 0x302010;
+        let bytes: Vec<u8> = simular_flujo_de_datos(value, compact_size_value);
         let mut offset: usize = 0;
         let tx_out_expected: TxOut = TxOut::unmarshalling(&bytes, &mut offset)?;
         let compact_size_expected: CompactSizeUint = CompactSizeUint::new(compact_size_value);
@@ -164,12 +167,12 @@ mod tests {
     }
     #[test]
     fn test_marshalling_de_tx_out_devuelve_pk_script_esperado() -> Result<(), &'static str> {
-        let compact_size_value : u128 = 4;
-        let value :i64 = 0x302010;
-        let bytes : Vec<u8> = simular_flujo_de_datos(value, compact_size_value);
+        let compact_size_value: u128 = 4;
+        let value: i64 = 0x302010;
+        let bytes: Vec<u8> = simular_flujo_de_datos(value, compact_size_value);
         let mut offset: usize = 0;
         let tx_out_expected: TxOut = TxOut::unmarshalling(&bytes, &mut offset)?;
-        let pk_script_expected: Vec<u8> = vec![1,1,1,1];
+        let pk_script_expected: Vec<u8> = vec![1, 1, 1, 1];
         assert_eq!(tx_out_expected.pk_script, pk_script_expected);
         Ok(())
     }

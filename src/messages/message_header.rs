@@ -1,5 +1,5 @@
+use std::io::{Error, Read, Write};
 use std::str::Utf8Error;
-use std::io::{Write, Read, Error};
 // todo: implementar test de read_from usando mocking
 #[derive(Clone, Debug)]
 /// Representa el header de cualquier mensaje del protocolo bitcoin
@@ -55,7 +55,7 @@ impl HeaderMessage {
         stream.flush()?;
         Ok(())
     }
-    /// Recibe un stream que implemente el trait read (algo desde lo que se pueda leer) y devuelve un 
+    /// Recibe un stream que implemente el trait read (algo desde lo que se pueda leer) y devuelve un
     /// HeaderMessage si se pudo leer correctamente uno desde el stream o Error si lo leido no corresponde a
     /// el header de un mensaje del protocolo de bitcoin
     pub fn read_from(stream: &mut dyn Read) -> Result<Self, Error> {

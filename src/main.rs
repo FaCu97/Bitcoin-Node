@@ -1,8 +1,8 @@
 use std::env;
 use std::process::exit;
 mod config;
-use bitcoin::network::get_active_nodes_from_dns_seed;
 use bitcoin::config::Config;
+use bitcoin::network::get_active_nodes_from_dns_seed;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -13,14 +13,13 @@ fn main() {
         }
         Ok(config) => config,
     };
-    let active_nodes =
-        match get_active_nodes_from_dns_seed(&config) {
-            Err(e) => {
-                println!("ERROR: {}", e);
-                exit(-1)
-            }
-            Ok(active_nodes) => active_nodes,
-        };
+    let active_nodes = match get_active_nodes_from_dns_seed(&config) {
+        Err(e) => {
+            println!("ERROR: {}", e);
+            exit(-1)
+        }
+        Ok(active_nodes) => active_nodes,
+    };
     println!("{:?}", active_nodes);
 }
 
