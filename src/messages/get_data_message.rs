@@ -1,7 +1,7 @@
 use bitcoin_hashes::{sha256d, Hash};
 use std::io::Write;
 
-use super::{get_data_payload::GetDataPayload, message_header::HeaderMessage};
+use super::{get_data_payload::GetDataPayload, message_header::HeaderMessage, inventory::Inventory};
 // todo: el write_to es código repetido, es igual que el de getheaders_message.rs. Habría que extraerlos.
 /// Implementa el mensaje getdata necesario para solicitar objetos a otro nodo.
 /// Puede usarse para solicitar transacciones, bloques, etc.
@@ -14,8 +14,28 @@ pub struct GetDataMessage {
 }
 impl GetDataMessage {
     /// Crea el mensaje getdata a partir de los inventories,
-    /// los cuales son los hashes de algún objeto, tal como tx o BlockHeader
-    pub fn new(inventories: Vec<[u8; 32]>) -> GetDataMessage {
+    /// los cuales son los hashes de algún objeto, tal como tx o block
+    /// 
+    /// # EJEMPLO de uso:
+    /// ```no_run
+    ///     let hash:[u8;32] = [
+    ///         0x56, 0x48, 0x22, 0x54,
+    ///         0x8a, 0x41, 0x0e, 0x1d,
+    ///         0xcf, 0xa0, 0xc7, 0x21,
+    ///         0x90, 0xb7, 0x28, 0xd4,
+    ///         0xc2, 0x93, 0xc3, 0x14,
+    ///         0xb6, 0xf2, 0x2b, 0x16,
+    ///         0x13, 0x00, 0x00, 0x00,
+    ///         0x00, 0x00, 0x00, 0x00
+    ///     ];
+    ///     let mut inventories = Vec::new();
+    ///     inventories.push(Inventory::new_block(hash));
+    /// 
+    ///     let data_message = GetDataMessage::new(inventories);
+    ///     data_message.write_to(&mut stream);
+    /// ```
+    /// 
+    pub fn new(inventories: Vec<Inventory>) -> GetDataMessage {
         let payload = GetDataPayload::get_payload(inventories);
         let header = get_data_header_message(&payload);
         GetDataMessage { header, payload }
@@ -56,7 +76,8 @@ mod tests {
     #[test]
     fn get_data_message_con_un_inventory_se_crea_con_el_command_name_correcto() {
         // GIVEN : un inventory con un solo hash nulo
-        let inventories = vec![[0; 32]];
+        let mut inventories = Vec::new();
+        inventories.push(Inventory::new_block([0; 32]));
         // WHEN: se llama al método get_payload
         let message = GetDataMessage::new(inventories);
         // THEN: el header del mensaje se creó con el command_name correcto.
