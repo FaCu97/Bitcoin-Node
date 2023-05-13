@@ -6,14 +6,14 @@ use crate::compact_size_uint::CompactSizeUint;
 pub struct GetDataPayload {
     count: CompactSizeUint,
     inventories: Vec<[u8; 32]>,
-    get_data_payload_bytes: Box<Vec<u8>>,
+    get_data_payload_bytes: Vec<u8>,
 }
 
 impl GetDataPayload {
     /// Dado un vector de inventory, devuelve el payload del mensaje getdata
     pub fn get_payload(inventories: Vec<[u8; 32]>) -> GetDataPayload {
         let count = CompactSizeUint::new(inventories.len() as u128);
-        let get_data_payload_bytes = Box::new(get_data_payload_bytes(&count, &inventories));
+        let get_data_payload_bytes = get_data_payload_bytes(&count, &inventories);
         GetDataPayload {
             count,
             inventories,
@@ -23,7 +23,7 @@ impl GetDataPayload {
 
     /// Devuelve un vector de bytes que representan el payload del mensaje getdata
     pub fn to_le_bytes(&self) -> &[u8] {
-        &*self.get_data_payload_bytes
+        &self.get_data_payload_bytes
     }
 
     /// Devuelve el tamaño en bytes del payload
