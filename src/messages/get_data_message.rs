@@ -17,7 +17,7 @@ impl GetDataMessage {
     /// los cuales son los hashes de algún objeto, tal como tx o block
     /// 
     /// # EJEMPLO de uso:
-    /// ```no_run
+    /// ```no_test
     ///     let hash:[u8;32] = [
     ///         0x56, 0x48, 0x22, 0x54,
     ///         0x8a, 0x41, 0x0e, 0x1d,
