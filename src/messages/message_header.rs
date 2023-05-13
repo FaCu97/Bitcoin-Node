@@ -1,6 +1,9 @@
-use std::io::{Error, Read, Write};
+use bitcoin_hashes::{sha256d, Hash};
+use std::io::{Read, Write};
 use std::str::Utf8Error;
 // todo: implementar test de read_from usando mocking
+// todo: implementar test de write_to usando mocking
+// todo: implementar test de write_verack_message, read_verack_message, write_sendheaders_message usando mocking
 #[derive(Clone, Debug)]
 /// Representa el header de cualquier mensaje del protocolo bitcoin
 pub struct HeaderMessage {
@@ -49,23 +52,67 @@ impl HeaderMessage {
     /// y un stream que implemente el trait Write (en donde se pueda escribir) y escribe el mensaje serializado
     /// en bytes en el stream. Devuelve un error en caso de que no se haya podido escribir correctamente o un Ok en caso
     /// de que se haya escrito correctamente
-    pub fn write_to(&self, stream: &mut dyn Write) -> std::io::Result<()> {
+    pub fn write_to(&self, stream: &mut dyn Write) -> Result<(), Box<dyn std::error::Error>> {
         let header = self.to_le_bytes();
         stream.write_all(&header)?;
         stream.flush()?;
         Ok(())
     }
-    /// Recibe un stream que implemente el trait read (algo desde lo que se pueda leer) y devuelve un
-    /// HeaderMessage si se pudo leer correctamente uno desde el stream o Error si lo leido no corresponde a
-    /// el header de un mensaje del protocolo de bitcoin
-    pub fn read_from(stream: &mut dyn Read) -> Result<Self, Error> {
+    /// Recibe un stream que implemente el trait read (algo desde lo que se pueda leer) y el nombre del comando que se quiere leer
+    /// y devuelve un HeaderMessage si se pudo leer correctamente uno desde el stream
+    /// o Error si lo leido no corresponde a el header de un mensaje del protocolo de bitcoin
+    pub fn read_from(
+        stream: &mut dyn Read,
+        command_name: String,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
+        let header_command_name =
+            std::str::from_utf8(&command_name_to_bytes(&command_name))?.to_string();
         let mut buffer_num = [0; 24];
         stream.read_exact(&mut buffer_num)?;
-        let header = HeaderMessage::from_le_bytes(buffer_num).map_err(|err: Utf8Error| {
-            Error::new(std::io::ErrorKind::InvalidData, err.to_string())
-        })?;
+        let mut header = HeaderMessage::from_le_bytes(buffer_num)?;
+        // si no se leyo el header que se queria, sigo leyendo hasta encontrarlo
+        while header.command_name != header_command_name {
+            let payload_size = header.payload_size as usize;
+            let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
+            stream.read_exact(&mut payload_buffer_num)?;
+            buffer_num = [0; 24];
+            stream.read_exact(&mut buffer_num)?;
+            header = HeaderMessage::from_le_bytes(buffer_num)?;
+        }
         Ok(header)
     }
+}
+
+/// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje verack segun
+/// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error
+pub fn write_verack_message(stream: &mut dyn Write) -> Result<(), Box<dyn std::error::Error>> {
+    let header = HeaderMessage {
+        start_string: [0x0b, 0x11, 0x09, 0x07],
+        command_name: "verack".to_string(),
+        payload_size: 0,
+        checksum: [0x5d, 0xf6, 0xe0, 0xe2], // checksum de payload vacio
+    };
+    header.write_to(stream)?;
+    Ok(())
+}
+/// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje sendheaders segun
+/// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error
+pub fn write_sendheaders_message(stream: &mut dyn Write) -> Result<(), Box<dyn std::error::Error>> {
+    let header = HeaderMessage {
+        start_string: [0x0b, 0x11, 0x09, 0x07],
+        command_name: "sendheaders".to_string(),
+        payload_size: 0,
+        checksum: [0x5d, 0xf6, 0xe0, 0xe2], // checksum de payload vacio
+    };
+    header.write_to(stream)?;
+    Ok(())
+}
+/// Recibe un stream que implemente el trait Read (algo donde se pueda Leer) y lee el mensaje verack segun
+/// el protocolo de bitcoin, si se lee correctamente devuelve Ok(HeaderMessage) y sino devuelve un error
+pub fn read_verack_message(
+    stream: &mut dyn Read,
+) -> Result<HeaderMessage, Box<dyn std::error::Error>> {
+    HeaderMessage::read_from(stream, "verack".to_string())
 }
 
 /// Recibe un String que representa el nombre del comando del Header Message
@@ -80,6 +127,13 @@ fn command_name_to_bytes(command: &String) -> [u8; 12] {
     command_name_bytes
 }
 
+pub fn get_checksum(payload: &[u8]) -> [u8; 4] {
+    let sha_hash = sha256d::Hash::hash(payload); // hasheo doble de los bytes del payload
+    let hash_bytes: [u8; 32] = sha_hash.to_byte_array(); // convert Hash to [u8; 32] array
+    let mut checksum: [u8; 4] = [0u8; 4];
+    checksum.copy_from_slice(&hash_bytes[0..4]); // checksum devuelve los primeros 4 bytes de SHA256(SHA256(payload))
+    checksum
+}
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,8 +1,9 @@
+use bitcoin::config::Config;
+use bitcoin::handshake::Handshake;
+
+use bitcoin::network::get_active_nodes_from_dns_seed;
 use std::env;
 use std::process::exit;
-mod config;
-use bitcoin::config::Config;
-use bitcoin::network::get_active_nodes_from_dns_seed;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -13,14 +14,21 @@ fn main() {
         }
         Ok(config) => config,
     };
-    let active_nodes = match get_active_nodes_from_dns_seed(&config) {
+
+    let active_nodes = match get_active_nodes_from_dns_seed(config.clone()) {
         Err(e) => {
             println!("ERROR: {}", e);
             exit(-1)
         }
         Ok(active_nodes) => active_nodes,
     };
-    println!("{:?}", active_nodes);
+
+    let sockets = Handshake::handshake(config.clone(), &active_nodes);
+
+    println!("Sockets: {:?}", sockets);
+    println!("CANTIDAD SOCKETS: {:?}", sockets.len());
+    println!("{:?}", config.user_agent);
+    // Acá iría la descarga de los headers
 }
 
 #[cfg(test)]

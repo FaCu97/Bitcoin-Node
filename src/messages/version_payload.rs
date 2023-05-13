@@ -1,7 +1,10 @@
 use crate::compact_size_uint::CompactSizeUint;
+use crate::config::Config;
+use rand::Rng;
+use std::error::Error;
 use std::net::SocketAddr;
 use std::str::Utf8Error;
-use std::time::{SystemTime, SystemTimeError, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Debug)]
 ///  representa el payload de un mensaje Version segun el protocolo bitcoin, con todos sus respectivos campos
@@ -190,7 +193,7 @@ impl VersionPayload {
 }
 
 /// devuelve el timepo acutal segun EPOCH como un i64 o error en caso de que no se pueda obtener
-pub fn get_current_unix_epoch_time() -> Result<i64, SystemTimeError> {
+pub fn get_current_unix_epoch_time() -> Result<i64, Box<dyn Error>> {
     let current_time = SystemTime::now();
     let unix_epoch = UNIX_EPOCH;
     let unix_time = current_time.duration_since(unix_epoch)?;
@@ -209,6 +212,30 @@ pub fn get_ipv6_address_ip(socket_addr: SocketAddr) -> [u8; 16] {
         addr_recv_ip[(i * 2)..(i * 2 + 2)].copy_from_slice(&bytes); // copiamos los bytes en el vector de 8 bits
     }
     addr_recv_ip
+}
+
+pub fn get_version_payload(
+    config: &Config,
+    socket_addr: SocketAddr,
+    local_ip_addr: SocketAddr,
+) -> Result<VersionPayload, Box<dyn Error>> {
+    let timestamp: i64 = get_current_unix_epoch_time()?;
+    Ok(VersionPayload {
+        version: config.protocol_version,
+        services: 0u64,
+        timestamp,
+        addr_recv_service: 1u64,
+        addr_recv_ip: get_ipv6_address_ip(socket_addr),
+        addr_recv_port: 18333,
+        addr_trans_service: 0u64,
+        addr_trans_ip: get_ipv6_address_ip(local_ip_addr),
+        addr_trans_port: 18333,
+        nonce: rand::thread_rng().gen(),
+        user_agent_bytes: CompactSizeUint::new(16u128),
+        user_agent: config.user_agent.to_string(),
+        start_height: 1,
+        relay: true,
+    })
 }
 
 #[cfg(test)]
