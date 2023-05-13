@@ -8,7 +8,7 @@ impl Inventory {
     pub fn new_block(hash: [u8;32]) -> Inventory {
         Inventory{
             type_identifier: 2, // 2: Block
-            hash: hash,
+            hash,
         }
     }
     
