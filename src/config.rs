@@ -15,6 +15,7 @@ pub struct Config {
     pub protocol_version: i32,
     pub user_agent: String,
     pub n_threads: usize,
+    pub dns_port: u16,
 }
 impl Config {
     /// Crea un config leyendo un archivo de configuracion ubicado en la
@@ -54,6 +55,7 @@ impl Config {
             protocol_version: 0,
             user_agent: String::new(),
             n_threads: 0,
+            dns_port: 0,
         };
 
         for line in reader.lines() {
@@ -82,6 +84,7 @@ impl Config {
             "PROTOCOL_VERSION" => self.protocol_version = i32::from_str(value)?,
             "USER_AGENT" => self.user_agent = String::from(value),
             "N_THREADS" => self.n_threads = usize::from_str(value)?,
+            "DNS_PORT" => self.dns_port = u16::from_str(value)?,
             _ => {
                 return Err(Box::new(io::Error::new(
                     io::ErrorKind::InvalidInput,
