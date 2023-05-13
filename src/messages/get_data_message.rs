@@ -1,7 +1,9 @@
 use bitcoin_hashes::{sha256d, Hash};
 use std::io::Write;
 
-use super::{get_data_payload::GetDataPayload, message_header::HeaderMessage, inventory::Inventory};
+use super::{
+    get_data_payload::GetDataPayload, inventory::Inventory, message_header::HeaderMessage,
+};
 // todo: el write_to es código repetido, es igual que el de getheaders_message.rs. Habría que extraerlos.
 /// Implementa el mensaje getdata necesario para solicitar objetos a otro nodo.
 /// Puede usarse para solicitar transacciones, bloques, etc.
@@ -15,7 +17,7 @@ pub struct GetDataMessage {
 impl GetDataMessage {
     /// Crea el mensaje getdata a partir de los inventories,
     /// los cuales son los hashes de algún objeto, tal como tx o block
-    /// 
+    ///
     /// # EJEMPLO de uso:
     /// ```no_test
     ///     let hash:[u8;32] = [
@@ -30,11 +32,11 @@ impl GetDataMessage {
     ///     ];
     ///     let mut inventories = Vec::new();
     ///     inventories.push(Inventory::new_block(hash));
-    /// 
+    ///
     ///     let data_message = GetDataMessage::new(inventories);
     ///     data_message.write_to(&mut stream);
     /// ```
-    /// 
+    ///
     pub fn new(inventories: Vec<Inventory>) -> GetDataMessage {
         let payload = GetDataPayload::get_payload(inventories);
         let header = get_data_header_message(&payload);

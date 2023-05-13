@@ -69,6 +69,6 @@ mod tests {
         let payload = GetDataPayload::get_payload(inventories.clone());
         // THEN: los atributos del GetDataPayload se crearon correctamente.
         assert_eq!(payload.count.decoded_value() as usize, inventories.len());
-       // assert_eq!(payload.inventories, inventories);
+        // assert_eq!(payload.inventories, inventories);
     }
 }
