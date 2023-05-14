@@ -6,16 +6,20 @@ use std::io::BufReader;
 use std::io::Read;
 use std::str::FromStr;
 
+/// Permite validar la cantidad de atributos en el archivo de configuración
+/// Si se agregan hay que incrementarlo
+const CANTIDAD_ATRIBUTOS: usize = 9;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub number_of_nodes: usize,
     pub dns_seed: String,
-    pub testnet_port: String,
+    pub testnet_port: u16,
     pub testnet_start_string: [u8; 4],
     pub protocol_version: i32,
     pub user_agent: String,
     pub n_threads: usize,
     pub dns_port: u16,
+    pub connect_timeout: u64,
 }
 impl Config {
     /// Crea un config leyendo un archivo de configuracion ubicado en la
@@ -50,15 +54,18 @@ impl Config {
         let mut cfg = Self {
             number_of_nodes: 0,
             dns_seed: String::new(),
-            testnet_port: String::new(),
+            testnet_port: 0,
             testnet_start_string: [0; 4],
             protocol_version: 0,
             user_agent: String::new(),
             n_threads: 0,
             dns_port: 0,
+            connect_timeout: 0,
         };
 
+        let mut cantidad_de_lineas: usize = 0;
         for line in reader.lines() {
+            cantidad_de_lineas += 1;
             let current_line = line?;
             let setting: Vec<&str> = current_line.split('=').collect();
 
@@ -70,14 +77,25 @@ impl Config {
             }
             Self::load_setting(&mut cfg, setting[0], setting[1])?;
         }
+        Self::check_number_of_attributes(cantidad_de_lineas)?;
         Ok(cfg)
+    }
+
+    fn check_number_of_attributes(cantidad_de_lineas: usize) -> Result<(), Box<dyn Error>> {
+        if cantidad_de_lineas != CANTIDAD_ATRIBUTOS {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Invalid quantity of lines in file config".to_string(),
+            )));
+        }
+        Ok(())
     }
 
     fn load_setting(&mut self, name: &str, value: &str) -> Result<(), Box<dyn Error>> {
         match name {
             "NUMBER_OF_NODES" => self.number_of_nodes = usize::from_str(value)?,
             "DNS_SEED" => self.dns_seed = String::from(value),
-            "TESTNET_PORT" => self.testnet_port = String::from(value),
+            "TESTNET_PORT" => self.testnet_port = u16::from_str(value)?,
             "TESTNET_START_STRING" => {
                 self.testnet_start_string = i32::from_str(value)?.to_be_bytes()
             }
@@ -85,6 +103,7 @@ impl Config {
             "USER_AGENT" => self.user_agent = String::from(value),
             "N_THREADS" => self.n_threads = usize::from_str(value)?,
             "DNS_PORT" => self.dns_port = u16::from_str(value)?,
+            "CONNECT_TIMEOUT" => self.connect_timeout = u64::from_str(value)?,
             _ => {
                 return Err(Box::new(io::Error::new(
                     io::ErrorKind::InvalidInput,
@@ -114,23 +133,15 @@ mod tests {
     }
 
     #[test]
-    fn config_sin_valores_requeridos() -> Result<(), Box<dyn Error>> {
-        // GIVEN: un reader con contenido de configuracion completo
-        let content = "NUMBER_OF_NODES=8\n\
-        DNS_SEED=prueba\n\
-        TESTNET_PORT=65536\n\
-        TESTNET_START_STRING=123456\n\
-        PROTOCOL_VERSION=70015\n\
-        USER_AGENT=/satoshi/"
-            .as_bytes();
+    fn config_file_completo_se_crea_correctamente() -> Result<(), Box<dyn Error>> {
+        // GIVEN: un archivo de configuracion completo
+        let file = File::open("nodo.conf")?;
 
-        // WHEN: se ejecuta la funcion from_reader con ese reader
-        let cfg = Config::from_reader(content)?;
+        // WHEN: se ejecuta la funcion from_reader con ese archivo
+        let cfg_result = Config::from_reader(file);
 
-        // THEN: la funcion devuelve Ok y los parametros de configuracion tienen los valores esperados
-        assert_eq!(8, cfg.number_of_nodes);
-        assert_eq!("prueba", cfg.dns_seed);
-        assert_eq!("65536", cfg.testnet_port);
+        // THEN: se crea correctamente sin dar error
+        assert!(!cfg_result.is_err());
         Ok(())
     }
 
@@ -162,5 +173,25 @@ mod tests {
         // THEN: la funcion devuelve un Err porque el contenido es invalido
         assert!(cfg.is_err());
         assert!(matches!(cfg, Err(_)));
+    }
+
+    #[test]
+    fn archivo_config_con_cantidad_atributos_incorrecta_devuelve_error(
+    ) -> Result<(), Box<dyn Error>> {
+        // GIVEN: Un archivo de configuración con cantidad incorrecta de lineas
+        let content = "NUMBER_OF_NODES=8\n\
+        DNS_SEED=prueba\n\
+        TESTNET_PORT=65536\n\
+        TESTNET_START_STRING=123456\n\
+        PROTOCOL_VERSION=70015\n\
+        USER_AGENT=/satoshi/"
+            .as_bytes();
+
+        // WHEN: se crea la la configuración
+        let config_result = Config::from_reader(content);
+
+        // THEN: la configuración da error
+        assert!(config_result.is_err());
+        Ok(())
     }
 }
