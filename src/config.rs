@@ -63,9 +63,8 @@ impl Config {
             connect_timeout: 0,
         };
 
-        let mut cantidad_de_lineas: usize = 0;
+        let mut number_of_settings_loaded: usize = 0;
         for line in reader.lines() {
-            cantidad_de_lineas += 1;
             let current_line = line?;
             let setting: Vec<&str> = current_line.split('=').collect();
 
@@ -75,9 +74,9 @@ impl Config {
                     format!("Invalid config input: {}", current_line),
                 )));
             }
-            Self::load_setting(&mut cfg, setting[0], setting[1])?;
+            Self::load_setting(&mut cfg, setting[0], setting[1], &mut number_of_settings_loaded)?;
         }
-        Self::check_number_of_attributes(cantidad_de_lineas)?;
+        Self::check_number_of_attributes(number_of_settings_loaded)?;
         Ok(cfg)
     }
 
@@ -91,19 +90,44 @@ impl Config {
         Ok(())
     }
 
-    fn load_setting(&mut self, name: &str, value: &str) -> Result<(), Box<dyn Error>> {
+    fn load_setting(&mut self, name: &str, value: &str, number_of_settings_loaded: &mut usize) -> Result<(), Box<dyn Error>> {
         match name {
-            "NUMBER_OF_NODES" => self.number_of_nodes = usize::from_str(value)?,
-            "DNS_SEED" => self.dns_seed = String::from(value),
-            "TESTNET_PORT" => self.testnet_port = u16::from_str(value)?,
+            "NUMBER_OF_NODES" => {
+                self.number_of_nodes = usize::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            },
+            "DNS_SEED" => {
+                self.dns_seed = String::from(value);
+                *number_of_settings_loaded += 1;
+            },
+            "TESTNET_PORT" => {
+                self.testnet_port = u16::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            },
             "TESTNET_START_STRING" => {
-                self.testnet_start_string = i32::from_str(value)?.to_be_bytes()
-            }
-            "PROTOCOL_VERSION" => self.protocol_version = i32::from_str(value)?,
-            "USER_AGENT" => self.user_agent = String::from(value),
-            "N_THREADS" => self.n_threads = usize::from_str(value)?,
-            "DNS_PORT" => self.dns_port = u16::from_str(value)?,
-            "CONNECT_TIMEOUT" => self.connect_timeout = u64::from_str(value)?,
+                self.testnet_start_string = i32::from_str(value)?.to_be_bytes();
+                *number_of_settings_loaded += 1;
+            },
+            "PROTOCOL_VERSION" => {
+                self.protocol_version = i32::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            },
+            "USER_AGENT" => {
+                self.user_agent = String::from(value);
+                *number_of_settings_loaded += 1;
+            },
+            "N_THREADS" => {
+                self.n_threads = usize::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            },
+            "DNS_PORT" => {
+                self.dns_port = u16::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            },
+            "CONNECT_TIMEOUT" => {
+                self.connect_timeout = u64::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            },
             _ => {
                 return Err(Box::new(io::Error::new(
                     io::ErrorKind::InvalidInput,
