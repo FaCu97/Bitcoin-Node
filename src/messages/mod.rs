@@ -1,3 +1,4 @@
+pub mod block_message;
 pub mod get_data_message;
 pub mod get_data_payload;
 pub mod getheaders_message;
