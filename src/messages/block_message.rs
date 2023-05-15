@@ -20,7 +20,7 @@ impl BlockMessage {
     /// el bloque correspondiente si se pudo leer correctamente o un Error en caso contrario.
     pub fn read_from(stream: &mut dyn Read) -> Result<Block, Box<dyn std::error::Error>> {
         let header = HeaderMessage::read_from(stream, "block".to_string())?;
-        println!("Header recibido: {:?}\n", header);
+        //println!("Header recibido: {:?}\n", header);
         let payload_size = header.payload_size as usize;
         let mut buffer_num = vec![0; payload_size];
         stream.read_exact(&mut buffer_num)?;

@@ -1,6 +1,6 @@
 use bitcoin::config::Config;
 use bitcoin::handshake::Handshake;
-use bitcoin::initial_block_download::download_headers;
+use bitcoin::initial_block_download::ibm;
 use bitcoin::network::get_active_nodes_from_dns_seed;
 use std::env;
 use std::error::Error;
@@ -15,7 +15,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("CANTIDAD SOCKETS: {:?}", sockets.len());
     println!("{:?}", config.user_agent);
     // Acá iría la descarga de los headers
-    download_headers(&config, &mut sockets)?;
+    ibm(config.clone(), sockets)?;
     Ok(())
 }
 
