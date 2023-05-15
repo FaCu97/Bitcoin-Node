@@ -63,9 +63,9 @@ fn conectar_a_nodo(configuracion: Config, sockets: Arc<Mutex<Vec<TcpStream>>>, n
 
 fn connect_to_node(config: &Config, node_ip: &Ipv4Addr) -> Result<TcpStream, Box<dyn Error>> {
     //let socket_addr: SocketAddr = node_ip.parse()?;
-    let port: u16 = 18333;
-    let socket_addr = SocketAddr::new((*node_ip).into(), port);
-    let mut stream: TcpStream = TcpStream::connect_timeout(&socket_addr, Duration::from_secs(5))?;
+    let socket_addr = SocketAddr::new((*node_ip).into(), config.testnet_port);
+    let mut stream: TcpStream =
+        TcpStream::connect_timeout(&socket_addr, Duration::from_secs(config.connect_timeout))?;
 
     let local_ip_addr = stream.local_addr()?;
     let version_message = get_version_message(config, socket_addr, local_ip_addr)?;
