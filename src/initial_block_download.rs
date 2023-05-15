@@ -66,6 +66,8 @@ pub fn download_headers(config: &Config, nodes: &mut Vec<TcpStream>) -> Result<V
         }
     }
     println!("BLOQUES A DESCARGAR {:?}", bloques.len());
+    let mut bloques_descargados: Vec<Block> = vec![];
+    
     Ok(headers_list)
 }
 
