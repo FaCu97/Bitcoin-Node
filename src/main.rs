@@ -14,6 +14,7 @@ fn main() {
         }
         Ok(config) => config,
     };
+
     let active_nodes = match get_active_nodes_from_dns_seed(config.clone()) {
         Err(e) => {
             println!("ERROR: {}", e);
