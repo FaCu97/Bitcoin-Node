@@ -32,7 +32,7 @@ impl TxIn {
             );
         }
         let previous_output: Outpoint = Outpoint::unmarshalling(bytes, offset)?;
-        let script_bytes: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, offset);
+        let script_bytes: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, offset)?;
         let mut height: Option<Vec<u8>> = None;
         if previous_output.is_a_coinbase_outpoint() {
             if script_bytes.decoded_value() > 100 {

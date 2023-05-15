@@ -33,7 +33,7 @@ impl TxOut {
         byte_value.copy_from_slice(&bytes[*offset..*offset + 8]);
         *offset += 8;
         let value = i64::from_le_bytes(byte_value);
-        let pk_script_bytes = CompactSizeUint::unmarshalling(bytes, offset);
+        let pk_script_bytes = CompactSizeUint::unmarshalling(bytes, offset)?;
         let mut pk_script: Vec<u8> = Vec::new();
         let amount_bytes: usize = pk_script_bytes.decoded_value() as usize;
         pk_script.extend_from_slice(&bytes[*offset..(*offset + amount_bytes)]);

@@ -14,7 +14,7 @@ impl HeadersMessage {
         let mut block_header_vec: Vec<BlockHeader> = Vec::new();
         let mut offset: usize = 0;
         let count: CompactSizeUint =
-            CompactSizeUint::unmarshalling(headers_message_bytes, &mut offset);
+            CompactSizeUint::unmarshalling(headers_message_bytes, &mut offset)?;
         let headers_size: usize = headers_message_bytes.len();
         let mut i: u64 = 0;
         while i < count.decoded_value() {
