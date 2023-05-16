@@ -7,8 +7,8 @@ use super::inventory::Inventory;
 /// Puede ser la respuesta al mensaje getdata
 #[derive(Debug)]
 pub struct GetDataPayload {
-    count: CompactSizeUint,
-    inventories: Vec<Inventory>,
+    pub count: CompactSizeUint,
+    pub inventories: Vec<Inventory>,
     get_data_payload_bytes: Vec<u8>,
 }
 

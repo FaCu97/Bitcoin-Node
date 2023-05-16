@@ -4,8 +4,6 @@ use std::io::Write;
 use crate::compact_size_uint::CompactSizeUint;
 use crate::config::Config;
 
-const PROTOCOL_VERSION: i32 = 70015;
-const START_STRING: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
 
 // todo: Implementar pruebas usando mocking
 /// Representa un mensaje del tipo getheaders segun el protocolo de bitcoin, con su respectivo header y payload

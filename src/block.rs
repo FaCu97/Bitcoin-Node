@@ -4,9 +4,9 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Block {
-    block_header: BlockHeader,
-    txn_count: CompactSizeUint,
-    txn: Vec<Transaction>,
+    pub block_header: BlockHeader,
+    pub txn_count: CompactSizeUint,
+    pub txn: Vec<Transaction>,
 }
 
 impl Block {
