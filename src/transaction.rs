@@ -41,13 +41,13 @@ impl Transaction {
         version_bytes.copy_from_slice(&bytes[*offset..(*offset + 4)]);
         *offset += 4;
         let version = i32::from_le_bytes(version_bytes);
-        let txin_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut *offset);
+        let txin_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut *offset)?;
         let amount_txin: u64 = txin_count.decoded_value();
         let tx_in: Vec<TxIn> = TxIn::unmarshalling_txins(bytes, amount_txin, &mut *offset)?; // aca se actualizaria el *offset tambien
         if tx_in[0].is_coinbase() && txin_count.decoded_value() != 1 {
             return Err("una coinbase transaction no puede tener mas de un input");
         }
-        let txout_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut *offset);
+        let txout_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut *offset)?;
         let amount_txout: u64 = txout_count.decoded_value();
         let tx_out: Vec<TxOut> = TxOut::unmarshalling_txouts(bytes, amount_txout, &mut *offset)?; // aca se actualizaria el *offset tambien
         let mut lock_time_bytes: [u8; 4] = [0; 4];
@@ -188,7 +188,7 @@ mod test {
         ));
         let txin_count: CompactSizeUint = CompactSizeUint::new(1);
         let txout_count: CompactSizeUint = CompactSizeUint::new(1);
-        let mut transaction: Transaction = Transaction::new(
+        let transaction: Transaction = Transaction::new(
             0x11111111,
             txin_count,
             tx_in,
