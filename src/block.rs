@@ -2,7 +2,7 @@ use crate::{
     block_header::BlockHeader, compact_size_uint::CompactSizeUint, transaction::Transaction,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Block {
     block_header: BlockHeader,
     txn_count: CompactSizeUint,

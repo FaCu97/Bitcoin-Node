@@ -62,6 +62,8 @@ impl BlockHeader {
         *hash_block.as_byte_array()
     }
 }
+unsafe impl Send for BlockHeader {}
+unsafe impl Sync for BlockHeader {}
 
 #[cfg(test)]
 mod tests {

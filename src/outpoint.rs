@@ -1,4 +1,4 @@
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Outpoint {
     tx_id: [u8; 32],
     index: u32,

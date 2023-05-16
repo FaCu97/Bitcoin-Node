@@ -47,6 +47,7 @@ pub fn download_headers(config: Arc<Mutex<Config>>, mut node: TcpStream, headers
             return Err(e.to_string().into())
         } 
     };
+    
     let mut headers_guard = match headers.lock() {
         Ok(guard) => guard,
         Err(e) => {
@@ -56,8 +57,9 @@ pub fn download_headers(config: Arc<Mutex<Config>>, mut node: TcpStream, headers
     let mut encontrado = false;
     GetHeadersMessage::build_getheaders_message(&config_guard, vec![GENESIS_BLOCK]).write_to(&mut node)?;
     let mut headers_read = HeadersMessage::read_from(&mut node)?;
-    headers_guard.extend(headers_read.clone());
-    while headers_read.len() == 2000 {
+    headers_guard.extend_from_slice(&headers_read);
+    //let headers_read_lenght : &usize = &headers_read.len();
+    while  headers_read.len() == 2000 {
         let last_header_hash = match headers_read.last() {
             Some(block_header) => Ok::<[u8; 32], Box<dyn Error>>(block_header.hash()) ,  
             None => Err("No se pudo obtener el ultimo elemento del vector de 2000 headers".into())
@@ -76,29 +78,35 @@ pub fn download_headers(config: Arc<Mutex<Config>>, mut node: TcpStream, headers
                     first_block_headers.push(header);
                 }
             }
-            tx.send(first_block_headers)?;
+            println!("ENVIO {:?} HEADERS\n", first_block_headers.len());
+            tx.send(first_block_headers.clone())?;
+            
         }
-        if encontrado == true && headers_guard.len() >= 430000{
+        if encontrado == true && headers_guard.len() >= 430000 {
             tx.send(headers_read.clone())?;
             println!("ENVIO {:?} HEADERS\n", headers_read.len());
         }
-        headers_guard.extend(headers_read.clone());
-        println!("{:?}\n", headers_guard.len());
+        headers_guard.extend_from_slice(&headers_read);
+        println!("{:?}\n", headers_guard.len());    
     }
     Ok(())
 }
 
 
-pub fn download_blocks(blocks: Arc<Mutex<Vec<BlockHeader>>>, rx: Receiver<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>> {
+pub fn download_blocks(mut nodes: Vec<TcpStream>,blocks: Arc<Mutex<Vec<Block>>>, rx: Receiver<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>> {
     for recieved in rx {
         println!("RECIBO {:?} HEADERS\n", recieved.len());
+    }
+        /* 
         let mut blocks_guard = match blocks.lock() {
             Ok(guard) => guard,
             Err(e) => {
                 return Err(e.to_string().into())
             },
         };
-        blocks_guard.extend(recieved.clone());
+        */
+        //blocks_guard.extend_from_slice(&recieved);
+        /* 
         let chunk_size = (recieved.len() as f64 / 8 as f64).ceil() as usize;
         let blocks_headers_chunks = Arc::new(Mutex::new(
             recieved
@@ -106,27 +114,34 @@ pub fn download_blocks(blocks: Arc<Mutex<Vec<BlockHeader>>>, rx: Receiver<Vec<Bl
                 .map(|chunk| chunk.to_vec())
                 .collect::<Vec<_>>(),
         ));
-
-
-            /* 
-            let mut thread_handles = vec![];
-            let pointer_to_thread_handles = Arc::new(Mutex::new(thread_handles));
-            let pointer_to_thread_handles_clone = Arc::clone(&pointer_to_thread_handles);
-            for i in 1..9 {
-                let n = nodes.remove(i);
-                pointer_to_thread_handles_clone.lock().unwrap().push(thread::spawn(move || {
-                    //let blocks_from_this_thread = bloques[i];
-                
-                }).join().unwrap());
-                nodes.push(n);
-
-
+        
+        for i in 0..8 {
+            let mut n = nodes.remove(i + 1);
+            let block_headers_chunk_clone = Arc::clone(&blocks_headers_chunks);
+            let mut handle_join = vec![];
+            let block_clone = Arc::clone(&blocks);
+            handle_join.push(thread::spawn(move || {
+                let chunk = block_headers_chunk_clone.lock().unwrap()[i].clone();
+                println!("VOY A DESCARGAR {:?} BLOQUES DEL NODO {:?}\n", chunk.len(), n);
+                for block in chunk {
+                    let block_hash = block.hash();
+                    let mut inventories = Vec::new();
+                    inventories.push(Inventory::new_block(block_hash));
+                    let data_message = GetDataMessage::new(inventories);
+                    data_message.write_to(&mut n).unwrap();
+                    let bloque = BlockMessage::read_from(&mut n).unwrap();
+                    block_clone.lock().unwrap().push(bloque);
+                }
+            }));
+            for h in handle_join {
+                h.join().unwrap();
             }
-            */
+        */
+        
+            /* 
             // divido los headers que me llegaron en 8 vectores de igual tamaño
             // creo 8 threads, cada uno conectado a un nodo distinto
             // 
-            /* 
             for block in recieved {
                 let block_hash = block.hash();
                 let mut inventories = Vec::new();
@@ -137,7 +152,7 @@ pub fn download_blocks(blocks: Arc<Mutex<Vec<BlockHeader>>>, rx: Receiver<Vec<Bl
                 pointer_to_blocks_clone.lock().unwrap().push(bloque);
             }
             */
-    }
+    
     Ok(())
 
 }
@@ -165,11 +180,11 @@ pub fn ibm(config: Config, mut nodes: Vec<TcpStream>) -> Result<Vec<BlockHeader>
 
 
     
-    let blocks: Vec<BlockHeader> = vec![];
+    let blocks: Vec<Block> = vec![];
     let pointer_to_blocks = Arc::new(Mutex::new(blocks));
     let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
     let blocks_thread = thread::spawn(move || {
-        match download_blocks(pointer_to_blocks_clone, rx) {
+        match download_blocks(nodes, pointer_to_blocks_clone, rx) {
             Err(e) => println!("{:?}", e),
             Ok(_) => (),
         }
@@ -303,3 +318,71 @@ cada thread le pide a un nodo los distitos bloques y los va agregando a una list
 
 
  */
+
+
+
+
+
+
+
+
+
+/*
+
+ pub fn _download_headers(config: Arc<Mutex<Config>>, mut node: TcpStream, headers: Arc<Mutex<Vec<BlockHeader>>>, tx: Sender<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>>{
+    // *********************************************
+    // *******   timestamp primer bloque   *********
+    // *********************************************
+    let fecha_hora_str = "2023-04-10 00:06:14";
+    let formato = "%Y-%m-%d %H:%M:%S";
+    let fecha_hora = Utc.datetime_from_str(fecha_hora_str, formato)?;
+    let timestamp = fecha_hora.timestamp() as u32;
+    
+    
+    let config_guard = match config.lock() {
+        Ok(guard) => guard,
+        Err(e) => {
+            return Err(e.to_string().into())
+        } 
+    };
+    let mut headers_guard = match headers.lock() {
+        Ok(guard) => guard,
+        Err(e) => {
+            return Err(e.to_string().into())
+        } 
+    };
+    let mut encontrado = false;
+    GetHeadersMessage::build_getheaders_message(&config_guard, vec![GENESIS_BLOCK]).write_to(&mut node)?;
+    let mut headers_read = HeadersMessage::read_from(&mut node)?;
+    headers_guard.extend_from_slice(&headers_read);
+    let headers_read_lenght : &usize = &headers_read.len();
+    while  *headers_read_lenght== 2000 {
+        let last_header_hash = match headers_read.last() {
+            Some(block_header) => Ok::<[u8; 32], Box<dyn Error>>(block_header.hash()) ,  
+            None => Err("No se pudo obtener el ultimo elemento del vector de 2000 headers".into())
+        }?;
+        let getheaders_message = GetHeadersMessage::build_getheaders_message(&config_guard,vec![last_header_hash]);
+        getheaders_message.write_to(&mut node)?;
+        headers_read = HeadersMessage::read_from(&mut node)?;
+        if headers_guard.len() == 428000 {
+            let mut first_block_headers: Vec<BlockHeader> = Vec::new();
+            for header in &headers_read{
+                if header.time == timestamp {
+                    encontrado = true;
+                    println!("LO ENCONTRE!\n");
+                }
+                if encontrado == true {
+                    first_block_headers.push(*header);
+                }
+            tx.send(first_block_headers)?;
+            }
+        }
+        if encontrado == true && headers_guard.len() >= 430000 {
+            tx.send(headers_read.clone())?;
+            println!("ENVIO {:?} HEADERS\n",headers_read_lenght);
+        }
+        headers_guard.extend_from_slice(&headers_read);
+        println!("{:?}\n", headers_guard.len());    
+    }
+    Ok(())
+}*/
