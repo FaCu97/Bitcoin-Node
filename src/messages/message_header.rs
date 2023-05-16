@@ -68,6 +68,9 @@ impl HeaderMessage {
         let mut header = HeaderMessage::from_le_bytes(buffer_num)?;
         // si no se leyo el header que se queria, sigo leyendo hasta encontrarlo
         while header.command_name != header_command_name {
+            if header.command_name.contains("reject"){
+                println!("REJECT!!!!!!: {:?}",header);
+            }
             let payload_size = header.payload_size as usize;
             let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
             stream.read_exact(& mut payload_buffer_num)?;

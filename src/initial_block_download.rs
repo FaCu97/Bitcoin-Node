@@ -7,6 +7,7 @@ use crate::{block::Block, block_header::BlockHeader};
 use crate::messages::{block_message::BlockMessage ,inventory::Inventory, get_data_message::GetDataMessage, getheaders_message::GetHeadersMessage, headers_message::HeadersMessage};
 use crate::config::Config;
 use chrono::{ TimeZone, Utc};
+use std::io;
 
 
 // [120, 68, 126, 97, 111, 67, 237, 161, 95, 205, 185, 172, 158, 124, 192, 106, 14, 28, 5, 185, 250, 200, 168, 19, 38, 0, 0, 0, 0, 0, 0, 0];
@@ -58,7 +59,6 @@ pub fn download_headers(config: Arc<Mutex<Config>>, mut node: TcpStream, headers
     GetHeadersMessage::build_getheaders_message(&config_guard, vec![GENESIS_BLOCK]).write_to(&mut node)?;
     let mut headers_read = HeadersMessage::read_from(&mut node)?;
     headers_guard.extend_from_slice(&headers_read);
-    //let headers_read_lenght : &usize = &headers_read.len();
     while  headers_read.len() == 2000 {
         let last_header_hash = match headers_read.last() {
             Some(block_header) => Ok::<[u8; 32], Box<dyn Error>>(block_header.hash()) ,  
@@ -93,20 +93,16 @@ pub fn download_headers(config: Arc<Mutex<Config>>, mut node: TcpStream, headers
 }
 
 
-pub fn download_blocks(mut nodes: Vec<TcpStream>,blocks: Arc<Mutex<Vec<Block>>>, rx: Receiver<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>> {
+pub fn download_blocks(mut nodes: Vec<TcpStream>, blocks: Arc<Mutex<Vec<Block>>>, rx: Receiver<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>> {
+    
+    let pointer_to_nodes = Arc::new(Mutex::new(nodes));
+    
+    let mut a = pointer_to_nodes.lock().unwrap().pop().unwrap();
+
     for recieved in rx {
         println!("RECIBO {:?} HEADERS\n", recieved.len());
-    }
-        /* 
-        let mut blocks_guard = match blocks.lock() {
-            Ok(guard) => guard,
-            Err(e) => {
-                return Err(e.to_string().into())
-            },
-        };
-        */
-        //blocks_guard.extend_from_slice(&recieved);
-        /* 
+        
+         
         let chunk_size = (recieved.len() as f64 / 8 as f64).ceil() as usize;
         let blocks_headers_chunks = Arc::new(Mutex::new(
             recieved
@@ -114,11 +110,11 @@ pub fn download_blocks(mut nodes: Vec<TcpStream>,blocks: Arc<Mutex<Vec<Block>>>,
                 .map(|chunk| chunk.to_vec())
                 .collect::<Vec<_>>(),
         ));
-        
+        let mut handle_join = vec![];
         for i in 0..8 {
-            let mut n = nodes.remove(i + 1);
+            let pointer_cloned = pointer_to_nodes.clone();
+            let mut n = pointer_cloned.lock().unwrap().pop().unwrap();
             let block_headers_chunk_clone = Arc::clone(&blocks_headers_chunks);
-            let mut handle_join = vec![];
             let block_clone = Arc::clone(&blocks);
             handle_join.push(thread::spawn(move || {
                 let chunk = block_headers_chunk_clone.lock().unwrap()[i].clone();
@@ -130,14 +126,13 @@ pub fn download_blocks(mut nodes: Vec<TcpStream>,blocks: Arc<Mutex<Vec<Block>>>,
                     let data_message = GetDataMessage::new(inventories);
                     data_message.write_to(&mut n).unwrap();
                     let bloque = BlockMessage::read_from(&mut n).unwrap();
+                    println!("CANTIDAD DE BLOQUES DESCARGADOS: {:?}\n", block_clone.lock().unwrap().len());
                     block_clone.lock().unwrap().push(bloque);
                 }
-            }));
-            for h in handle_join {
-                h.join().unwrap();
-            }
-        */
-        
+                pointer_cloned.lock().unwrap().push(n);
+                }));
+
+            
             /* 
             // divido los headers que me llegaron en 8 vectores de igual tamaño
             // creo 8 threads, cada uno conectado a un nodo distinto
@@ -152,32 +147,48 @@ pub fn download_blocks(mut nodes: Vec<TcpStream>,blocks: Arc<Mutex<Vec<Block>>>,
                 pointer_to_blocks_clone.lock().unwrap().push(bloque);
             }
             */
-    
+        }
+        for h in handle_join {
+            h.join().unwrap();
+        }
+        
+    }
     Ok(())
 
 }
+
+
 
 
 pub fn ibm(config: Config, mut nodes: Vec<TcpStream>) -> Result<Vec<BlockHeader>, Box<dyn Error>> {
     
 
     let node = nodes.remove(0);
-    let (tx, rx) = channel();
+    let (tx , rx ) = channel();
     let headers = vec![];
     let pointer_to_headers = Arc::new(Mutex::new(headers));
     let pointer_to_config = Arc::new(Mutex::new(config));
     let pointer_to_headers_clone = Arc::clone(&pointer_to_headers);
-    let headers_thread = thread::spawn(move || {
-        match download_headers(pointer_to_config, node, pointer_to_headers_clone, tx) {
-            Err(e) => println!("{:?}", e),
-            Ok(_) => (),
-        };
+    
+    
 
+    let headers_thread = thread::spawn(move || -> io::Result<()> {
+        match download_headers(pointer_to_config, node, pointer_to_headers_clone, tx) {
+            Err(e) => {
+                println!("{:?}", e);
+                return Err(io::Error::new(io::ErrorKind::Other, "Some error message"));
+                },
+            Ok(_) => io::Result::Ok(()),
+        }
     });
 
 
 
+    
 
+
+
+//thread::Result<std::io::Result<()>>
 
     
     let blocks: Vec<Block> = vec![];
@@ -192,9 +203,15 @@ pub fn ibm(config: Config, mut nodes: Vec<TcpStream>) -> Result<Vec<BlockHeader>
         
     });
 
+    let resul = headers_thread.join().unwrap()?;
 
-
-    headers_thread.join().unwrap();
+    /*
+    let resultado = match headers_thread.join() {
+        Err(e) => return e,
+        Ok(_) => (),
+    };
+*/
+    
     blocks_thread.join().unwrap();
     let headers = &*pointer_to_headers.lock().unwrap();
     let blocks = &*pointer_to_blocks.lock().unwrap();
