@@ -2,12 +2,32 @@ use std::error::Error;
 use std::net::TcpStream;
 use std::sync::mpsc::{channel, Sender, Receiver};
 use std::sync::{Arc, Mutex};
-use std::{thread, vec};
+use std::{thread, vec, fmt};
+use crate::messages::inventory;
 use crate::{block::Block, block_header::BlockHeader};
 use crate::messages::{block_message::BlockMessage ,inventory::Inventory, get_data_message::GetDataMessage, getheaders_message::GetHeadersMessage, headers_message::HeadersMessage};
 use crate::config::Config;
 use chrono::{ TimeZone, Utc};
 use std::io;
+
+#[derive(Debug)]
+struct MyError {
+    message: String,
+}
+
+impl MyError {
+    fn new(message: &str) -> Self {
+        Self {
+            message: message.to_string(),
+        }
+    }
+}
+impl fmt::Display for MyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+impl Error for MyError {}
 
 
 // HASH DEL BLOQUE 2000000: [140, 59, 62, 211, 170, 119, 142, 174, 205, 203, 233, 29, 174, 87, 25, 124, 225, 186, 160, 215, 195, 62, 134, 208, 13, 1, 0, 0, 0, 0, 0, 0]
@@ -110,11 +130,11 @@ pub fn download_headers(config: Arc<Mutex<Config>>, nodes: Arc<Mutex<Vec<TcpStre
 pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<Block>>>, rx: Receiver<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>> {
     
     
-
+    // recieves in the channel the vec of headers sent by the function downloading headers
     for recieved in rx {
         println!("RECIBO {:?} HEADERS\n", recieved.len());
         
-         
+        // divides the vec into 8 with the same lenght (or same lenght but the last with less)
         let chunk_size = (recieved.len() as f64 / 8_f64).ceil() as usize;
         let blocks_headers_chunks = Arc::new(Mutex::new(
             recieved
@@ -124,23 +144,26 @@ pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<
         ));
         let mut handle_join = vec![];
         for i in 0..8 {
-            let pointer_cloned = nodes.clone();
-            let mut n = pointer_cloned.lock().unwrap().pop().unwrap();
+            let nodes_pointer_clone = nodes.clone();
             let block_headers_chunk_clone = Arc::clone(&blocks_headers_chunks);
-            let block_clone = Arc::clone(&blocks);
+            let blocks_pointer_clone = Arc::clone(&blocks);
+            let mut node = nodes_pointer_clone.lock().unwrap().pop().unwrap();
             handle_join.push(thread::spawn(move || {
-                let chunk = block_headers_chunk_clone.lock().unwrap()[i].clone();
-                println!("VOY A DESCARGAR {:?} BLOQUES DEL NODO {:?}\n", chunk.len(), n);
-                for block in chunk {
-                    let block_hash = block.hash();
-                    let inventories = vec![Inventory::new_block(block_hash)];
-                    let data_message = GetDataMessage::new(inventories);
-                    data_message.write_to(&mut n).unwrap();
-                    let bloque = BlockMessage::read_from(&mut n).unwrap();
-                    println!("CANTIDAD DE BLOQUES DESCARGADOS: {:?}\n", block_clone.lock().unwrap().len());
-                    block_clone.lock().unwrap().push(bloque);
+                let block_headers = block_headers_chunk_clone.lock().unwrap()[i].clone();
+                println!("VOY A DESCARGAR {:?} BLOQUES DEL NODO {:?}\n", block_headers.len(), node);
+                for chunk in block_headers.chunks(16) {
+                    let mut inventory = vec![];
+                    for block in chunk.to_owned() {
+                        inventory.push(Inventory::new_block(block.hash()));
+                    }
+                    GetDataMessage::new(inventory).write_to(&mut node).unwrap();
+                    for _ in 0..chunk.len() {
+                        let bloque = BlockMessage::read_from(&mut node).unwrap();
+                        println!("CANTIDAD DE BLOQUES DESCARGADOS: {:?}\n", blocks_pointer_clone.lock().unwrap().len());
+                        blocks_pointer_clone.lock().unwrap().push(bloque);
+                    }
                 }
-                pointer_cloned.lock().unwrap().push(n);
+                nodes_pointer_clone.lock().unwrap().push(node);
                 }));
         }
         for h in handle_join {
