@@ -1,14 +1,13 @@
 use std::error::Error;
 use std::net::TcpStream;
 use std::sync::mpsc::{channel, Sender, Receiver};
-use std::sync::{Arc, Mutex, RwLock};
-use std::{thread, vec};
+use std::sync::{Arc, Mutex};
+use std::{thread, vec, fmt};
 use crate::{block::Block, block_header::BlockHeader};
 use crate::messages::{block_message::BlockMessage , inventory::Inventory, get_data_message::GetDataMessage, getheaders_message::GetHeadersMessage, headers_message::HeadersMessage};
 use crate::config::Config;
 use chrono::{ TimeZone, Utc};
 use std::io;
-
 
 
 // todo: Cambiar la manera en que se pasa el config (?)
@@ -18,6 +17,25 @@ use std::io;
 // todo: Si no se pudo descargar de un nodo, intentar descargar con otro (?)
 
 
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum DownloadError {
+    CanNotJoin(String),
+    CanNotRead(String),
+    CanNotLock(String),
+}
+
+impl fmt::Display for DownloadError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            DownloadError::CanNotJoin(msg) => write!(f, "CanNotJoin Error: {}", msg),
+            DownloadError::CanNotRead(msg) => write!(f, "CanNotRead Error: {}", msg),
+            DownloadError::CanNotLock(msg) => write!(f, "CanNotLock Error: {}", msg),
+        }
+    }
+}
+
+impl Error for DownloadError {}
 
 // HASH DEL BLOQUE 2000000: [140, 59, 62, 211, 170, 119, 142, 174, 205, 203, 233, 29, 174, 87, 25, 124, 225, 186, 160, 215, 195, 62, 134, 208, 13, 1, 0, 0, 0, 0, 0, 0]
 const GENESIS_BLOCK: [u8; 32] = [140, 59, 62, 211, 170, 119, 142, 174, 205, 203, 233, 29, 174, 87, 25, 124, 225, 186, 160, 215, 195, 62, 134, 208, 13, 1, 0, 0, 0, 0, 0, 0];
@@ -56,23 +74,13 @@ pub fn search_first_header_block_to_download(headers: Vec<BlockHeader>, found: &
 
 
 
-pub fn download_headers(config: Arc<RwLock<Config>>, nodes: Arc<RwLock<Vec<TcpStream>>>, headers: Arc<RwLock<Vec<BlockHeader>>>, tx: Sender<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>>{
-    
-    let mut node = nodes.write().unwrap().pop().unwrap();
+pub fn download_headers(config: Arc<Mutex<Config>>, nodes: Arc<Mutex<Vec<TcpStream>>>, headers: Arc<Mutex<Vec<BlockHeader>>>, tx: Sender<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>>{
+    let mut node = nodes.lock().unwrap().pop().unwrap();
 
-    let config_guard = match config.lock() {
-        Ok(guard) => guard,
-        Err(e) => {
-            return Err(e.to_string().into())
-        } 
-    };
+    let config_guard = config.lock().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?;
     
-    let mut headers_guard = match headers.lock() {
-        Ok(guard) => guard,
-        Err(e) => {
-            return Err(e.to_string().into())
-        } 
-    };
+
+    let mut headers_guard =  headers.lock().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?;
 
     let mut first_block_found = false;
     // write first getheaders message with genesis block
@@ -105,10 +113,9 @@ pub fn download_headers(config: Arc<RwLock<Config>>, nodes: Arc<RwLock<Vec<TcpSt
         headers_guard.extend_from_slice(&headers_read);
         println!("{:?}\n", headers_guard.len());    
     }
-    nodes.lock().unwrap().push(node);
+    nodes.lock().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?.push(node);
     Ok(())
 }
-
 
 
 
@@ -130,7 +137,7 @@ pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<
         ));
         let mut handle_join = vec![];
         for i in 0..8 {
-            let nodes_pointer_clone = nodes.clone();
+            let nodes_pointer_clone = Arc::clone(&nodes);
             let block_headers_chunk_clone = Arc::clone(&blocks_headers_chunks);
             let blocks_pointer_clone = Arc::clone(&blocks);
             let mut node = nodes_pointer_clone.lock().unwrap().pop().unwrap();
@@ -153,7 +160,7 @@ pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<
                 }));
         }
         for h in handle_join {
-            h.join().unwrap();
+            h.join().map_err(|err| DownloadError::CanNotJoin(format!("{:?}", err)))?;
         }
         
     }
@@ -167,7 +174,7 @@ pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<
 
 
 
-pub fn ibd(config: Config, nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<Vec<BlockHeader>, Box<dyn Error>> {
+pub fn ibd(config: Config, nodes: Arc<Mutex<Vec<TcpStream>>>) -> Result<Vec<BlockHeader>, Box<dyn Error>> {
     
     let headers = vec![];
     let blocks: Vec<Block> = vec![];
@@ -175,8 +182,8 @@ pub fn ibd(config: Config, nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<Vec<Blo
     let (tx , rx ) = channel();
 
 
-    let pointer_to_headers = Arc::new(RwLock::new(headers));
-    let pointer_to_config = Arc::new(RwLock::new(config));
+    let pointer_to_headers = Arc::new(Mutex::new(headers));
+    let pointer_to_config = Arc::new(Mutex::new(config));
     let pointer_to_headers_clone = Arc::clone(&pointer_to_headers);
     let pointer_to_nodes_clone = Arc::clone(&nodes);
     let headers_thread = thread::spawn(move || -> io::Result<()> {
@@ -199,11 +206,12 @@ pub fn ibd(config: Config, nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<Vec<Blo
             Ok(_) => io::Result::Ok(()),
         }
     });
+    headers_thread.join().map_err(|err| DownloadError::CanNotJoin(format!("{:?}", err)))?.map_err(|err| DownloadError::CanNotJoin(format!("{}", err)))?;  
+    blocks_thread.join().map_err(|err| DownloadError::CanNotJoin(format!("{:?}", err)))??;
 
-    headers_thread.join().unwrap()?;    
-    blocks_thread.join().unwrap()?;
-    let headers = &*pointer_to_headers.lock().unwrap();
-    let blocks = &*pointer_to_blocks.lock().unwrap();
+
+    let headers = &*pointer_to_headers.lock().map_err(|err| DownloadError::CanNotLock(format!("{:?}", err)))?;
+    let blocks = &*pointer_to_blocks.lock().map_err(|err| DownloadError::CanNotLock(format!("{:?}", err)))?;
     println!("HEADERS DESCARGADOS: {:?}", headers.len());
     println!("BLOQUES A DESCARGAR: {:?}", blocks.len());
     println!("ULTIMO BLOQUE: {:?}", blocks.last().unwrap());
