@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::net::TcpStream;
 use std::sync::mpsc::{channel, Sender, Receiver};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 use std::{thread, vec, fmt};
 use crate::{block::Block, block_header::BlockHeader};
 use crate::messages::{block_message::BlockMessage , inventory::Inventory, get_data_message::GetDataMessage, getheaders_message::GetHeadersMessage, headers_message::HeadersMessage};
@@ -74,13 +74,12 @@ pub fn search_first_header_block_to_download(headers: Vec<BlockHeader>, found: &
 
 
 
-pub fn download_headers(config: Arc<Mutex<Config>>, nodes: Arc<Mutex<Vec<TcpStream>>>, headers: Arc<Mutex<Vec<BlockHeader>>>, tx: Sender<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>>{
-    let mut node = nodes.lock().unwrap().pop().unwrap();
+pub fn download_headers(config: Arc<RwLock<Config>>, nodes: Arc<RwLock<Vec<TcpStream>>>, headers: Arc<RwLock<Vec<BlockHeader>>>, tx: Sender<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>>{
+    let mut node = nodes.write().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?.pop().ok_or("Error no hay mas nodos para descargar los headers!\n")?;
 
-    let config_guard = config.lock().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?;
+    let config_guard = config.read().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?;
     
 
-    let mut headers_guard =  headers.lock().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?;
 
     let mut first_block_found = false;
     // write first getheaders message with genesis block
@@ -88,7 +87,7 @@ pub fn download_headers(config: Arc<Mutex<Config>>, nodes: Arc<Mutex<Vec<TcpStre
     // read first 2000 headers from headers message answered from node
     let mut headers_read = HeadersMessage::read_from(&mut node)?;
     // store headers in `global` vec `headers_guard`   
-    headers_guard.extend_from_slice(&headers_read);
+    headers.write().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?.extend_from_slice(&headers_read);
     while  headers_read.len() == 2000 {
         // get the last header hash from the latest headers you have
         let last_header_hash = headers_read
@@ -100,27 +99,27 @@ pub fn download_headers(config: Arc<Mutex<Config>>, nodes: Arc<Mutex<Vec<TcpStre
         // read next 2000 headers (or less if they are the last ones)        
         headers_read = HeadersMessage::read_from(&mut node)?;
 
-        if headers_guard.len() == ALTURA_PRIMER_BLOQUE_A_DESCARGAR {
+        if headers.read().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?.len() == ALTURA_PRIMER_BLOQUE_A_DESCARGAR {
             let first_block_headers_to_download = search_first_header_block_to_download(headers_read.clone(), &mut first_block_found)?;
             tx.send(first_block_headers_to_download)?;
         }
-        if first_block_found && headers_guard.len() >= ALTURA_BLOQUES_A_DESCARGAR {
+        if first_block_found && headers.read().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?.len() >= ALTURA_BLOQUES_A_DESCARGAR {
             tx.send(headers_read.clone())?;
             println!("ENVIO {:?} HEADERS\n", headers_read.len());
         }
 
         // store headers in `global` vec `headers_guard`
-        headers_guard.extend_from_slice(&headers_read);
-        println!("{:?}\n", headers_guard.len());    
+        headers.write().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?.extend_from_slice(&headers_read);
+        println!("{:?}\n", headers.read().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?.len());    
     }
-    nodes.lock().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?.push(node);
+    nodes.write().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?.push(node);
     Ok(())
 }
 
 
 
 
-pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<Block>>>, rx: Receiver<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>> {
+pub fn download_blocks(nodes: Arc<RwLock<Vec<TcpStream>>>, blocks: Arc<RwLock<Vec<Block>>>, rx: Receiver<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>> {
     
     
     // recieves in the channel the vec of headers sent by the function downloading headers
@@ -129,7 +128,7 @@ pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<
         
         // divides the vec into 8 with the same lenght (or same lenght but the last with less)
         let chunk_size = (recieved.len() as f64 / 8_f64).ceil() as usize;
-        let blocks_headers_chunks = Arc::new(Mutex::new(
+        let blocks_headers_chunks = Arc::new(RwLock::new(
             recieved
                 .chunks(chunk_size)
                 .map(|chunk| chunk.to_vec())
@@ -138,11 +137,11 @@ pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<
         let mut handle_join = vec![];
         for i in 0..8 {
             let nodes_pointer_clone = Arc::clone(&nodes);
-            let block_headers_chunk_clone = Arc::clone(&blocks_headers_chunks);
+            let block_headers_chunks_clone = Arc::clone(&blocks_headers_chunks);
             let blocks_pointer_clone = Arc::clone(&blocks);
-            let mut node = nodes_pointer_clone.lock().unwrap().pop().unwrap();
+            let mut node = nodes_pointer_clone.write().map_err(|err| DownloadError::CanNotLock(format!("{}", err)))?.pop().ok_or("No hay nodos para descargar los bloques!\n")?;
             handle_join.push(thread::spawn(move || {
-                let block_headers = block_headers_chunk_clone.lock().unwrap()[i].clone();
+                let block_headers = block_headers_chunks_clone.write().unwrap()[i].clone();
                 println!("VOY A DESCARGAR {:?} BLOQUES DEL NODO {:?}\n", block_headers.len(), node);
                 for chunk in block_headers.chunks(16) {
                     let mut inventory = vec![];
@@ -152,11 +151,11 @@ pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<
                     GetDataMessage::new(inventory).write_to(&mut node).unwrap();
                     for _ in 0..chunk.len() {
                         let bloque = BlockMessage::read_from(&mut node).unwrap();
-                        println!("CANTIDAD DE BLOQUES DESCARGADOS: {:?}\n", blocks_pointer_clone.lock().unwrap().len());
-                        blocks_pointer_clone.lock().unwrap().push(bloque);
+                        println!("CANTIDAD DE BLOQUES DESCARGADOS: {:?}\n", blocks_pointer_clone.read().unwrap().len());
+                        blocks_pointer_clone.write().unwrap().push(bloque);
                     }
                 }
-                nodes_pointer_clone.lock().unwrap().push(node);
+                nodes_pointer_clone.write().unwrap().push(node);
                 }));
         }
         for h in handle_join {
@@ -174,7 +173,7 @@ pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<
 
 
 
-pub fn ibd(config: Config, nodes: Arc<Mutex<Vec<TcpStream>>>) -> Result<Vec<BlockHeader>, Box<dyn Error>> {
+pub fn ibd(config: Config, nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<Vec<BlockHeader>, DownloadError> {
     
     let headers = vec![];
     let blocks: Vec<Block> = vec![];
@@ -182,8 +181,8 @@ pub fn ibd(config: Config, nodes: Arc<Mutex<Vec<TcpStream>>>) -> Result<Vec<Bloc
     let (tx , rx ) = channel();
 
 
-    let pointer_to_headers = Arc::new(Mutex::new(headers));
-    let pointer_to_config = Arc::new(Mutex::new(config));
+    let pointer_to_headers = Arc::new(RwLock::new(headers));
+    let pointer_to_config = Arc::new(RwLock::new(config));
     let pointer_to_headers_clone = Arc::clone(&pointer_to_headers);
     let pointer_to_nodes_clone = Arc::clone(&nodes);
     let headers_thread = thread::spawn(move || -> io::Result<()> {
@@ -196,7 +195,7 @@ pub fn ibd(config: Config, nodes: Arc<Mutex<Vec<TcpStream>>>) -> Result<Vec<Bloc
     });
 
 
-    let pointer_to_blocks = Arc::new(Mutex::new(blocks));
+    let pointer_to_blocks = Arc::new(RwLock::new(blocks));
     let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
     let blocks_thread = thread::spawn(move || -> io::Result<()> {
         match download_blocks(nodes, pointer_to_blocks_clone, rx) {
@@ -207,11 +206,11 @@ pub fn ibd(config: Config, nodes: Arc<Mutex<Vec<TcpStream>>>) -> Result<Vec<Bloc
         }
     });
     headers_thread.join().map_err(|err| DownloadError::CanNotJoin(format!("{:?}", err)))?.map_err(|err| DownloadError::CanNotJoin(format!("{}", err)))?;  
-    blocks_thread.join().map_err(|err| DownloadError::CanNotJoin(format!("{:?}", err)))??;
+    blocks_thread.join().map_err(|err| DownloadError::CanNotJoin(format!("{:?}", err)))?.map_err(|err| DownloadError::CanNotJoin(format!("{}", err)))?;
 
 
-    let headers = &*pointer_to_headers.lock().map_err(|err| DownloadError::CanNotLock(format!("{:?}", err)))?;
-    let blocks = &*pointer_to_blocks.lock().map_err(|err| DownloadError::CanNotLock(format!("{:?}", err)))?;
+    let headers = &*pointer_to_headers.read().map_err(|err|DownloadError::CanNotLock(format!("{:?}", err)))?;
+    let blocks = &*pointer_to_blocks.read().map_err(|err| DownloadError::CanNotLock(format!("{:?}", err)))?;
     println!("HEADERS DESCARGADOS: {:?}", headers.len());
     println!("BLOQUES A DESCARGAR: {:?}", blocks.len());
     println!("ULTIMO BLOQUE: {:?}", blocks.last().unwrap());
