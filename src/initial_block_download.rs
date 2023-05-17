@@ -153,6 +153,7 @@ pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<
         }
         
     }
+    println!("SE CIERRA EL CHANNEL !!!!\n");
     Ok(())
 
 }
