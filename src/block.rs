@@ -112,7 +112,6 @@ impl Block {
             current_hash = Self::concatenate_and_hash(hash, current_hash);
         }
         current_hash == self.generate_merkle_root()
-
     }
 }
 
@@ -260,7 +259,6 @@ mod test {
         assert_eq!(block.txn[0], tx);
         Ok(())
     }
-
 
     #[test]
     fn test_merkle_root_de_un_bloque_con_2_transacciones_se_genera_correctamente() {
@@ -417,5 +415,4 @@ mod test {
         let hola = &block.txn[3];
         assert!(block.merkle_proof_of_inclusion(hola, vector));
     }
-
 }
