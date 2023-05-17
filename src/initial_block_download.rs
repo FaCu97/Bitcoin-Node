@@ -50,8 +50,6 @@ pub fn search_first_header_block_to_download(headers: Vec<BlockHeader>, found: &
 
 
 
-
-
 pub fn download_headers(config: Arc<Mutex<Config>>, nodes: Arc<Mutex<Vec<TcpStream>>>, headers: Arc<Mutex<Vec<BlockHeader>>>, tx: Sender<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>>{
     
     let mut node = nodes.lock().unwrap().pop().unwrap();
@@ -106,6 +104,10 @@ pub fn download_headers(config: Arc<Mutex<Config>>, nodes: Arc<Mutex<Vec<TcpStre
     nodes.lock().unwrap().push(node);
     Ok(())
 }
+
+
+
+
 
 
 
