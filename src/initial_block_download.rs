@@ -68,13 +68,12 @@ pub fn download_headers(config: Arc<Mutex<Config>>, nodes: Arc<Mutex<Vec<TcpStre
         } 
     };
 
-
     let mut first_block_found = false;
     // write first getheaders message with genesis block
     GetHeadersMessage::build_getheaders_message(&config_guard, vec![GENESIS_BLOCK]).write_to(&mut node)?;
     // read first 2000 headers from headers message answered from node
     let mut headers_read = HeadersMessage::read_from(&mut node)?;
-    // store headers in `global` vec `headers_guard`
+    // store headers in `global` vec `headers_guard`   
     headers_guard.extend_from_slice(&headers_read);
     while  headers_read.len() == 2000 {
         // get the last header hash from the latest headers you have
@@ -84,29 +83,25 @@ pub fn download_headers(config: Arc<Mutex<Config>>, nodes: Arc<Mutex<Vec<TcpStre
             .hash();
         // write getheaders message with last header you have, asking for next 2000 (or less if they are the last ones)
         GetHeadersMessage::build_getheaders_message(&config_guard,vec![last_header_hash]).write_to(&mut node)?;
-        // read next 2000 headers (or less if they are the last ones)
+        // read next 2000 headers (or less if they are the last ones)        
         headers_read = HeadersMessage::read_from(&mut node)?;
 
-        
         if headers_guard.len() == ALTURA_PRIMER_BLOQUE_A_DESCARGAR {
             let first_block_headers_to_download = search_first_header_block_to_download(headers_read.clone(), &mut first_block_found)?;
             tx.send(first_block_headers_to_download)?;
-        } 
+        }
         if first_block_found && headers_guard.len() >= ALTURA_BLOQUES_A_DESCARGAR {
-            println!("ENVIO {:?} HEADERS A DESCARGAR SUS BLOQUES\n", headers_read.len());           
             tx.send(headers_read.clone())?;
+            println!("ENVIO {:?} HEADERS\n", headers_read.len());
         }
 
         // store headers in `global` vec `headers_guard`
         headers_guard.extend_from_slice(&headers_read);
-        println!("HEADERS DESCARGADOS: {:?}\n", headers_guard.len());    
+        println!("{:?}\n", headers_guard.len());    
     }
     nodes.lock().unwrap().push(node);
     Ok(())
 }
-
-
-
 
 
 
@@ -142,23 +137,23 @@ pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<
                     let data_message = GetDataMessage::new(inventories);
                     data_message.write_to(&mut n).unwrap();
                     let bloque = BlockMessage::read_from(&mut n).unwrap();
-                    //println!("CANTIDAD DE BLOQUES DESCARGADOS: {:?}\n", block_clone.lock().unwrap().len());
+                    println!("CANTIDAD DE BLOQUES DESCARGADOS: {:?}\n", block_clone.lock().unwrap().len());
                     block_clone.lock().unwrap().push(bloque);
                 }
                 pointer_cloned.lock().unwrap().push(n);
                 }));
-
-            
         }
-        for handle in handle_join {
-            handle.join().unwrap();
+        for h in handle_join {
+            h.join().unwrap();
         }
         
     }
-    println!("SE CIERRA EL CHANNEL !!!!\n");
     Ok(())
 
 }
+
+
+
 
 
 
