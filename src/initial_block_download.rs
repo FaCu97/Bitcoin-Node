@@ -162,16 +162,16 @@ pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<
 
 pub fn ibd(config: Config, nodes: Arc<Mutex<Vec<TcpStream>>>) -> Result<Vec<BlockHeader>, Box<dyn Error>> {
     
-    let (tx , rx ) = channel();
     let headers = vec![];
+    let blocks: Vec<Block> = vec![];
+
+    let (tx , rx ) = channel();
+
+
     let pointer_to_headers = Arc::new(Mutex::new(headers));
     let pointer_to_config = Arc::new(Mutex::new(config));
-
-
-
     let pointer_to_headers_clone = Arc::clone(&pointer_to_headers);
     let pointer_to_nodes_clone = Arc::clone(&nodes);
-
     let headers_thread = thread::spawn(move || -> io::Result<()> {
         match download_headers(pointer_to_config, pointer_to_nodes_clone, pointer_to_headers_clone, tx) {
             Err(e) => {
@@ -182,27 +182,19 @@ pub fn ibd(config: Config, nodes: Arc<Mutex<Vec<TcpStream>>>) -> Result<Vec<Bloc
     });
 
 
-
-    
-    let blocks: Vec<Block> = vec![];
     let pointer_to_blocks = Arc::new(Mutex::new(blocks));
     let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
-    let blocks_thread = thread::spawn(move || {
-        if let Err(e) = download_blocks(nodes, pointer_to_blocks_clone, rx) { println!("{:?}", e) }
-        
-        
+    let blocks_thread = thread::spawn(move || -> io::Result<()> {
+        match download_blocks(nodes, pointer_to_blocks_clone, rx) {
+            Err(e) => {
+                Err(io::Error::new(io::ErrorKind::Other, e.to_string()))
+                },
+            Ok(_) => io::Result::Ok(()),
+        }
     });
 
-    headers_thread.join().unwrap()?;
-
-    /*
-    let resultado = match headers_thread.join() {
-        Err(e) => return e,
-        Ok(_) => (),
-    };
-*/
-    
-    blocks_thread.join().unwrap();
+    headers_thread.join().unwrap()?;    
+    blocks_thread.join().unwrap()?;
     let headers = &*pointer_to_headers.lock().unwrap();
     let blocks = &*pointer_to_blocks.lock().unwrap();
     println!("HEADERS DESCARGADOS: {:?}", headers.len());
