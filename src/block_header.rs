@@ -10,6 +10,24 @@ pub struct BlockHeader {
 }
 
 impl BlockHeader {
+    pub fn new(
+        version: i32,
+        previous_block_header_hash: [u8; 32],
+        merkle_root_hash: [u8; 32],
+        time: u32,
+        n_bits: u32,
+        nonce: u32,
+    ) -> BlockHeader {
+        BlockHeader {
+            version,
+            previous_block_header_hash,
+            merkle_root_hash,
+            time,
+            n_bits,
+            nonce,
+        }
+    }
+
     pub fn unmarshalling(block_header_message: &[u8], offset: &mut usize) -> BlockHeader {
         let mut version_bytes: [u8; 4] = [0; 4];
         version_bytes.copy_from_slice(&block_header_message[*offset..(*offset + 4)]);
@@ -60,6 +78,30 @@ impl BlockHeader {
         self.marshalling(&mut block_header_marshaled);
         let hash_block = sha256d::Hash::hash(&block_header_marshaled);
         *hash_block.as_byte_array()
+    }
+    // Esta funcion realiza la proof of work
+    pub fn validate(&self) -> bool {
+        let n_bits_bytes = self.n_bits.to_be_bytes();
+        let mut mantisa = Vec::new();
+        mantisa.extend_from_slice(&n_bits_bytes[1..4]);
+        let primer_byte: u8 = n_bits_bytes[0];
+        if primer_byte > 32 {
+            return false;
+        }
+        let posicion_inicial_mantisa = 32 - primer_byte;
+        let mut target: [u8; 32] = [0; 32];
+        for i in 0..3 {
+            target[(posicion_inicial_mantisa as usize) + i] = mantisa[i];
+        }
+
+        let block_hash: [u8; 32] = self.hash();
+        if block_hash < target {
+            return true;
+        }
+        false
+    }
+    pub fn is_same_merkle_root_hash(&self, received_hash: &[u8; 32]) -> bool {
+        self.merkle_root_hash == *received_hash
     }
 }
 unsafe impl Send for BlockHeader {}
@@ -247,5 +289,16 @@ mod tests {
         let expected_hash = sha256d::Hash::hash(&block_header_message_expected);
         let hash: [u8; 32] = block_header.hash();
         assert_eq!(hash, *expected_hash.as_byte_array())
+    }
+
+    #[test]
+    fn test_validate_de_un_bloque_valido_devuelve_true() {
+        let block: BlockHeader = BlockHeader::new(0, [0; 32], [0; 32], 0, 0x20ffffff, 0);
+        assert!(block.validate())
+    }
+    #[test]
+    fn test_validate_de_un_bloque_valido_devuelve_false() {
+        let block: BlockHeader = BlockHeader::new(0, [0; 32], [0; 32], 0, 0x10ffffff, 0);
+        assert!(!block.validate())
     }
 }

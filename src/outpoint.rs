@@ -39,8 +39,8 @@ impl Outpoint {
     pub fn marshalling(&self, bytes: &mut Vec<u8>) {
         bytes.extend_from_slice(&self.tx_id[0..32]); // se cargan los elementos del tx_id
         let index_bytes: [u8; 4] = self.index.to_le_bytes();
-        for i in 0..4 {
-            bytes.push(index_bytes[i]);
+        for item in index_bytes {
+            bytes.push(item);
         }
     }
 }

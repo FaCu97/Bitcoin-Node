@@ -1,4 +1,4 @@
-use bitcoin_hashes::{sha256, Hash};
+use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{compact_size_uint::CompactSizeUint, tx_in::TxIn, tx_out::TxOut};
 #[derive(Debug, PartialEq, Clone)]
@@ -41,13 +41,13 @@ impl Transaction {
         version_bytes.copy_from_slice(&bytes[*offset..(*offset + 4)]);
         *offset += 4;
         let version = i32::from_le_bytes(version_bytes);
-        let txin_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut *offset);
+        let txin_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut *offset)?;
         let amount_txin: u64 = txin_count.decoded_value();
         let tx_in: Vec<TxIn> = TxIn::unmarshalling_txins(bytes, amount_txin, &mut *offset)?; // aca se actualizaria el *offset tambien
         if tx_in[0].is_coinbase() && txin_count.decoded_value() != 1 {
             return Err("una coinbase transaction no puede tener mas de un input");
         }
-        let txout_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut *offset);
+        let txout_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, &mut *offset)?;
         let amount_txout: u64 = txout_count.decoded_value();
         let tx_out: Vec<TxOut> = TxOut::unmarshalling_txouts(bytes, amount_txout, &mut *offset)?; // aca se actualizaria el *offset tambien
         let mut lock_time_bytes: [u8; 4] = [0; 4];
@@ -79,10 +79,10 @@ impl Transaction {
         bytes.extend_from_slice(&locktime_bytes);
     }
 
-    pub fn hash(&mut self) -> [u8; 32] {
+    pub fn hash(&self) -> [u8; 32] {
         let mut raw_transaction_bytes: Vec<u8> = Vec::new();
         self.marshalling(&mut raw_transaction_bytes);
-        let hash_transaction = sha256::Hash::hash(&raw_transaction_bytes);
+        let hash_transaction = sha256d::Hash::hash(&raw_transaction_bytes);
         *hash_transaction.as_byte_array()
     }
 
@@ -107,7 +107,7 @@ mod test {
     use crate::{
         compact_size_uint::CompactSizeUint, outpoint::Outpoint, tx_in::TxIn, tx_out::TxOut,
     };
-    use bitcoin_hashes::{sha256, Hash};
+    use bitcoin_hashes::{sha256d, Hash};
 
     fn crear_txins(cantidad: u128) -> Vec<TxIn> {
         let mut tx_in: Vec<TxIn> = Vec::new();
@@ -135,7 +135,7 @@ mod test {
             let value: i64 = 43;
             let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(0);
             let pk_script: Vec<u8> = Vec::new();
-            tx_out.push(TxOut::new(value, pk_script_bytes, pk_script));
+            tx_out.push(TxOut::new(value, pk_script_bytes, pk_script, true));
         }
         tx_out
     }
@@ -180,10 +180,15 @@ mod test {
         ));
         let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(0);
         let mut tx_out: Vec<TxOut> = Vec::new();
-        tx_out.push(TxOut::new(0x1111111111111111, pk_script_bytes, Vec::new()));
+        tx_out.push(TxOut::new(
+            0x1111111111111111,
+            pk_script_bytes,
+            Vec::new(),
+            true,
+        ));
         let txin_count: CompactSizeUint = CompactSizeUint::new(1);
         let txout_count: CompactSizeUint = CompactSizeUint::new(1);
-        let mut transaction: Transaction = Transaction::new(
+        let transaction: Transaction = Transaction::new(
             0x11111111,
             txin_count,
             tx_in,
@@ -193,7 +198,7 @@ mod test {
         );
         let mut vector = Vec::new();
         transaction.marshalling(&mut vector);
-        let hash_transaction = sha256::Hash::hash(&vector);
+        let hash_transaction = sha256d::Hash::hash(&vector);
         assert_eq!(transaction.hash(), *hash_transaction.as_byte_array());
     }
 

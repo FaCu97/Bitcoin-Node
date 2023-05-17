@@ -64,7 +64,12 @@ impl CompactSizeUint {
         bytes.extend(self.value());
         bytes
     }
-    pub fn unmarshalling(bytes: &[u8], offset: &mut usize) -> CompactSizeUint {
+    pub fn unmarshalling(bytes: &[u8], offset: &mut usize) -> Result<CompactSizeUint,&'static str> {
+        if bytes.len()-(*offset) < 1{
+            return Err(
+                "Los bytes recibidos no corresponden a un CompactSizeUnit, el largo es menor a 1 byte",
+            );
+        }
         let first_byte = bytes[*offset];
         *offset += 1;
         let mut value: Vec<u8> = Vec::new();
@@ -72,19 +77,19 @@ impl CompactSizeUint {
         if first_byte == 0xfd {
             value.extend_from_slice(&bytes[*offset..(*offset + 2)]);
             *offset += 2;
-            return Self { bytes: value };
+            return Ok(Self { bytes: value });
         }
         if first_byte == 0xfe {
             value.extend_from_slice(&bytes[*offset..(*offset + 4)]);
             *offset += 4;
-            return Self { bytes: value };
+            return Ok(Self { bytes: value });
         }
         if first_byte == 0xff {
             value.extend_from_slice(&bytes[*offset..(*offset + 8)]);
             *offset += 8;
-            return Self { bytes: value };
+            return Ok(Self { bytes: value });
         }
-        Self { bytes: value }
+        Ok(Self { bytes: value })
     }
 }
 
@@ -125,40 +130,44 @@ mod test {
     }
 
     #[test]
-    fn test_unmarshalling_de_compact_size_de_1_byte_se_realiza_correctamente() {
+    fn test_unmarshalling_de_compact_size_de_1_byte_se_realiza_correctamente() -> Result<(),&'static str> {
         let compact_size_serializado: Vec<u8> = vec![0x30];
         let mut offset: usize = 0;
         let compact_size_esperado: CompactSizeUint =
-            CompactSizeUint::unmarshalling(&compact_size_serializado, &mut offset);
+            CompactSizeUint::unmarshalling(&compact_size_serializado, &mut offset)?;
         assert_eq!(compact_size_esperado.bytes, compact_size_serializado);
+        Ok(())
     }
 
     #[test]
-    fn test_unmarshalling_de_compact_size_de_3_bytes_se_realiza_correctamente() {
+    fn test_unmarshalling_de_compact_size_de_3_bytes_se_realiza_correctamente() -> Result<(),&'static str> {
         let compact_size_serializado: Vec<u8> = vec![0xfd, 0x30, 0x20];
         let mut offset: usize = 0;
         let compact_size_esperado: CompactSizeUint =
-            CompactSizeUint::unmarshalling(&compact_size_serializado, &mut offset);
+            CompactSizeUint::unmarshalling(&compact_size_serializado, &mut offset)?;
         assert_eq!(compact_size_esperado.bytes, compact_size_serializado);
+        Ok(())
     }
 
     #[test]
-    fn test_unmarshalling_de_compact_size_de_5_bytes_se_realiza_correctamente() {
+    fn test_unmarshalling_de_compact_size_de_5_bytes_se_realiza_correctamente() -> Result<(),&'static str> {
         let compact_size_serializado: Vec<u8> = vec![0xFE, 0xA0, 0x86, 0x01, 0x00];
         let mut offset: usize = 0;
         let compact_size_esperado: CompactSizeUint =
-            CompactSizeUint::unmarshalling(&compact_size_serializado, &mut offset);
+            CompactSizeUint::unmarshalling(&compact_size_serializado, &mut offset)?;
         assert_eq!(compact_size_esperado.bytes, compact_size_serializado);
+        Ok(())
     }
 
     #[test]
-    fn test_unmarshalling_de_compact_size_de_9_bytes_se_realiza_correctamente() {
+    fn test_unmarshalling_de_compact_size_de_9_bytes_se_realiza_correctamente() -> Result<(),&'static str> {
         let compact_size_serializado: Vec<u8> =
             vec![0xFF, 0x00, 0xF2, 0x05, 0x2A, 0x01, 0x00, 0x00, 0x00];
         let mut offset: usize = 0;
         let compact_size_esperado: CompactSizeUint =
-            CompactSizeUint::unmarshalling(&compact_size_serializado, &mut offset);
+            CompactSizeUint::unmarshalling(&compact_size_serializado, &mut offset)?;
         assert_eq!(compact_size_esperado.bytes, compact_size_serializado);
+        Ok(())
     }
 
     #[test]
