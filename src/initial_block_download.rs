@@ -48,9 +48,14 @@ pub fn search_first_header_block_to_download(headers: Vec<BlockHeader>, found: &
     Ok(first_headers_from_blocks_to_download)
 }
 
+
+
+
+
 pub fn download_headers(config: Arc<Mutex<Config>>, nodes: Arc<Mutex<Vec<TcpStream>>>, headers: Arc<Mutex<Vec<BlockHeader>>>, tx: Sender<Vec<BlockHeader>>) -> Result<(), Box<dyn Error>>{
     
     let mut node = nodes.lock().unwrap().pop().unwrap();
+
     let config_guard = match config.lock() {
         Ok(guard) => guard,
         Err(e) => {
@@ -64,28 +69,39 @@ pub fn download_headers(config: Arc<Mutex<Config>>, nodes: Arc<Mutex<Vec<TcpStre
             return Err(e.to_string().into())
         } 
     };
-    let mut encontrado = false;
+
+
+    let mut first_block_found = false;
+    // write first getheaders message with genesis block
     GetHeadersMessage::build_getheaders_message(&config_guard, vec![GENESIS_BLOCK]).write_to(&mut node)?;
+    // read first 2000 headers from headers message answered from node
     let mut headers_read = HeadersMessage::read_from(&mut node)?;
+    // store headers in `global` vec `headers_guard`
     headers_guard.extend_from_slice(&headers_read);
     while  headers_read.len() == 2000 {
-        let last_header_hash = match headers_read.last() {
-            Some(block_header) => Ok::<[u8; 32], Box<dyn Error>>(block_header.hash()) ,  
-            None => Err("No se pudo obtener el ultimo elemento del vector de 2000 headers".into())
-        }?;
-        let getheaders_message = GetHeadersMessage::build_getheaders_message(&config_guard,vec![last_header_hash]);
-        getheaders_message.write_to(&mut node)?;
+        // get the last header hash from the latest headers you have
+        let last_header_hash = headers_read
+            .last()
+            .ok_or("No se pudo obtener el último elemento del vector de 2000 headers")?
+            .hash();
+        // write getheaders message with last header you have, asking for next 2000 (or less if they are the last ones)
+        GetHeadersMessage::build_getheaders_message(&config_guard,vec![last_header_hash]).write_to(&mut node)?;
+        // read next 2000 headers (or less if they are the last ones)
         headers_read = HeadersMessage::read_from(&mut node)?;
+
+        
         if headers_guard.len() == ALTURA_PRIMER_BLOQUE_A_DESCARGAR {
-            let first_block_headers_to_download = search_first_header_block_to_download(headers_read.clone(), &mut encontrado)?;
+            let first_block_headers_to_download = search_first_header_block_to_download(headers_read.clone(), &mut first_block_found)?;
             tx.send(first_block_headers_to_download)?;
-        }
-        if encontrado && headers_guard.len() >= ALTURA_BLOQUES_A_DESCARGAR {
+        } 
+        if first_block_found && headers_guard.len() >= ALTURA_BLOQUES_A_DESCARGAR {
+            println!("ENVIO {:?} HEADERS A DESCARGAR SUS BLOQUES\n", headers_read.len());           
             tx.send(headers_read.clone())?;
-            println!("ENVIO {:?} HEADERS\n", headers_read.len());
         }
+
+        // store headers in `global` vec `headers_guard`
         headers_guard.extend_from_slice(&headers_read);
-        println!("{:?}\n", headers_guard.len());    
+        println!("HEADERS DESCARGADOS: {:?}\n", headers_guard.len());    
     }
     nodes.lock().unwrap().push(node);
     Ok(())
@@ -131,23 +147,9 @@ pub fn download_blocks(nodes: Arc<Mutex<Vec<TcpStream>>>, blocks: Arc<Mutex<Vec<
                 }));
 
             
-            /* 
-            // divido los headers que me llegaron en 8 vectores de igual tamaño
-            // creo 8 threads, cada uno conectado a un nodo distinto
-            // 
-            for block in recieved {
-                let block_hash = block.hash();
-                let mut inventories = Vec::new();
-                inventories.push(Inventory::new_block(block_hash));
-                let data_message = GetDataMessage::new(inventories);
-                data_message.write_to(&mut n).unwrap();
-                let bloque = BlockMessage::read_from(&mut n).unwrap();
-                pointer_to_blocks_clone.lock().unwrap().push(bloque);
-            }
-            */
         }
-        for h in handle_join {
-            h.join().unwrap();
+        for handle in handle_join {
+            handle.join().unwrap();
         }
         
     }
