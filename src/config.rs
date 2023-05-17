@@ -8,7 +8,7 @@ use std::str::FromStr;
 
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
-const CANTIDAD_ATRIBUTOS: usize = 9;
+const CANTIDAD_ATRIBUTOS: usize = 10;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub number_of_nodes: usize,
@@ -20,6 +20,7 @@ pub struct Config {
     pub n_threads: usize,
     pub dns_port: u16,
     pub connect_timeout: u64,
+    pub log_path : String,
 }
 impl Config {
     /// Crea un config leyendo un archivo de configuracion ubicado en la
@@ -61,6 +62,7 @@ impl Config {
             n_threads: 0,
             dns_port: 0,
             connect_timeout: 0,
+            log_path:String::new()
         };
 
         let mut number_of_settings_loaded: usize = 0;
