@@ -74,7 +74,12 @@ impl Config {
                     format!("Invalid config input: {}", current_line),
                 )));
             }
-            Self::load_setting(&mut cfg, setting[0], setting[1], &mut number_of_settings_loaded)?;
+            Self::load_setting(
+                &mut cfg,
+                setting[0],
+                setting[1],
+                &mut number_of_settings_loaded,
+            )?;
         }
         Self::check_number_of_attributes(number_of_settings_loaded)?;
         Ok(cfg)
@@ -90,44 +95,49 @@ impl Config {
         Ok(())
     }
 
-    fn load_setting(&mut self, name: &str, value: &str, number_of_settings_loaded: &mut usize) -> Result<(), Box<dyn Error>> {
+    fn load_setting(
+        &mut self,
+        name: &str,
+        value: &str,
+        number_of_settings_loaded: &mut usize,
+    ) -> Result<(), Box<dyn Error>> {
         match name {
             "NUMBER_OF_NODES" => {
                 self.number_of_nodes = usize::from_str(value)?;
                 *number_of_settings_loaded += 1;
-            },
+            }
             "DNS_SEED" => {
                 self.dns_seed = String::from(value);
                 *number_of_settings_loaded += 1;
-            },
+            }
             "TESTNET_PORT" => {
                 self.testnet_port = u16::from_str(value)?;
                 *number_of_settings_loaded += 1;
-            },
+            }
             "TESTNET_START_STRING" => {
                 self.testnet_start_string = i32::from_str(value)?.to_be_bytes();
                 *number_of_settings_loaded += 1;
-            },
+            }
             "PROTOCOL_VERSION" => {
                 self.protocol_version = i32::from_str(value)?;
                 *number_of_settings_loaded += 1;
-            },
+            }
             "USER_AGENT" => {
                 self.user_agent = String::from(value);
                 *number_of_settings_loaded += 1;
-            },
+            }
             "N_THREADS" => {
                 self.n_threads = usize::from_str(value)?;
                 *number_of_settings_loaded += 1;
-            },
+            }
             "DNS_PORT" => {
                 self.dns_port = u16::from_str(value)?;
                 *number_of_settings_loaded += 1;
-            },
+            }
             "CONNECT_TIMEOUT" => {
                 self.connect_timeout = u64::from_str(value)?;
                 *number_of_settings_loaded += 1;
-            },
+            }
             _ => {
                 return Err(Box::new(io::Error::new(
                     io::ErrorKind::InvalidInput,

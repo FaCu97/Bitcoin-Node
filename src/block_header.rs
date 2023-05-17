@@ -1,4 +1,4 @@
-use bitcoin_hashes::{Hash, sha256d};
+use bitcoin_hashes::{sha256d, Hash};
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct BlockHeader {
     pub version: i32,

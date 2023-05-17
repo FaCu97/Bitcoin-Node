@@ -1,9 +1,8 @@
 use super::getheaders_payload::GetHeadersPayload;
-use super::message_header::{HeaderMessage, get_checksum};
-use std::io::Write;
+use super::message_header::{get_checksum, HeaderMessage};
 use crate::compact_size_uint::CompactSizeUint;
 use crate::config::Config;
-
+use std::io::Write;
 
 // todo: Implementar pruebas usando mocking
 /// Representa un mensaje del tipo getheaders segun el protocolo de bitcoin, con su respectivo header y payload
@@ -29,7 +28,10 @@ impl GetHeadersMessage {
     /// Recibe un struct Config con las constantes a utilizar en el header del mensaje getheaders y un vector
     /// de hashes de bloques y arma el mensaje getheaders para que pida todos los headers a partir del ultimo hash del vector
     /// de hashes y con stop_hash en 0 para que devuelva 2000 o si no puede devolver 2000, todos los que tenga
-    pub fn build_getheaders_message(config: &Config, locator_hashes: Vec<[u8; 32]>) -> GetHeadersMessage {
+    pub fn build_getheaders_message(
+        config: &Config,
+        locator_hashes: Vec<[u8; 32]>,
+    ) -> GetHeadersMessage {
         let hash_count = CompactSizeUint::new(1u128);
         let stop_hash = [0u8; 32];
         let getheaders_payload = GetHeadersPayload {
