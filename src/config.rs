@@ -130,6 +130,10 @@ impl Config {
                 self.connect_timeout = u64::from_str(value)?;
                 *number_of_settings_loaded += 1;
             },
+            "LOG_PATH" => {
+                self.log_path = String::from(value);
+                *number_of_settings_loaded += 1;
+            },
             _ => {
                 return Err(Box::new(io::Error::new(
                     io::ErrorKind::InvalidInput,
