@@ -13,7 +13,6 @@ use std::{fmt, thread, vec};
 
 // todo: Cambiar la manera en que se pasa el config (?)
 // todo: Pasar constantes a config
-// todo: Sacar unwraps
 // todo: Agregar validacion de headers
 // todo: Si no se pudo descargar de un nodo, intentar descargar con otro (?)
 
@@ -55,21 +54,21 @@ impl fmt::Display for DownloadError {
 impl Error for DownloadError {}
 
 // HASH DEL BLOQUE 2000000: [140, 59, 62, 211, 170, 119, 142, 174, 205, 203, 233, 29, 174, 87, 25, 124, 225, 186, 160, 215, 195, 62, 134, 208, 13, 1, 0, 0, 0, 0, 0, 0]
-const GENESIS_BLOCK: [u8; 32] = [
+/*const GENESIS_BLOCK: [u8; 32] = [
     140, 59, 62, 211, 170, 119, 142, 174, 205, 203, 233, 29, 174, 87, 25, 124, 225, 186, 160, 215,
     195, 62, 134, 208, 13, 1, 0, 0, 0, 0, 0, 0,
-];
+];*/
 
-/*
+
 const GENESIS_BLOCK: [u8; 32] =
 [
     0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79,
     0xba, 0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f,
     0x49, 0x43,
 ];
-*/
 
-const ALTURA_PRIMER_BLOQUE_A_DESCARGAR: usize = 428000;
+
+const ALTURA_PRIMER_BLOQUE_A_DESCARGAR: usize = 2428000;
 const ALTURA_BLOQUES_A_DESCARGAR: usize = ALTURA_PRIMER_BLOQUE_A_DESCARGAR + 2000;
 const FECHA_INICIO_PROYECTO: &str = "2023-04-10 00:06:14";
 const FORMATO_FECHA_INICIO_PROYECTO: &str = "%Y-%m-%d %H:%M:%S";
@@ -191,6 +190,7 @@ pub fn download_headers(
     let mut download = download_headers_from_node(config, node, headers, tx);
     while download.is_err() {
         println!("FALLO LA DESCARGA CON EL NODO, VOY A INTENTAR CON OTRO!\n");
+        headers_clone.write().map_err(|err| DownloadError::LockError(err.to_string()))?.clear();
         node = nodes
         .write()
         .map_err(|err| DownloadError::LockError(err.to_string()))?
@@ -311,11 +311,13 @@ pub fn ibd(
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<(Vec<BlockHeader>, Vec<Block>), DownloadError> {
     let headers = vec![];
+    let pointer_to_headers = Arc::new(RwLock::new(headers));
     let blocks: Vec<Block> = vec![];
+    let pointer_to_blocks = Arc::new(RwLock::new(blocks));
 
+    // channel to comunicate headers download thread with blocks download thread
     let (tx, rx) = channel();
 
-    let pointer_to_headers = Arc::new(RwLock::new(headers));
     let pointer_to_config = Arc::new(RwLock::new(config));
     let pointer_to_headers_clone = Arc::clone(&pointer_to_headers);
     let pointer_to_nodes_clone = Arc::clone(&nodes);
@@ -329,7 +331,6 @@ pub fn ibd(
         Ok(())
     });
 
-    let pointer_to_blocks = Arc::new(RwLock::new(blocks));
     let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
     let blocks_thread = thread::spawn(move || -> DownlaodResult {
         download_blocks(nodes, pointer_to_blocks_clone, rx)?;
