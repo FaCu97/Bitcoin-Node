@@ -93,19 +93,11 @@ pub fn search_first_header_block_to_download(
     Ok(first_headers_from_blocks_to_download)
 }
 
-pub fn download_headers(
-    config: Arc<RwLock<Config>>,
-    nodes: Arc<RwLock<Vec<TcpStream>>>,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    tx: Sender<Vec<BlockHeader>>,
-) -> DownlaodResult {
-    let mut node = nodes
-        .write()
-        .map_err(|err| DownloadError::LockError(err.to_string()))?
-        .pop()
-        .ok_or("Error no hay mas nodos para descargar los headers!\n")
-        .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
 
+
+
+
+pub fn download_headers_from_node(config: Arc<RwLock<Config>>, mut node: TcpStream, headers: Arc<RwLock<Vec<BlockHeader>>>, tx: Sender<Vec<BlockHeader>>) -> Result<TcpStream, Box<dyn Error>> {
     let config_guard = config
         .read()
         .map_err(|err| DownloadError::LockError(err.to_string()))?;
@@ -174,12 +166,62 @@ pub fn download_headers(
                 .len()
         );
     }
+    Ok(node)
+}
+
+
+
+
+
+pub fn download_headers(
+    config: Arc<RwLock<Config>>,
+    nodes: Arc<RwLock<Vec<TcpStream>>>,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    tx: Sender<Vec<BlockHeader>>,
+) -> DownlaodResult {
+    let mut node = nodes
+        .write()
+        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .pop()
+        .ok_or("Error no hay mas nodos para descargar los headers!\n")
+        .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+    let config_clone = config.clone();
+    let headers_clone = headers.clone();
+    let tx_clone = tx.clone();
+    let mut download = download_headers_from_node(config, node, headers, tx);
+    while download.is_err() {
+        println!("FALLO LA DESCARGA CON EL NODO, VOY A INTENTAR CON OTRO!\n");
+        node = nodes
+        .write()
+        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .pop()
+        .ok_or("Error no hay mas nodos para descargar los headers! Todos fallaron \n")
+        .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+        download = download_headers_from_node(config_clone.clone(), node, headers_clone.clone(), tx_clone.clone());
+    }  
+    node = download.map_err(|err| DownloadError::ReadNodeError(err.to_string()))?;
     nodes
         .write()
         .map_err(|err| DownloadError::LockError(err.to_string()))?
         .push(node);
     Ok(())
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 pub fn download_blocks(
     nodes: Arc<RwLock<Vec<TcpStream>>>,
@@ -257,6 +299,12 @@ pub fn download_blocks(
     }
     Ok(())
 }
+
+
+
+
+
+
 
 pub fn ibd(
     config: Config,
