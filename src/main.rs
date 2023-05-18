@@ -32,17 +32,17 @@ impl Error for GenericError {}
 
 fn main() -> Result<(), GenericError> {
     let args: Vec<String> = env::args().collect();
-    let config: Config = Config::from(&args).map_err( GenericError::ConfigError)?;
+    let config: Config = Config::from(&args).map_err(GenericError::ConfigError)?;
     let active_nodes = get_active_nodes_from_dns_seed(config.clone())
-        .map_err( GenericError::ConnectionToDnsError)?;
+        .map_err(GenericError::ConnectionToDnsError)?;
     let sockets = Handshake::handshake(config.clone(), &active_nodes)
-        .map_err( GenericError::HandShakeError)?;
+        .map_err(GenericError::HandShakeError)?;
     println!("Sockets: {:?}", sockets);
     println!("CANTIDAD SOCKETS: {:?}", sockets.len());
     println!("{:?}", config.user_agent);
     // Acá iría la descarga de los headers
     let pointer_to_nodes = Arc::new(RwLock::new(sockets));
-    ibd(config, pointer_to_nodes).map_err( GenericError::DownloadError)?;
+    ibd(config, pointer_to_nodes).map_err(GenericError::DownloadError)?;
     Ok(())
 }
 
