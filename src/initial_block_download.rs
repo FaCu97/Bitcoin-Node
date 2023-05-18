@@ -60,10 +60,10 @@ const GENESIS_BLOCK: [u8; 32] = [
     195, 62, 134, 208, 13, 1, 0, 0, 0, 0, 0, 0,
 ];
 
-/*const GENESIS_BLOCK: [u8; 32] = [
-    0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79, 0xba,
-    0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43,
-];*/
+//const GENESIS_BLOCK: [u8; 32] = [
+//    0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79, 0xba,
+//    0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43,
+//];
 
 const ALTURA_PRIMER_BLOQUE_A_DESCARGAR: usize = 428000;
 const ALTURA_BLOQUES_A_DESCARGAR: usize = ALTURA_PRIMER_BLOQUE_A_DESCARGAR + 2000;
@@ -228,6 +228,12 @@ fn download_headers(
     Ok(())
 }
 
+
+/// # Descarga de bloques
+/// Recibe:
+/// - La referencia a la lista de nodos a los que se conectar.
+/// - La referencia a la lista de bloques donde los almacenará
+/// 
 pub fn download_blocks(
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     blocks: Arc<RwLock<Vec<Block>>>,
@@ -241,10 +247,7 @@ pub fn download_blocks(
         // FUNCIONA BIEN CON NODOS CON O SIN FALLAS
         // AL FINAL SE QUEDA ESPERANDO AL CIERRE DEL CHANNEL
         // HAY QUE SOLUCIONAR ESO
-        if blocks.read().unwrap().len() == (headers.read().unwrap().len() - ALTURA_PRIMER_BLOQUE) {
-            //drop(rx);
-            return Ok(());
-        }
+
         // No sirve hacer recieved.len() < 2000 porque recibe también los 250 de los nodos que fallan
 
         // acá recibo 2000 block headers
@@ -271,18 +274,18 @@ pub fn download_blocks(
             let nodes_pointer_clone = nodes.clone();
             let block_headers_chunk_clone = Arc::clone(&blocks_headers_chunks);
             let blocks_pointer_clone = Arc::clone(&blocks);
-            let mut node = nodes_pointer_clone.write().unwrap().pop().unwrap();
-            handle_join.push(thread::spawn(move || {
+            let mut node = nodes_pointer_clone.write()
+            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .pop()
+            .ok_or("Error no hay mas nodos para descargar los bloques!\n")
+            .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+            handle_join.push(thread::spawn(move || -> DownlaodResult {
                 let mut current_blocks: Vec<Block> = Vec::new();
                 // el thread recibe 250 bloques
-                let block_headers = block_headers_chunk_clone.write().unwrap()[i].clone();
+                let block_headers = block_headers_chunk_clone.write().map_err(|err| DownloadError::LockError(err.to_string()))?[i].clone();
                 let block_headers_thread = block_headers.clone();
                 println!("VOY A DESCARGAR {:?} BLOQUES DEL NODO {:?}\n", block_headers.len(), node);
                 let chunk_size = 16;
-
-                if block_headers_thread.len() < 31{
-                    let a = 0;
-                }
 
                 for chunk_llamada in block_headers.chunks(chunk_size) {
                 //  Acá ya separé los 250 en chunks de 16 para las llamadas
@@ -290,20 +293,17 @@ pub fn download_blocks(
                     for block in chunk_llamada {
                         inventory.push(Inventory::new_block(block.hash()));
                     }
-                    match GetDataMessage::new(inventory).write_to(&mut node){
-                        Ok(_) => {},
-                        Err(e) => {
+                    match GetDataMessage::new(inventory).write_to(&mut node) {
+                        Ok(_) => (),
+                        Err(_) => {
                             println!("ERORRRRRR: DEVUELVO LOS HEADERS DEL NODO --- NO PUEDO HACER LA SOLICITUD DE BLOQUES");
                             let mut vec = Vec::new();
                             vec.extend(block_headers_thread);
-                            match tx_cloned.send(vec){
-                                Ok(_) => {},
-                                Err(e) => print!("ERROR!!! NO PUEDO ENVIAR LOS BLOQUES AL TX %%%%%%%%%%%%%%%")
-                            }
+                            tx_cloned.send(block_headers_thread).map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
                             // falló el envio del mensaje, tengo que intentar con otro nodo
                             // si hago return, termino el thread.
                             // tengo que enviar todos los bloques que tenía ese thread
-                            return;
+                            return Ok(());
                         }
                     }
 
@@ -311,29 +311,38 @@ pub fn download_blocks(
                     for _ in 0..chunk_llamada.len(){
                         let bloque = match BlockMessage::read_from(&mut node){
                             Ok(bloque) => bloque,
-                            Err(e) => {
+                            Err(_) => {
                                 println!("ERORRRRRR: DEVUELVO LOS HEADERS DEL NODO");
                                 let mut vec = Vec::new();
                                 vec.extend(block_headers_thread);
-                                match tx_cloned.send(vec){
-                                    Ok(_) => {},
-                                    Err(e) => print!("ERROR!!! NO PUEDO ENVIAR LOS BLOQUES AL TX %%%%%%%%%%%%%%---%%%%%%")
-                                }
+                                tx_cloned.send(vec).map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
                                 // falló la recepción del mensaje, tengo que intentar con otro nodo
                                 // termino el nodo con el return
-                                return;
+                                return Ok(());
                             }
                         };
                         current_blocks.push(bloque);
                     }
                 }
-                blocks_pointer_clone.write().unwrap().extend(current_blocks);
+                blocks_pointer_clone.write().map_err(|err| DownloadError::LockError(err.to_string()))?.extend(current_blocks);
+                if blocks_pointer_clone.read().unwrap().len() >= 5705 {
+                    let mut a = 0;
+                    a = 22;
+                }
                 println!("BLOQUES DESCARGADOS: {:?}", blocks_pointer_clone.read().unwrap().len());
                 nodes_pointer_clone.write().unwrap().push(node);
+                Ok(())
                 }));
         }
         for h in handle_join {
-            h.join().unwrap();
+            h.join().unwrap()?;
+        }
+        let bloques_descargados = blocks.read().unwrap().len();
+        let cantidad_headers_descargados = headers.read().unwrap().len();
+        let bloques_a_descargar = cantidad_headers_descargados - ALTURA_PRIMER_BLOQUE + 1 ;
+        if bloques_descargados == bloques_a_descargar {
+            //drop(rx);
+            return Ok(());
         }
     }
     Ok(())
