@@ -241,10 +241,6 @@ pub fn download_blocks(
         // FUNCIONA BIEN CON NODOS CON O SIN FALLAS
         // AL FINAL SE QUEDA ESPERANDO AL CIERRE DEL CHANNEL
         // HAY QUE SOLUCIONAR ESO
-        if blocks.read().unwrap().len() == (headers.read().unwrap().len() - ALTURA_PRIMER_BLOQUE) {
-            //drop(rx);
-            return Ok(());
-        }
         // No sirve hacer recieved.len() < 2000 porque recibe también los 250 de los nodos que fallan
 
         // acá recibo 2000 block headers
@@ -334,6 +330,9 @@ pub fn download_blocks(
         }
         for h in handle_join {
             h.join().unwrap();
+        }
+        if blocks.read().unwrap().len() == (headers.read().unwrap().len() - ALTURA_PRIMER_BLOQUE + 1) {
+            break;
         }
     }
     Ok(())
