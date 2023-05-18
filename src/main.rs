@@ -1,6 +1,6 @@
 use bitcoin::config::Config;
 use bitcoin::handshake::{HandShakeError, Handshake};
-use bitcoin::initial_block_download::{ibd, DownloadError};
+use bitcoin::initial_block_download::{initial_block_download, DownloadError};
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use std::error::Error;
 use std::{env, fmt};
@@ -42,7 +42,7 @@ fn main() -> Result<(), GenericError> {
     println!("{:?}", config.user_agent);
     // Acá iría la descarga de los headers
     let pointer_to_nodes = Arc::new(RwLock::new(sockets));
-    let (headers, blocks) = ibd(config, pointer_to_nodes).map_err(GenericError::DownloadError)?;
+    let (headers, blocks) = initial_block_download(config, pointer_to_nodes).map_err(GenericError::DownloadError)?;
     println!("DESCARGUE {:?} HEADERS\n", headers.len());
     println!("DESCARGUE {:?} BLOQUES\n", blocks.len());
     Ok(())
