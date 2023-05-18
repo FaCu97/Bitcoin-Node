@@ -9,6 +9,7 @@ use std::error::Error;
 use std::net::TcpStream;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, RwLock};
+use std::time::Duration;
 use std::{fmt, thread, vec};
 
 // todo: Cambiar la manera en que se pasa el config (?)
@@ -59,18 +60,16 @@ const GENESIS_BLOCK: [u8; 32] = [
     195, 62, 134, 208, 13, 1, 0, 0, 0, 0, 0, 0,
 ];
 
-/*
-const GENESIS_BLOCK: [u8; 32] =
-[
-    0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79,
-    0xba, 0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f,
-    0x49, 0x43,
+/*const GENESIS_BLOCK: [u8; 32] = [
+    0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79, 0xba,
+    0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43,
 ];*/
 
 const ALTURA_PRIMER_BLOQUE_A_DESCARGAR: usize = 428000;
 const ALTURA_BLOQUES_A_DESCARGAR: usize = ALTURA_PRIMER_BLOQUE_A_DESCARGAR + 2000;
 const FECHA_INICIO_PROYECTO: &str = "2023-04-10 00:06:14";
 const FORMATO_FECHA_INICIO_PROYECTO: &str = "%Y-%m-%d %H:%M:%S";
+const ALTURA_PRIMER_BLOQUE: usize = 428246;
 
 fn search_first_header_block_to_download(
     headers: Vec<BlockHeader>,
@@ -96,13 +95,14 @@ fn download_headers_from_node(
     mut node: TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     tx: Sender<Vec<BlockHeader>>,
-) -> Result<TcpStream, Box<dyn Error>> {
+) -> Result<TcpStream, DownloadError> {
     let config_guard = config
         .read()
         .map_err(|err| DownloadError::LockError(err.to_string()))?;
 
     let mut first_block_found = false;
     // write first getheaders message with genesis block
+    
     GetHeadersMessage::build_getheaders_message(&config_guard, vec![GENESIS_BLOCK])
         .write_to(&mut node)
         .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
@@ -172,6 +172,7 @@ fn download_headers(
     config: Arc<RwLock<Config>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
+    blocks: Arc<RwLock<Vec<Block>>>,
     tx: Sender<Vec<BlockHeader>>,
 ) -> DownlaodResult {
     // get last node from list, if possible
@@ -188,7 +189,12 @@ fn download_headers(
     let mut download = download_headers_from_node(config, node, headers, tx);
     while download.is_err() {
         println!("FALLO LA DESCARGA DE HEADERS CON EL NODO, VOY A INTENTAR CON OTRO!\n");
-        // clear the list of headers
+        // clear list of blocks in case they where already been downloaded
+        blocks
+            .write()
+            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .clear();
+        // clear the list of headers     
         headers_clone
             .write()
             .map_err(|err| DownloadError::LockError(err.to_string()))?
@@ -222,78 +228,112 @@ fn download_headers(
     Ok(())
 }
 
-fn download_blocks(
+pub fn download_blocks(
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     blocks: Arc<RwLock<Vec<Block>>>,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
     rx: Receiver<Vec<BlockHeader>>,
-) -> DownlaodResult {
+    tx: Sender<Vec<BlockHeader>>,
+) -> Result<(), Box<dyn Error>> {
     // recieves in the channel the vec of headers sent by the function downloading headers
     for recieved in rx {
-        println!("RECIBO {:?} HEADERS\n", recieved.len());
+    //while let Ok(recieved) = rx.recv_timeout(Duration::from_secs(240)) {
+        // FUNCIONA BIEN CON NODOS CON O SIN FALLAS
+        // AL FINAL SE QUEDA ESPERANDO AL CIERRE DEL CHANNEL
+        // HAY QUE SOLUCIONAR ESO
+        if blocks.read().unwrap().len() == (headers.read().unwrap().len() - ALTURA_PRIMER_BLOQUE) {
+            //drop(rx);
+            return Ok(());
+        }
+        // No sirve hacer recieved.len() < 2000 porque recibe también los 250 de los nodos que fallan
 
+        // acá recibo 2000 block headers
+        println!("RECIBO {:?} HEADERS\n", recieved.len());
+        let mut n_threads = 8;
+
+        if recieved.len() < 250 {
+            n_threads = 1;
+        }
+
+        let blocks_headers_chunks;
+        let chunk_size = (recieved.len() as f64 / n_threads as f64).ceil() as usize;
         // divides the vec into 8 with the same lenght (or same lenght but the last with less)
-        let chunk_size = (recieved.len() as f64 / 8_f64).ceil() as usize;
-        let blocks_headers_chunks = Arc::new(RwLock::new(
+        blocks_headers_chunks = Arc::new(RwLock::new(
             recieved
                 .chunks(chunk_size)
                 .map(|chunk| chunk.to_vec())
                 .collect::<Vec<_>>(),
         ));
         let mut handle_join = vec![];
-        for i in 0..8 {
-            let nodes_pointer_clone = Arc::clone(&nodes);
-            let block_headers_chunks_clone = Arc::clone(&blocks_headers_chunks);
+        for i in 0..n_threads {
+            // este ciclo crea la cantidad de threads simultaneos
+            let tx_cloned = tx.clone();
+            let nodes_pointer_clone = nodes.clone();
+            let block_headers_chunk_clone = Arc::clone(&blocks_headers_chunks);
             let blocks_pointer_clone = Arc::clone(&blocks);
-            let mut node = nodes_pointer_clone
-                .write()
-                .map_err(|err| DownloadError::LockError(err.to_string()))?
-                .pop()
-                .ok_or("No hay nodos para descargar los bloques!\n")
-                .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
-            handle_join.push(thread::spawn(move || -> DownlaodResult {
-                let block_headers = block_headers_chunks_clone
-                    .write()
-                    .map_err(|err| DownloadError::LockError(err.to_string()))?[i]
-                    .clone();
-                println!(
-                    "VOY A DESCARGAR {:?} BLOQUES DEL NODO {:?}\n",
-                    block_headers.len(),
-                    node
-                );
-                for chunk in block_headers.chunks(16) {
+            let mut node = nodes_pointer_clone.write().unwrap().pop().unwrap();
+            handle_join.push(thread::spawn(move || {
+                let mut current_blocks: Vec<Block> = Vec::new();
+                // el thread recibe 250 bloques
+                let block_headers = block_headers_chunk_clone.write().unwrap()[i].clone();
+                let block_headers_thread = block_headers.clone();
+                println!("VOY A DESCARGAR {:?} BLOQUES DEL NODO {:?}\n", block_headers.len(), node);
+                let chunk_size = 16;
+
+                if block_headers_thread.len() < 31{
+                    let a = 0;
+                }
+
+                for chunk_llamada in block_headers.chunks(chunk_size) {
+                //  Acá ya separé los 250 en chunks de 16 para las llamadas
                     let mut inventory = vec![];
-                    for block in chunk {
+                    for block in chunk_llamada {
                         inventory.push(Inventory::new_block(block.hash()));
                     }
-                    GetDataMessage::new(inventory)
-                        .write_to(&mut node)
-                        .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
-                    for _ in 0..chunk.len() {
-                        let bloque = BlockMessage::read_from(&mut node)
-                            .map_err(|err| DownloadError::ReadNodeError(err.to_string()))?;
-                        println!(
-                            "CANTIDAD DE BLOQUES DESCARGADOS: {:?}\n",
-                            blocks_pointer_clone
-                                .read()
-                                .map_err(|err| DownloadError::LockError(err.to_string()))?
-                                .len()
-                        );
-                        blocks_pointer_clone
-                            .write()
-                            .map_err(|err| DownloadError::LockError(err.to_string()))?
-                            .push(bloque);
+                    match GetDataMessage::new(inventory).write_to(&mut node){
+                        Ok(_) => {},
+                        Err(e) => {
+                            println!("ERORRRRRR: DEVUELVO LOS HEADERS DEL NODO --- NO PUEDO HACER LA SOLICITUD DE BLOQUES");
+                            let mut vec = Vec::new();
+                            vec.extend(block_headers_thread);
+                            match tx_cloned.send(vec){
+                                Ok(_) => {},
+                                Err(e) => print!("ERROR!!! NO PUEDO ENVIAR LOS BLOQUES AL TX %%%%%%%%%%%%%%%")
+                            }
+                            // falló el envio del mensaje, tengo que intentar con otro nodo
+                            // si hago return, termino el thread.
+                            // tengo que enviar todos los bloques que tenía ese thread
+                            return;
+                        }
+                    }
+
+                    // Acá tengo que recibir los 16 bloques (o menos) de la llamada
+                    for _ in 0..chunk_llamada.len(){
+                        let bloque = match BlockMessage::read_from(&mut node){
+                            Ok(bloque) => bloque,
+                            Err(e) => {
+                                println!("ERORRRRRR: DEVUELVO LOS HEADERS DEL NODO");
+                                let mut vec = Vec::new();
+                                vec.extend(block_headers_thread);
+                                match tx_cloned.send(vec){
+                                    Ok(_) => {},
+                                    Err(e) => print!("ERROR!!! NO PUEDO ENVIAR LOS BLOQUES AL TX %%%%%%%%%%%%%%---%%%%%%")
+                                }
+                                // falló la recepción del mensaje, tengo que intentar con otro nodo
+                                // termino el nodo con el return
+                                return;
+                            }
+                        };
+                        current_blocks.push(bloque);
                     }
                 }
-                nodes_pointer_clone
-                    .write()
-                    .map_err(|err| DownloadError::LockError(err.to_string()))?
-                    .push(node);
-                Ok(())
-            }));
+                blocks_pointer_clone.write().unwrap().extend(current_blocks);
+                println!("BLOQUES DESCARGADOS: {:?}", blocks_pointer_clone.read().unwrap().len());
+                nodes_pointer_clone.write().unwrap().push(node);
+                }));
         }
         for h in handle_join {
-            h.join()
-                .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))??;
+            h.join().unwrap();
         }
     }
     Ok(())
@@ -312,21 +352,28 @@ pub fn initial_block_download(
     let pointer_to_blocks = Arc::new(RwLock::new(blocks));
     // channel to comunicate headers download thread with blocks download thread
     let (tx, rx) = channel();
+    let tx_cloned = tx.clone();
     let pointer_to_config = Arc::new(RwLock::new(config));
-    let (pointer_to_headers_clone, pointer_to_nodes_clone) =
-        (Arc::clone(&pointer_to_headers), Arc::clone(&nodes));
+    let (pointer_to_headers_clone, pointer_to_nodes_clone, pointer_to_blocks_clone) = (
+        Arc::clone(&pointer_to_headers),
+        Arc::clone(&nodes),
+        Arc::clone(&pointer_to_blocks),
+    );
     let headers_thread = thread::spawn(move || -> DownlaodResult {
         download_headers(
             pointer_to_config,
             pointer_to_nodes_clone,
             pointer_to_headers_clone,
+            pointer_to_blocks_clone,
             tx,
         )?;
         Ok(())
     });
+    let pointer_to_headers_clone_for_blocks = Arc::clone(&pointer_to_headers);
     let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
     let blocks_thread = thread::spawn(move || -> DownlaodResult {
-        download_blocks(nodes, pointer_to_blocks_clone, rx)?;
+        download_blocks(nodes, pointer_to_blocks_clone, pointer_to_headers_clone_for_blocks, rx, tx_cloned)
+            .map_err(|_| DownloadError::CanNotRead("f".to_string()))?;
         Ok(())
     });
     headers_thread
