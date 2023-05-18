@@ -5,7 +5,7 @@ use bitcoin::network::get_active_nodes_from_dns_seed;
 use std::error::Error;
 use std::{env, fmt};
 //use std::process::exit;
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug)]
 pub enum GenericError {
@@ -37,7 +37,10 @@ fn main() -> Result<(), GenericError> {
     println!("{:?}", config.user_agent);
     // Acá iría la descarga de los headers
     let pointer_to_nodes = Arc::new(RwLock::new(sockets));
-    ibd(config, pointer_to_nodes).map_err(|err| GenericError::DownloadError(err))?;
+    match ibd(config, pointer_to_nodes).map_err(|err| GenericError::DownloadError(err)) {
+        Ok(_) => (),
+        Err(err) => println!("{err}"),
+    };
     Ok(())
 }
 
