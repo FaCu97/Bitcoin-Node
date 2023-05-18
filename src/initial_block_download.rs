@@ -230,12 +230,21 @@ fn download_headers(
 
 
 /// # Descarga de bloques
+/// Realiza la descarga de bloques de forma concurrente.
 /// ### Recibe:
 /// - La referencia a la lista de nodos a los que se conectar.
 /// - La referencia a la lista de bloques donde los almacenará
 /// - La referencia a los block headers descargados
 /// - El channel por donde recibe los block headers
-/// - El channel por donde recibe los block headers
+/// - El channel por donde devuelve los block headers cuando no los puede descargar
+/// 
+/// ### Manejo de errores:
+/// Vuelve a intentar la descarga con un nuevo nodo, en los siguientes casos:
+/// - No se pudo realizar la solicitud de los bloques
+/// - No se pudo recibir el bloque
+/// 
+/// ### Devuelve:
+/// - Ok o un error si no se puede completar la descarga
 pub fn download_blocks(
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     blocks: Arc<RwLock<Vec<Block>>>,
@@ -335,7 +344,6 @@ pub fn download_blocks(
         let cantidad_headers_descargados = headers.read().map_err(|err| DownloadError::LockError(err.to_string()))?.len();
         let bloques_a_descargar = cantidad_headers_descargados - ALTURA_PRIMER_BLOQUE + 1 ;
         if bloques_descargados == bloques_a_descargar {
-            //drop(rx);
             return Ok(());
         }
     }
