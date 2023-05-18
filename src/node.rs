@@ -1,8 +1,8 @@
 use crate::{block::Block, transaction::Transaction, tx_out::TxOut};
 
 pub struct Node {
-    block_chain: Vec<Block>,
-    utxo_set: Vec<TxOut>,
+    pub block_chain: Vec<Block>,
+    pub utxo_set: Vec<TxOut>,
 }
 
 impl Node {

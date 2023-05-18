@@ -101,8 +101,8 @@ fn get_nonce_from_bytes(bytes: &[u8], counter: &mut usize) -> u64 {
 fn get_user_agent_bytes_from_bytes(bytes: &[u8], counter: &mut usize) -> CompactSizeUint {
     let hola = CompactSizeUint::unmarshalling(bytes, &mut *counter);
     match hola {
-        Ok(valor) => return valor,
-        Err(_e) => return CompactSizeUint::new(0),
+        Ok(valor) => valor,
+        Err(_e) => CompactSizeUint::new(0),
     }
 }
 /// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
