@@ -25,7 +25,7 @@ impl Block {
     }
 
     pub fn unmarshalling(bytes: &Vec<u8>, offset: &mut usize) -> Result<Block, &'static str> {
-        let block_header: BlockHeader = BlockHeader::unmarshalling(bytes, offset);
+        let block_header: BlockHeader = BlockHeader::unmarshalling(bytes, offset)?;
         let txn_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, offset)?;
         let amount_transaction: u64 = txn_count.decoded_value();
         let txn: Vec<Transaction> =
