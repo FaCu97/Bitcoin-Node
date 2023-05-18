@@ -261,7 +261,7 @@ pub fn download_blocks(
 pub fn ibd(
     config: Config,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-) -> Result<Vec<BlockHeader>, DownloadError> {
+) -> Result<(Vec<BlockHeader>, Vec<Block>), DownloadError> {
     let headers = vec![];
     let blocks: Vec<Block> = vec![];
 
@@ -300,9 +300,5 @@ pub fn ibd(
     let blocks = &*pointer_to_blocks
         .read()
         .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?;
-    println!("HEADERS DESCARGADOS: {:?}", headers.len());
-    println!("BLOQUES A DESCARGAR: {:?}", blocks.len());
-    println!("ULTIMO BLOQUE: {:?}", blocks.last().unwrap());
-
-    Ok(headers.clone())
+    Ok((headers.clone(), blocks.clone()))
 }

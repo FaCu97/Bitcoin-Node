@@ -42,7 +42,9 @@ fn main() -> Result<(), GenericError> {
     println!("{:?}", config.user_agent);
     // Acá iría la descarga de los headers
     let pointer_to_nodes = Arc::new(RwLock::new(sockets));
-    ibd(config, pointer_to_nodes).map_err(GenericError::DownloadError)?;
+    let (headers, blocks) = ibd(config, pointer_to_nodes).map_err(GenericError::DownloadError)?;
+    println!("DESCARGUE {:?} HEADERS\n", headers.len());
+    println!("DESCARGUE {:?} BLOQUES\n", blocks.len());
     Ok(())
 }
 
