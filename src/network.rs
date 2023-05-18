@@ -28,20 +28,20 @@ pub fn get_active_nodes_from_dns_seed(
     let addrs = (host, port)
         .to_socket_addrs()
         .map_err(|err| ConnectionToDnsError(format!("{}", err)))?;
-/* 
-     node_ips.push(Ipv4Addr::new(5, 255,97, 92));
-    node_ips.push(Ipv4Addr::new(5, 255,97, 92));
+    /*
+         node_ips.push(Ipv4Addr::new(5, 255,97, 92));
+        node_ips.push(Ipv4Addr::new(5, 255,97, 92));
 
-    node_ips.push(Ipv4Addr::new(144, 126,221, 254));
-    node_ips.push(Ipv4Addr::new(94, 130, 58, 119));
+        node_ips.push(Ipv4Addr::new(144, 126,221, 254));
+        node_ips.push(Ipv4Addr::new(94, 130, 58, 119));
 
-    node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
-    node_ips.push(Ipv4Addr::new(94, 130, 58, 119));
-    node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
-    node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
-    node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
-    node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
-*/
+        node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
+        node_ips.push(Ipv4Addr::new(94, 130, 58, 119));
+        node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
+        node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
+        node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
+        node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
+    */
     for addr in addrs {
         if let SocketAddr::V4(v4_addr) = addr {
             node_ips.push(*v4_addr.ip());
