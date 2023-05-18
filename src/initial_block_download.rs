@@ -54,21 +54,20 @@ impl fmt::Display for DownloadError {
 impl Error for DownloadError {}
 
 // HASH DEL BLOQUE 2000000: [140, 59, 62, 211, 170, 119, 142, 174, 205, 203, 233, 29, 174, 87, 25, 124, 225, 186, 160, 215, 195, 62, 134, 208, 13, 1, 0, 0, 0, 0, 0, 0]
-/*const GENESIS_BLOCK: [u8; 32] = [
+const GENESIS_BLOCK: [u8; 32] = [
     140, 59, 62, 211, 170, 119, 142, 174, 205, 203, 233, 29, 174, 87, 25, 124, 225, 186, 160, 215,
     195, 62, 134, 208, 13, 1, 0, 0, 0, 0, 0, 0,
-];*/
+];
 
-
+/*
 const GENESIS_BLOCK: [u8; 32] =
 [
     0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79,
     0xba, 0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f,
     0x49, 0x43,
-];
+];*/
 
-
-const ALTURA_PRIMER_BLOQUE_A_DESCARGAR: usize = 2428000;
+const ALTURA_PRIMER_BLOQUE_A_DESCARGAR: usize = 428000;
 const ALTURA_BLOQUES_A_DESCARGAR: usize = ALTURA_PRIMER_BLOQUE_A_DESCARGAR + 2000;
 const FECHA_INICIO_PROYECTO: &str = "2023-04-10 00:06:14";
 const FORMATO_FECHA_INICIO_PROYECTO: &str = "%Y-%m-%d %H:%M:%S";
@@ -92,11 +91,12 @@ fn search_first_header_block_to_download(
     Ok(first_headers_from_blocks_to_download)
 }
 
-
-
-
-
-fn download_headers_from_node(config: Arc<RwLock<Config>>, mut node: TcpStream, headers: Arc<RwLock<Vec<BlockHeader>>>, tx: Sender<Vec<BlockHeader>>) -> Result<TcpStream, Box<dyn Error>> {
+fn download_headers_from_node(
+    config: Arc<RwLock<Config>>,
+    mut node: TcpStream,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    tx: Sender<Vec<BlockHeader>>,
+) -> Result<TcpStream, Box<dyn Error>> {
     let config_guard = config
         .read()
         .map_err(|err| DownloadError::LockError(err.to_string()))?;
@@ -168,10 +168,6 @@ fn download_headers_from_node(config: Arc<RwLock<Config>>, mut node: TcpStream, 
     Ok(node)
 }
 
-
-
-
-
 fn download_headers(
     config: Arc<RwLock<Config>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
@@ -193,19 +189,31 @@ fn download_headers(
     while download.is_err() {
         println!("FALLO LA DESCARGA DE HEADERS CON EL NODO, VOY A INTENTAR CON OTRO!\n");
         // clear the list of headers
-        headers_clone.write().map_err(|err| DownloadError::LockError(err.to_string()))?.clear();
+        headers_clone
+            .write()
+            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .clear();
         // get another node if possible and discard the one that fails download
         node = nodes
-        .write()
-        .map_err(|err| DownloadError::LockError(err.to_string()))?
-        .pop()
-        .ok_or("Error no hay mas nodos para descargar los headers! Todos fallaron \n")
-        .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+            .write()
+            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .pop()
+            .ok_or("Error no hay mas nodos para descargar los headers! Todos fallaron \n")
+            .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
         // try to download headers from that node
-        download = download_headers_from_node(config_clone.clone(), node, headers_clone.clone(), tx_clone.clone());
+        download = download_headers_from_node(
+            config_clone.clone(),
+            node,
+            headers_clone.clone(),
+            tx_clone.clone(),
+        );
     }
-    // get the node which download the headers correctly  
-    node = download.map_err(|_| DownloadError::ReadNodeError("Descarga fallida con todos los nodos conectados! \n".to_string()))?;
+    // get the node which download the headers correctly
+    node = download.map_err(|_| {
+        DownloadError::ReadNodeError(
+            "Descarga fallida con todos los nodos conectados! \n".to_string(),
+        )
+    })?;
     // return node again to the list of nodes
     nodes
         .write()
@@ -213,22 +221,6 @@ fn download_headers(
         .push(node);
     Ok(())
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 fn download_blocks(
     nodes: Arc<RwLock<Vec<TcpStream>>>,
@@ -307,11 +299,6 @@ fn download_blocks(
     Ok(())
 }
 
-
-
-
-
-
 /// Recieves a list of TcpStreams that are the connection with nodes already established and downloads
 /// all the headers from the blockchain and the blocks from a config date. Returns the headers and blocks in
 /// two separete lists in case of exit or an error in case of faliure
@@ -323,13 +310,11 @@ pub fn initial_block_download(
     let pointer_to_headers = Arc::new(RwLock::new(headers));
     let blocks: Vec<Block> = vec![];
     let pointer_to_blocks = Arc::new(RwLock::new(blocks));
-
     // channel to comunicate headers download thread with blocks download thread
     let (tx, rx) = channel();
-
     let pointer_to_config = Arc::new(RwLock::new(config));
-    let pointer_to_headers_clone = Arc::clone(&pointer_to_headers);
-    let pointer_to_nodes_clone = Arc::clone(&nodes);
+    let (pointer_to_headers_clone, pointer_to_nodes_clone) =
+        (Arc::clone(&pointer_to_headers), Arc::clone(&nodes));
     let headers_thread = thread::spawn(move || -> DownlaodResult {
         download_headers(
             pointer_to_config,
@@ -339,7 +324,6 @@ pub fn initial_block_download(
         )?;
         Ok(())
     });
-
     let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
     let blocks_thread = thread::spawn(move || -> DownlaodResult {
         download_blocks(nodes, pointer_to_blocks_clone, rx)?;
@@ -351,7 +335,6 @@ pub fn initial_block_download(
     blocks_thread
         .join()
         .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))??;
-
     let headers = &*pointer_to_headers
         .read()
         .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?;
