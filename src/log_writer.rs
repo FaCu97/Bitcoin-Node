@@ -29,7 +29,11 @@ impl fmt::Display for LoggingError {
                 write!(f, "Error trying to open/create the log file: {}", msg)
             }
             LoggingError::WritingInFileError(msg) => {
-                write!(f, "Error trying to write the log file or send through log thread channel: {}", msg)
+                write!(
+                    f,
+                    "Error trying to write the log file or send through log thread channel: {}",
+                    msg
+                )
             }
             LoggingError::ThreadJoinError(msg) => {
                 write!(f, "Error trying to join the log thread: {}", msg)
@@ -40,24 +44,31 @@ impl fmt::Display for LoggingError {
 
 impl Error for LoggingError {}
 
-
 type LogFileSender = Sender<String>;
-
-
 
 pub fn write_in_log(log_sender: LogFileSender, msg: &str) {
     if let Err(err) = log_sender.send(msg.to_string()) {
-        println!("Error al intentar escribir {} en el log!, error: {}\n", msg.to_string(), err.to_string());
+        println!(
+            "Error al intentar escribir {} en el log!, error: {}\n",
+            msg, err
+        );
     };
 }
 
-pub fn set_up_loggers(error_file_path: String, info_file_path: String) -> Result<(LogFileSender, JoinHandle<()>, LogFileSender, JoinHandle<()>), LoggingError> {
+pub fn set_up_loggers(
+    error_file_path: String,
+    info_file_path: String,
+) -> Result<(LogFileSender, JoinHandle<()>, LogFileSender, JoinHandle<()>), LoggingError> {
     let (error_log_sender, error_handle) = LogWriter::new(error_file_path).create_logger()?;
     let (info_log_sender, info_handle) = LogWriter::new(info_file_path).create_logger()?;
     Ok((error_log_sender, error_handle, info_log_sender, info_handle))
 }
 
-pub fn shutdown_loggers(log_sender: LogSender, error_handler: JoinHandle<()>, info_handler: JoinHandle<()>) -> Result<(), LoggingError> {
+pub fn shutdown_loggers(
+    log_sender: LogSender,
+    error_handler: JoinHandle<()>,
+    info_handler: JoinHandle<()>,
+) -> Result<(), LoggingError> {
     shutdown_logger(log_sender.info_log_sender, info_handler)?;
     shutdown_logger(log_sender.error_log_sender, error_handler)?;
     Ok(())
@@ -71,7 +82,10 @@ pub struct LogSender {
 
 impl LogSender {
     pub fn new(error_log_sender: LogFileSender, info_log_sender: LogFileSender) -> Self {
-        LogSender { error_log_sender , info_log_sender }
+        LogSender {
+            error_log_sender,
+            info_log_sender,
+        }
     }
 }
 /// Representa a la estructura que escribe en el archivo Log
@@ -101,7 +115,7 @@ impl LogWriter {
         let mut file = open_log_file(&self.log_file)?;
         let local = Local::now();
         let date = format!(
-            "\n{} Actual date: {}-{}-{} Hour: {}:{} {}",
+            "\n{} Actual date: {}-{}-{} Hour: {}:{} {}\n",
             CENTER_DATE_LINE,
             local.day(),
             local.month(),
@@ -130,8 +144,6 @@ impl LogWriter {
         });
         Ok((tx, handle))
     }
-
-    
 }
 
 fn open_log_file(log_file: &String) -> Result<File, LoggingError> {
@@ -145,11 +157,8 @@ fn open_log_file(log_file: &String) -> Result<File, LoggingError> {
 /// Dado el extremo para escribir por el channel y un JoinHandle del thread que esta escribiendo en el archivo log,
 /// imprime que va a cerrar el archivo, cierra el extremo del channel y le hace join al thread para que termine. Devuelve
 /// error en caso de que no se pueda mandar el mensaje por el channel o no se pueda hacer join correctamente al thread
-fn shutdown_logger(
-    tx: LogFileSender,
-    handler: JoinHandle<()>,
-) -> Result<(), LoggingError> {
-    tx.send("Closing log".to_string())
+fn shutdown_logger(tx: LogFileSender, handler: JoinHandle<()>) -> Result<(), LoggingError> {
+    tx.send("Closing log\n".to_string())
         .map_err(|err| LoggingError::WritingInFileError(err.to_string()))?;
     tx.send(FINAL_LOGGING_SEPARATION.to_string())
         .map_err(|err| LoggingError::WritingInFileError(err.to_string()))?;

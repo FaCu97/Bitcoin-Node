@@ -4,7 +4,10 @@ use std::{
     net::{Ipv4Addr, SocketAddr, ToSocketAddrs},
 };
 
-use crate::{config::Config, log_writer::{LogSender, write_in_log}};
+use crate::{
+    config::Config,
+    log_writer::{write_in_log, LogSender},
+};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ConnectionToDnsError(String);
@@ -46,7 +49,15 @@ pub fn get_active_nodes_from_dns_seed(
             node_ips.push(*v4_addr.ip());
         }
     }
-    write_in_log(log_sender.info_log_sender, format!("Se obtuvieron {} ips de la DNS: {:?}\n", node_ips.len(), node_ips).as_str());
+    write_in_log(
+        log_sender.info_log_sender,
+        format!(
+            "Se obtuvieron {} ips de la DNS: {:?}\n",
+            node_ips.len(),
+            node_ips
+        )
+        .as_str(),
+    );
     Ok(node_ips)
 }
 

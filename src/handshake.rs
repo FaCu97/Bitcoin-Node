@@ -1,4 +1,4 @@
-use crate::log_writer::{LogSender, write_in_log};
+use crate::log_writer::{write_in_log, LogSender};
 use crate::messages::message_header::{read_verack_message, write_verack_message};
 use crate::messages::version_message::{get_version_message, VersionMessage};
 use std::error::Error;
@@ -70,7 +70,7 @@ impl Handshake {
                 Ok(())
             }));
         }
-        
+
         for handle in thread_handles {
             handle
                 .join()
@@ -80,8 +80,14 @@ impl Handshake {
             .map_err(|err| HandShakeError::LockError(format!("{:?}", err)))?
             .into_inner()
             .map_err(|err| HandShakeError::LockError(format!("{}", err)))?;
-        write_in_log(log_sender.info_log_sender.clone(), format!("\n{:?} nodos conectados", sockets.len()).as_str());
-        write_in_log(log_sender.info_log_sender, "Se completo correctamente el handshake\n");
+        write_in_log(
+            log_sender.info_log_sender.clone(),
+            format!("\n{:?} nodos conectados", sockets.len()).as_str(),
+        );
+        write_in_log(
+            log_sender.info_log_sender,
+            "Se completo correctamente el handshake\n",
+        );
         Ok(sockets)
     }
 }
@@ -97,7 +103,10 @@ fn conectar_a_nodo(
     for nodo in nodos {
         match connect_to_node(&configuracion, log_sender.clone(), nodo) {
             Ok(stream) => {
-                write_in_log(log_sender.info_log_sender.clone(),format!("Conectado correctamente a: {:?}", nodo).as_str());
+                write_in_log(
+                    log_sender.info_log_sender.clone(),
+                    format!("Conectado correctamente a: {:?}", nodo).as_str(),
+                );
                 sockets
                     .write()
                     .map_err(|err| HandShakeError::LockError(format!("{}", err)))?
@@ -111,7 +120,11 @@ fn conectar_a_nodo(
     Ok(())
 }
 
-fn connect_to_node(config: &Config, log_sender: LogSender, node_ip: &Ipv4Addr) -> Result<TcpStream, Box<dyn Error>> {
+fn connect_to_node(
+    config: &Config,
+    log_sender: LogSender,
+    node_ip: &Ipv4Addr,
+) -> Result<TcpStream, Box<dyn Error>> {
     let socket_addr = SocketAddr::new((*node_ip).into(), config.testnet_port);
     let mut stream: TcpStream =
         TcpStream::connect_timeout(&socket_addr, Duration::from_secs(config.connect_timeout))?;
@@ -120,9 +133,23 @@ fn connect_to_node(config: &Config, log_sender: LogSender, node_ip: &Ipv4Addr) -
     let version_message = get_version_message(config, socket_addr, local_ip_addr)?;
     version_message.write_to(&mut stream)?;
     VersionMessage::read_from(&mut stream)?;
-    write_in_log(log_sender.info_log_sender.clone(), format!("Recibo correctamente mensaje `version` del nodo: {:?}", node_ip).as_str());
+    write_in_log(
+        log_sender.info_log_sender.clone(),
+        format!(
+            "Recibo correctamente mensaje `version` del nodo: {:?}",
+            node_ip
+        )
+        .as_str(),
+    );
     write_verack_message(&mut stream)?;
     read_verack_message(&mut stream)?;
-    write_in_log(log_sender.info_log_sender.clone(), format!("Recibo correctamente mensaje `verack` del nodo: {:?}", node_ip).as_str());
+    write_in_log(
+        log_sender.info_log_sender,
+        format!(
+            "Recibo correctamente mensaje `verack` del nodo: {:?}",
+            node_ip
+        )
+        .as_str(),
+    );
     Ok(stream)
 }
