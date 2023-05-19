@@ -2,6 +2,3 @@
 1)
 si un bloque contiene una sola transaccion ,¿ el merkle root se genera aplicando el hash 
 al tx_id o se concatena el tx_id consigo mismo y luego se le aplica el hash ? 
-2)
-en una parte del codigo usamos unwrap para acceder al elemento dentro de un Option
-pero previamente nos aseguramos que el valor no sea none ¿ es valido usar unwrap ?

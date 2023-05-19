@@ -1,11 +1,12 @@
 use bitcoin::config::Config;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
+use bitcoin::log_writer::{LogWriter, set_up_loggers, LoggingError, shutdown_loggers};
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
 use std::error::Error;
+use std::sync::mpsc::Sender;
 use std::{env, fmt};
-//use std::process::exit;
 use std::sync::{Arc, RwLock};
 
 #[derive(Debug)]
@@ -14,6 +15,7 @@ pub enum GenericError {
     HandShakeError(HandShakeError),
     ConfigError(Box<dyn Error>),
     ConnectionToDnsError(ConnectionToDnsError),
+    LoggingError(LoggingError),
 }
 
 impl fmt::Display for GenericError {
@@ -25,15 +27,19 @@ impl fmt::Display for GenericError {
             GenericError::ConnectionToDnsError(msg) => {
                 write!(f, "CONNECTION TO DNS ERROR: {}", msg)
             }
+            GenericError::LoggingError(msg) => write!(f, "LOGGING ERROR: {}", msg),
+
         }
     }
 }
 
 impl Error for GenericError {}
 
+
 fn main() -> Result<(), GenericError> {
     let args: Vec<String> = env::args().collect();
     let config: Config = Config::from(&args).map_err(GenericError::ConfigError)?;
+    let (error_log, error_handler, info_log, info_handler) = set_up_loggers(config.clone().error_log_path, config.clone().info_log_path).map_err(GenericError::LoggingError)?;
     let active_nodes = get_active_nodes_from_dns_seed(config.clone())
         .map_err(GenericError::ConnectionToDnsError)?;
     let sockets = Handshake::handshake(config.clone(), &active_nodes)
@@ -56,6 +62,7 @@ fn main() -> Result<(), GenericError> {
         block_chain: blocks,
         utxo_set: vec![],
     };
+    shutdown_loggers(error_log, error_handler, info_log, info_handler).map_err(GenericError::LoggingError)?;
     Ok(())
 }
 
