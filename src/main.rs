@@ -2,6 +2,7 @@ use bitcoin::config::Config;
 use bitcoin::handshake::Handshake;
 
 use bitcoin::network::get_active_nodes_from_dns_seed;
+use bitcoin::log_writer::LogWriter;
 use std::env;
 use std::process::exit;
 
@@ -29,6 +30,11 @@ fn main() {
     println!("CANTIDAD SOCKETS: {:?}", sockets.len());
     println!("{:?}", config.user_agent);
     // Acá iría la descarga de los headers
+    let log = LogWriter::new("archivo_log.txt".to_string());
+    let (sender, handler) = log.create_logger().unwrap();
+    sender.send("loggendo algo!!!".to_string()).unwrap();
+    drop(sender);
+    handler.join().unwrap();
 }
 
 #[cfg(test)]

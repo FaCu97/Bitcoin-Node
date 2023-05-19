@@ -1,32 +1,66 @@
-use std::{fs::{File, OpenOptions}, io::Write};
+use std::{fs::{File, OpenOptions}, io::Write, error::Error, fmt, sync::mpsc::{Sender, channel, Receiver}, thread::{JoinHandle, self}};
+use chrono::{Local, Timelike, Datelike};
 
-pub struct LogWriter{
-    log_file: File,
+
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum LoggingError {
+    WritingInFileError(String),
+    ClosingFileError(String),
+    OpeningFileError(String),
+    ThreadJoinError(String),
 }
+
+impl fmt::Display for LoggingError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            LoggingError::ClosingFileError(msg) => write!(f, "Error trying to close the log file: {}", msg),
+            LoggingError::OpeningFileError(msg) => write!(f, "Error trying to open/create the log file: {}", msg),
+            LoggingError::WritingInFileError(msg) => write!(f, "Error trying to write the log file: {}", msg),
+            LoggingError::ThreadJoinError(msg) => write!(f, "Error trying to join the log thread: {}", msg),
+        }
+    }
+}
+
+impl Error for LoggingError {}
+
+pub struct LogWriter {
+    log_file: String,
+}
+
 
 
 
 impl LogWriter{
      
-    fn new(log_file:File) -> Self{
+    pub fn new(log_file: String) -> Self {
         LogWriter { log_file }
     }
-    /// crea una nueva estructura con el archivo correspondiente en caso de que el 
-    /// archivo no exista este se crea , caso contrario se abre el mismo sin pisar 
-    /// el contenido del mismo 
-    pub fn create_log_writer(path : &str) -> Result<LogWriter,std::io::Error>{
-        let file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)?;
-        Ok(Self::new(file))
+
+    pub fn create_logger(&self) -> Result<(Sender<String>, JoinHandle<()>), LoggingError> {
+        let (tx, rx): (Sender<String>, Receiver<String>) = channel();
+        let mut file = OpenOptions::new().create(true).append(true).open(&self.log_file).map_err(|err| LoggingError::OpeningFileError(err.to_string()))?;
+        let local = Local::now();
+        let date = format!("-------------------Actual date: {}-{}-{} Hour: {}:{}-------------------", local.day(), local.month(), local.year(), local.hour(), local.minute());    
+        if let Err(err) = writeln!(file, "{}", date) {
+            println!("ERROR AL ESCRIBIR LA FECHA DE LOGGING: {}, {}", date, LoggingError::WritingInFileError(err.to_string()));
+        }
+        let handle = thread::spawn(move || {
+            for log in rx {
+                if let Err(err) = writeln!(file, "{}", log) {
+                    println!("Error {} al escribir en el log: {}", LoggingError::WritingInFileError(err.to_string()), log);
+                };
+            }
+        });
+        Ok((tx, handle))
     }
-    /// Funcion para escribir en el archivo dentro del struct
-    pub fn write(&mut self,mssg:&str)-> Result<(), std::io::Error>{
-        writeln!(self.log_file, "{}", mssg)
-    }
+    
+
+
 }
 
+
+/* 
 #[cfg(test)]
 mod test{
     use std::{io::{BufReader, BufRead}, fs::File};
@@ -57,3 +91,5 @@ mod test{
         Ok(())
     }
 }
+
+*/
