@@ -33,7 +33,7 @@ impl Error for GenericError {}
 
 fn main() -> Result<(), GenericError> {
     let args: Vec<String> = env::args().collect();
-    let config: Config = Config::from(&args).map_err(GenericError::ConfigError)?;
+    let config = Config::from(&args).map_err(GenericError::ConfigError)?;
     let active_nodes = get_active_nodes_from_dns_seed(config.clone())
         .map_err(GenericError::ConnectionToDnsError)?;
     let sockets = Handshake::handshake(config.clone(), &active_nodes)

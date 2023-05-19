@@ -4,6 +4,7 @@ use rand::Rng;
 use std::error::Error;
 use std::net::SocketAddr;
 use std::str::Utf8Error;
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Clone, Debug)]
@@ -219,7 +220,7 @@ pub fn get_ipv6_address_ip(socket_addr: SocketAddr) -> [u8; 16] {
 }
 
 pub fn get_version_payload(
-    config: &Config,
+    config: Arc<Config>,
     socket_addr: SocketAddr,
     local_ip_addr: SocketAddr,
 ) -> Result<VersionPayload, Box<dyn Error>> {
