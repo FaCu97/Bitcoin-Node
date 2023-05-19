@@ -253,13 +253,6 @@ pub fn download_blocks(
 ) -> Result<(), Box<dyn Error>> {
     // recieves in the channel the vec of headers sent by the function downloading headers
     for recieved in rx {
-        //while let Ok(recieved) = rx.recv_timeout(Duration::from_secs(240)) {
-        // FUNCIONA BIEN CON NODOS CON O SIN FALLAS
-        // AL FINAL SE QUEDA ESPERANDO AL CIERRE DEL CHANNEL
-        // HAY QUE SOLUCIONAR ESO
-
-        // No sirve hacer recieved.len() < 2000 porque recibe también los 250 de los nodos que fallan
-
         // acá recibo 2000 block headers
         println!("RECIBO {:?} HEADERS\n", recieved.len());
         let mut n_threads = 8;
@@ -278,6 +271,7 @@ pub fn download_blocks(
                 .collect::<Vec<_>>(),
         ));
         let mut handle_join = vec![];
+
         for i in 0..n_threads {
             // este ciclo crea la cantidad de threads simultaneos
             let tx_cloned = tx.clone();
@@ -340,41 +334,25 @@ fn download_blocks_single_thread(
         node
     );
     let chunk_size = 16;
-
     for chunk_llamada in block_headers.chunks(chunk_size) {
-        //  Acá ya separé los 250 en chunks de 16 para las llamadas
-        let mut inventory = vec![];
-        for block in chunk_llamada {
-            inventory.push(Inventory::new_block(block.hash()));
-        }
-        match GetDataMessage::new(inventory).write_to(&mut node) {
-            Ok(_) => (),
-            Err(_) => {
-                println!("ERORRRRRR: DEVUELVO LOS HEADERS DEL NODO --- NO PUEDO HACER LA SOLICITUD DE BLOQUES");
-                tx.send(block_headers_thread)
-                    .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
-                // falló el envio del mensaje, tengo que intentar con otro nodo
-                // si hago return, termino el thread.
-                // tengo que enviar todos los bloques que tenía ese thread
-                return Ok(());
-            }
+        match request_blocks_from_node(&mut node, chunk_llamada, &block_headers_thread, tx.clone())
+        {
+            Ok(_) => {}
+            Err(DownloadError::WriteNodeError(_)) => return Ok(()),
+            Err(error) => return Err(error),
         }
 
-        // Acá tengo que recibir los 16 bloques (o menos) de la llamada
-        for _ in 0..chunk_llamada.len() {
-            let bloque = match BlockMessage::read_from(&mut node) {
-                Ok(bloque) => bloque,
-                Err(_) => {
-                    println!("ERORRRRRR: DEVUELVO LOS HEADERS DEL NODO");
-                    tx.send(block_headers_thread)
-                        .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
-                    // falló la recepción del mensaje, tengo que intentar con otro nodo
-                    // termino el nodo con el return
-                    return Ok(());
-                }
-            };
-            current_blocks.push(bloque);
-        }
+        let received_blocks = match receive_requested_blocks_from_node(
+            &mut node,
+            chunk_llamada,
+            &block_headers_thread,
+            tx.clone(),
+        ) {
+            Ok(blocks) => blocks,
+            Err(DownloadError::ReadNodeError(_)) => return Ok(()),
+            Err(error) => return Err(error),
+        };
+        current_blocks.extend(received_blocks);
     }
     blocks_pointer_clone
         .write()
@@ -392,6 +370,58 @@ fn download_blocks_single_thread(
         .map_err(|err| DownloadError::LockError(err.to_string()))?
         .push(node);
     Ok(())
+}
+
+/// Realiza la solicitud al nodo de los bloques recibidos
+/// En caso de error en el envío del mensaje,
+fn request_blocks_from_node(
+    mut node: &TcpStream,
+    chunk_llamada: &[BlockHeader],
+    block_headers_thread: &Vec<BlockHeader>,
+    tx: Sender<Vec<BlockHeader>>,
+) -> DownloadResult {
+    //  Acá ya separé los 250 en chunks de 16 para las llamadas
+    let mut inventory = vec![];
+    for block in chunk_llamada {
+        inventory.push(Inventory::new_block(block.hash()));
+    }
+    match GetDataMessage::new(inventory).write_to(&mut node) {
+        Ok(_) => Ok(()),
+        Err(err) => {
+            println!("ERORRRRRR: DEVUELVO LOS HEADERS DEL NODO --- NO PUEDO HACER LA SOLICITUD DE BLOQUES");
+            tx.send(block_headers_thread.clone())
+                .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
+            // falló el envio del mensaje, tengo que intentar con otro nodo
+            // si hago return, termino el thread.
+            // tengo que enviar todos los bloques que tenía ese thread
+            return Err(DownloadError::ReadNodeError(format!("{:?}", err)));
+        }
+    }
+}
+
+fn receive_requested_blocks_from_node(
+    mut node: &TcpStream,
+    chunk_llamada: &[BlockHeader],
+    block_headers_thread: &Vec<BlockHeader>,
+    tx: Sender<Vec<BlockHeader>>,
+) -> Result<Vec<Block>, DownloadError> {
+    // Acá tengo que recibir los 16 bloques (o menos) de la llamada
+    let mut current_blocks: Vec<Block> = Vec::new();
+    for _ in 0..chunk_llamada.len() {
+        let bloque = match BlockMessage::read_from(&mut node) {
+            Ok(bloque) => bloque,
+            Err(err) => {
+                println!("ERORRRRRR: DEVUELVO LOS HEADERS DEL NODO");
+                tx.send(block_headers_thread.clone())
+                    .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
+                // falló la recepción del mensaje, tengo que intentar con otro nodo
+                // termino el nodo con el return
+                return Err(DownloadError::ReadNodeError(format!("{:?}", err)));
+            }
+        };
+        current_blocks.push(bloque);
+    }
+    Ok(current_blocks)
 }
 
 /// Recieves a list of TcpStreams that are the connection with nodes already established and downloads
@@ -434,7 +464,7 @@ pub fn initial_block_download(
             rx,
             tx_cloned,
         )
-        .map_err(|_| DownloadError::CanNotRead("f".to_string()))?;
+        .map_err(|err| DownloadError::CanNotRead(format!("{:?}", err)))?;
         Ok(())
     });
     headers_thread

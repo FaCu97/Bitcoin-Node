@@ -29,15 +29,13 @@ pub fn get_active_nodes_from_dns_seed(
         .to_socket_addrs()
         .map_err(|err| ConnectionToDnsError(format!("{}", err)))?;
     /*
-         node_ips.push(Ipv4Addr::new(5, 255,97, 92));
-        node_ips.push(Ipv4Addr::new(5, 255,97, 92));
-
+        node_ips.push(Ipv4Addr::new(94, 130,58, 119));
+        node_ips.push(Ipv4Addr::new(94, 130,58, 119));
+        node_ips.push(Ipv4Addr::new(54, 251,158, 5));
         node_ips.push(Ipv4Addr::new(144, 126,221, 254));
         node_ips.push(Ipv4Addr::new(94, 130, 58, 119));
-
         node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
         node_ips.push(Ipv4Addr::new(94, 130, 58, 119));
-        node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
         node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
         node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
         node_ips.push(Ipv4Addr::new(185, 21, 217, 48));
