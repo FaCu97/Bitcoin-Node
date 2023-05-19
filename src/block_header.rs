@@ -28,7 +28,12 @@ impl BlockHeader {
         }
     }
 
-    pub fn unmarshalling(block_header_message: &[u8], offset: &mut usize) -> BlockHeader {
+    pub fn unmarshalling(block_header_message: &[u8], offset: &mut usize) -> Result<BlockHeader,&'static str> {
+        if block_header_message.len() - *offset < 80{
+            return Err(
+                "Los bytes recibidos no corresponden a un BlockHeader, el largo es menor a 80 bytes",
+            );
+        }
         let mut version_bytes: [u8; 4] = [0; 4];
         version_bytes.copy_from_slice(&block_header_message[*offset..(*offset + 4)]);
         *offset += 4;
@@ -51,14 +56,14 @@ impl BlockHeader {
         nonce_bytes.copy_from_slice(&block_header_message[*offset..(*offset + 4)]);
         let nonce = u32::from_le_bytes(nonce_bytes);
         *offset += 4;
-        BlockHeader {
+        Ok(BlockHeader {
             version,
             previous_block_header_hash,
             merkle_root_hash,
             time,
             n_bits,
             nonce,
-        }
+        })
     }
 
     pub fn marshalling(&self, marshaled_block_header: &mut Vec<u8>) {
@@ -110,66 +115,72 @@ mod tests {
     use crate::block_header::BlockHeader;
     use bitcoin_hashes::{sha256d, Hash};
 
-    fn generar_block_header() -> BlockHeader {
+    fn generar_block_header() -> Result<BlockHeader,&'static str> {
         let mut message_header: Vec<u8> = Vec::new();
         for i in 0..80 {
             message_header.push(i as u8);
         }
         let mut offset: usize = 0;
-        let blockheader = BlockHeader::unmarshalling(&message_header, &mut offset);
-        blockheader
+        let blockheader = BlockHeader::unmarshalling(&message_header, &mut offset)?;
+        Ok(blockheader)
     }
 
     #[test]
-    fn test_deserializacion_del_header_genera_version_esperada() {
-        let blockheader: BlockHeader = generar_block_header();
+    fn test_deserializacion_del_header_genera_version_esperada()-> Result<(),&'static str> {
+        let blockheader: BlockHeader = generar_block_header()?;
         let expected_value = 0x3020100;
         assert_eq!(blockheader.version, expected_value);
+        Ok(())
     }
 
     #[test]
-    fn test_deserializacion_del_header_genera_previous_block_header_hash_esperado() {
-        let blockeheader: BlockHeader = generar_block_header();
+    fn test_deserializacion_del_header_genera_previous_block_header_hash_esperado()-> Result<(),&'static str> {
+        let blockeheader: BlockHeader = generar_block_header()?;
         let expected_value = [
             4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
             27, 28, 29, 30, 31, 32, 33, 34, 35,
         ];
         assert_eq!(blockeheader.previous_block_header_hash, expected_value);
+        Ok(())
     }
 
     #[test]
-    fn test_deserializacion_del_header_genera_merkle_root_hash_esperado() {
-        let blockeheader: BlockHeader = generar_block_header();
+    fn test_deserializacion_del_header_genera_merkle_root_hash_esperado()-> Result<(),&'static str> {
+        let blockeheader: BlockHeader = generar_block_header()?;
         let expected_value = [
             36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
             58, 59, 60, 61, 62, 63, 64, 65, 66, 67,
         ];
         assert_eq!(blockeheader.merkle_root_hash, expected_value);
+        Ok(())
     }
 
     #[test]
-    fn test_deserializacion_del_header_genera_time_esperado() {
-        let blockeheader: BlockHeader = generar_block_header();
+    fn test_deserializacion_del_header_genera_time_esperado()-> Result<(),&'static str> {
+        let blockeheader: BlockHeader = generar_block_header()?;
         let expected_value = 0x47464544;
         assert_eq!(blockeheader.time, expected_value);
+        Ok(())
     }
 
     #[test]
-    fn test_deserializacion_del_header_genera_nbits_esperado() {
-        let blockeheader: BlockHeader = generar_block_header();
+    fn test_deserializacion_del_header_genera_nbits_esperado()-> Result<(),&'static str> {
+        let blockeheader: BlockHeader = generar_block_header()?;
         let expected_value = 0x4B4A4948;
         assert_eq!(blockeheader.n_bits, expected_value);
+        Ok(())
     }
 
     #[test]
-    fn test_deserializacion_del_header_genera_nonce_esperado() {
-        let blockeheader: BlockHeader = generar_block_header();
+    fn test_deserializacion_del_header_genera_nonce_esperado()-> Result<(),&'static str> {
+        let blockeheader: BlockHeader = generar_block_header()?;
         let expected_value = 0x4F4E4D4C;
         assert_eq!(blockeheader.nonce, expected_value);
+        Ok(())
     }
 
     #[test]
-    fn test_serializacion_correcta_del_campo_version() {
+    fn test_serializacion_correcta_del_campo_version()-> Result<(),&'static str> {
         let mut block_header_message: Vec<u8> = Vec::new();
         let block = BlockHeader {
             version: 50462976,
@@ -181,12 +192,13 @@ mod tests {
         };
         block.marshalling(&mut block_header_message);
         let mut offset: usize = 0;
-        let expected_block = BlockHeader::unmarshalling(&block_header_message, &mut offset);
+        let expected_block = BlockHeader::unmarshalling(&block_header_message, &mut offset)?;
         let expected_value = 0x3020100;
         assert_eq!(expected_block.version, expected_value);
+        Ok(())
     }
     #[test]
-    fn test_serializacion_correcta_del_campo_previous_block_header_hash() {
+    fn test_serializacion_correcta_del_campo_previous_block_header_hash()-> Result<(),&'static str> {
         let mut block_header_message: Vec<u8> = Vec::new();
         let value = [1; 32];
         let block = BlockHeader {
@@ -199,11 +211,12 @@ mod tests {
         };
         block.marshalling(&mut block_header_message);
         let mut offset: usize = 0;
-        let expected_block = BlockHeader::unmarshalling(&block_header_message, &mut offset);
+        let expected_block = BlockHeader::unmarshalling(&block_header_message, &mut offset)?;
         assert_eq!(expected_block.previous_block_header_hash, value);
+        Ok(())
     }
     #[test]
-    fn test_serializacion_correcta_del_campo_merkle_root_hash() {
+    fn test_serializacion_correcta_del_campo_merkle_root_hash()-> Result<(),&'static str> {
         let mut block_header_message: Vec<u8> = Vec::new();
         let value = [1; 32];
         let block = BlockHeader {
@@ -216,11 +229,12 @@ mod tests {
         };
         block.marshalling(&mut block_header_message);
         let mut offset: usize = 0;
-        let expected_block = BlockHeader::unmarshalling(&block_header_message, &mut offset);
+        let expected_block = BlockHeader::unmarshalling(&block_header_message, &mut offset)?;
         assert_eq!(expected_block.merkle_root_hash, value);
+        Ok(())
     }
     #[test]
-    fn test_serializacion_correcta_del_campo_time() {
+    fn test_serializacion_correcta_del_campo_time()-> Result<(),&'static str>{
         let mut block_header_message: Vec<u8> = Vec::new();
         let value = 0x03020100;
         let block = BlockHeader {
@@ -233,11 +247,12 @@ mod tests {
         };
         block.marshalling(&mut block_header_message);
         let mut offset: usize = 0;
-        let expected_block = BlockHeader::unmarshalling(&block_header_message, &mut offset);
+        let expected_block = BlockHeader::unmarshalling(&block_header_message, &mut offset)?;
         assert_eq!(expected_block.time, value);
+        Ok(())
     }
     #[test]
-    fn test_serializacion_correcta_del_campo_nbits() {
+    fn test_serializacion_correcta_del_campo_nbits()-> Result<(),&'static str> {
         let mut block_header_message: Vec<u8> = Vec::new();
         let value = 0x03020100;
         let block = BlockHeader {
@@ -250,11 +265,12 @@ mod tests {
         };
         block.marshalling(&mut block_header_message);
         let mut offset: usize = 0;
-        let expected_block = BlockHeader::unmarshalling(&block_header_message, &mut offset);
+        let expected_block = BlockHeader::unmarshalling(&block_header_message, &mut offset)?;
         assert_eq!(expected_block.n_bits, value);
+        Ok(())
     }
     #[test]
-    fn test_serializacion_correcta_del_campo_nonce() {
+    fn test_serializacion_correcta_del_campo_nonce()-> Result<(),&'static str> {
         let mut block_header_message: Vec<u8> = Vec::new();
         let value = 0x03020100;
         let block = BlockHeader {
@@ -267,11 +283,12 @@ mod tests {
         };
         block.marshalling(&mut block_header_message);
         let mut offset: usize = 0;
-        let expected_block = BlockHeader::unmarshalling(&block_header_message, &mut offset);
+        let expected_block = BlockHeader::unmarshalling(&block_header_message, &mut offset)?;
         assert_eq!(expected_block.nonce, value);
+        Ok(())
     }
     #[test]
-    fn test_el_header_es_hasheado_correctamente() {
+    fn test_el_header_es_hasheado_correctamente(){
         let block_header = BlockHeader {
             version: 0x03020100,
             previous_block_header_hash: [0; 32],
