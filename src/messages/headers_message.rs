@@ -27,7 +27,7 @@ impl HeadersMessage {
             block_header_vec.push(BlockHeader::unmarshalling(
                 headers_message_bytes,
                 &mut offset,
-            ));
+            )?);
             offset += 1;
         }
 
@@ -101,7 +101,7 @@ mod tests {
         expected_block_header_bytes.copy_from_slice(&headers_message[1..81]);
         let mut offset: usize = 0;
         let expected_block_header =
-            BlockHeader::unmarshalling(&expected_block_header_bytes, &mut offset);
+            BlockHeader::unmarshalling(&expected_block_header_bytes, &mut offset)?;
         let received_block_header = &block_headers[0];
 
         assert_eq!(received_block_header.version, expected_block_header.version);
@@ -136,7 +136,7 @@ mod tests {
         expected_block_header_bytes.copy_from_slice(&headers_message[3..83]);
         let mut offset: usize = 0;
         let expected_block_header =
-            BlockHeader::unmarshalling(&expected_block_header_bytes, &mut offset);
+            BlockHeader::unmarshalling(&expected_block_header_bytes, &mut offset)?;
         let received_block_header = &block_headers[0];
         let expected_len = 515;
 
