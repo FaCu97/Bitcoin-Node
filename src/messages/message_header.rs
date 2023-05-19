@@ -1,6 +1,8 @@
 use bitcoin_hashes::{sha256d, Hash};
 use std::io::{Read, Write};
+use std::net::TcpStream;
 use std::str::Utf8Error;
+use std::time::Duration;
 // todo: implementar test de read_from usando mocking
 // todo: implementar test de write_to usando mocking
 // todo: implementar test de write_verack_message, read_verack_message, write_sendheaders_message usando mocking
@@ -62,9 +64,15 @@ impl HeaderMessage {
     /// y devuelve un HeaderMessage si se pudo leer correctamente uno desde el stream
     /// o Error si lo leido no corresponde a el header de un mensaje del protocolo de bitcoin
     pub fn read_from(
-        stream: &mut dyn Read,
+        stream: &mut TcpStream,
         command_name: String,
     ) -> Result<Self, Box<dyn std::error::Error>> {
+        if command_name == "block".to_string() {
+            // will wait a minimum of two more seconds for the stalling node to send the block. 
+            // If the block still hasn’t arrived, Bitcoin Core will disconnect from the stalling 
+            // node and attempt to connect to another node.
+            stream.set_read_timeout(Some(Duration::from_secs(2)))?;
+        }
         let header_command_name =
             std::str::from_utf8(&command_name_to_bytes(&command_name))?.to_string();
         let mut buffer_num = [0; 24];
@@ -72,9 +80,6 @@ impl HeaderMessage {
         let mut header = HeaderMessage::from_le_bytes(buffer_num)?;
         // si no se leyo el header que se queria, sigo leyendo hasta encontrarlo
         while header.command_name != header_command_name {
-            if header.command_name.contains("reject") {
-                println!("REJECT!!!!!!: {:?}", header);
-            }
             let payload_size = header.payload_size as usize;
             let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
             stream.read_exact(&mut payload_buffer_num)?;
@@ -113,7 +118,7 @@ pub fn write_sendheaders_message(stream: &mut dyn Write) -> Result<(), Box<dyn s
 /// Recibe un stream que implemente el trait Read (algo donde se pueda Leer) y lee el mensaje verack segun
 /// el protocolo de bitcoin, si se lee correctamente devuelve Ok(HeaderMessage) y sino devuelve un error
 pub fn read_verack_message(
-    stream: &mut dyn Read,
+    stream: &mut TcpStream,
 ) -> Result<HeaderMessage, Box<dyn std::error::Error>> {
     HeaderMessage::read_from(stream, "verack".to_string())
 }

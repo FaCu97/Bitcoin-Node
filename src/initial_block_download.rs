@@ -9,7 +9,6 @@ use std::error::Error;
 use std::net::TcpStream;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, RwLock};
-use std::time::Duration;
 use std::{fmt, thread, vec};
 
 // todo: Cambiar la manera en que se pasa el config (?)
@@ -257,10 +256,6 @@ pub fn download_blocks(
         // FUNCIONA BIEN CON NODOS CON O SIN FALLAS
         // AL FINAL SE QUEDA ESPERANDO AL CIERRE DEL CHANNEL
         // HAY QUE SOLUCIONAR ESO
-<<<<<<< HEAD
-=======
-
->>>>>>> 575c843b6d8d73d3cbed71e17d1c0cc797b7da2d
         // No sirve hacer recieved.len() < 2000 porque recibe también los 250 de los nodos que fallan
 
         // acá recibo 2000 block headers
@@ -287,7 +282,7 @@ pub fn download_blocks(
             let nodes_pointer_clone = nodes.clone();
             let block_headers_chunk_clone = Arc::clone(&blocks_headers_chunks);
             let blocks_pointer_clone = Arc::clone(&blocks);
-            let mut node = nodes_pointer_clone
+            let node = nodes_pointer_clone
                 .write()
                 .map_err(|err| DownloadError::LockError(err.to_string()))?
                 .pop()
@@ -367,8 +362,8 @@ fn download_blocks_single_thread(
         for _ in 0..chunk_llamada.len() {
             let bloque = match BlockMessage::read_from(&mut node) {
                 Ok(bloque) => bloque,
-                Err(_) => {
-                    println!("ERORRRRRR: DEVUELVO LOS HEADERS DEL NODO");
+                Err(err) => {
+                    println!("ERORRRRRR: {:?} DEVUELVO LOS HEADERS DEL NODO", err);
                     tx.send(block_headers_thread)
                         .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
                     // falló la recepción del mensaje, tengo que intentar con otro nodo
@@ -377,9 +372,6 @@ fn download_blocks_single_thread(
                 }
             };
             current_blocks.push(bloque);
-        }
-        if blocks.read().unwrap().len() == (headers.read().unwrap().len() - ALTURA_PRIMER_BLOQUE + 1) {
-            break;
         }
     }
     blocks_pointer_clone
