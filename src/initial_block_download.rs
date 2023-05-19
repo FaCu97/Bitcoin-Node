@@ -183,7 +183,7 @@ fn download_headers(
     let headers_clone = headers.clone();
     let tx_clone = tx.clone();
     // first try to dowload headers from node
-    let mut download = download_headers_from_node(config, node, headers, tx);
+    let mut download = download_headers_from_node(config, node, headers, tx.clone());
     while download.is_err() {
         println!("FALLO LA DESCARGA DE HEADERS CON EL NODO, VOY A INTENTAR CON OTRO!\n");
         // clear list of blocks in case they where already been downloaded
@@ -222,6 +222,12 @@ fn download_headers(
         .write()
         .map_err(|err| DownloadError::LockError(err.to_string()))?
         .push(node);
+    let last_headers = compare_and_ask_for_last_headers(config_clone, nodes, headers_clone)?;
+    if last_headers.len() > 0 {
+        tx.send(last_headers.clone())
+                .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
+    }
+
     Ok(())
 }
 
@@ -250,11 +256,6 @@ pub fn download_blocks(
 ) -> Result<(), Box<dyn Error>> {
     // recieves in the channel the vec of headers sent by the function downloading headers
     for recieved in rx {
-        //while let Ok(recieved) = rx.recv_timeout(Duration::from_secs(240)) {
-        // FUNCIONA BIEN CON NODOS CON O SIN FALLAS
-        // AL FINAL SE QUEDA ESPERANDO AL CIERRE DEL CHANNEL
-        // HAY QUE SOLUCIONAR ESO
-        // No sirve hacer recieved.len() < 2000 porque recibe también los 250 de los nodos que fallan
 
         // acá recibo 2000 block headers
         println!("RECIBO {:?} HEADERS\n", recieved.len());
@@ -441,12 +442,6 @@ pub fn initial_block_download(
     blocks_thread
         .join()
         .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))??;
-    compare_and_ask_for_last_blocks(
-        pointer_to_config,
-        nodes,
-        pointer_to_headers.clone(),
-        pointer_to_blocks.clone(),
-    )?;
     let headers = &*pointer_to_headers
         .read()
         .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?;
@@ -456,13 +451,23 @@ pub fn initial_block_download(
     Ok((headers.clone(), blocks.clone()))
 }
 
-fn compare_and_ask_for_last_blocks(
+
+
+
+
+
+/// Once the headers are downloaded, this function recieves the nodes and headers  downloaded
+/// and sends a getheaders message to each node to compare and get a header that was not downloaded.
+/// it returns error in case of failure.
+fn compare_and_ask_for_last_headers(
     config: Arc<RwLock<Config>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
-    blocks: Arc<RwLock<Vec<Block>>>,
-) -> DownloadResult {
+) -> Result<Vec<BlockHeader>, DownloadError> {
+    // voy guardando los nodos que saco aca para despues agregarlos al puntero
     let mut nodes_vec: Vec<TcpStream> = vec![];
+    let mut new_headers = vec![];
+    // recorro todos los nodos
     while !nodes
         .read()
         .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
@@ -490,30 +495,20 @@ fn compare_and_ask_for_last_blocks(
         .write_to(&mut node)
         .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
         let headers_read = HeadersMessage::read_from(&mut node).map_err(|err| DownloadError::ReadNodeError(err.to_string()))?;
+        // si se recibio un header nuevo lo agrego
         if headers_read.len() > 0 {
             headers
                 .write()
                 .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
                 .extend_from_slice(&headers_read);
-            let mut inventory = vec![];
-            for block_header in &headers_read {
-                inventory.push(Inventory::new_block(block_header.hash()));
-            }
-            GetDataMessage::new(inventory).write_to(&mut node).map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
-            for _ in 0..headers_read.len() {
-                let block = BlockMessage::read_from(&mut node).map_err(|err| DownloadError::ReadNodeError(err.to_string()))?;
-                println!("NUEVO BLOQUE AGREGADOOOOO!!!!\n");
-                blocks
-                    .write()
-                    .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
-                    .push(block);
-            }
+            new_headers.extend_from_slice(&headers_read);
         }
         nodes_vec.push(node);
     }
+    // devuelvo todos los nodos a su puntero
     nodes
         .write()
         .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
         .extend(nodes_vec);
-    Ok(())
+    Ok(new_headers)
 }
