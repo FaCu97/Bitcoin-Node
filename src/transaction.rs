@@ -1,7 +1,7 @@
 use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{compact_size_uint::CompactSizeUint, tx_in::TxIn, tx_out::TxOut};
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Transaction {
     version: i32,
     txin_count: CompactSizeUint,

@@ -1,5 +1,5 @@
 use bitcoin_hashes::{sha256d, Hash};
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct BlockHeader {
     pub version: i32,
     pub previous_block_header_hash: [u8; 32],
@@ -28,8 +28,11 @@ impl BlockHeader {
         }
     }
 
-    pub fn unmarshalling(block_header_message: &[u8], offset: &mut usize) -> Result<BlockHeader,&'static str> {
-        if block_header_message.len() - *offset < 80{
+    pub fn unmarshalling(
+        block_header_message: &[u8],
+        offset: &mut usize,
+    ) -> Result<BlockHeader, &'static str> {
+        if block_header_message.len() - *offset < 80 {
             return Err(
                 "Los bytes recibidos no corresponden a un BlockHeader, el largo es menor a 80 bytes",
             );
@@ -109,13 +112,15 @@ impl BlockHeader {
         self.merkle_root_hash == *received_hash
     }
 }
+unsafe impl Send for BlockHeader {}
+unsafe impl Sync for BlockHeader {}
 
 #[cfg(test)]
 mod tests {
     use crate::block_header::BlockHeader;
     use bitcoin_hashes::{sha256d, Hash};
 
-    fn generar_block_header() -> Result<BlockHeader,&'static str> {
+    fn generar_block_header() -> Result<BlockHeader, &'static str> {
         let mut message_header: Vec<u8> = Vec::new();
         for i in 0..80 {
             message_header.push(i as u8);
@@ -126,7 +131,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deserializacion_del_header_genera_version_esperada()-> Result<(),&'static str> {
+    fn test_deserializacion_del_header_genera_version_esperada() -> Result<(), &'static str> {
         let blockheader: BlockHeader = generar_block_header()?;
         let expected_value = 0x3020100;
         assert_eq!(blockheader.version, expected_value);
@@ -134,7 +139,8 @@ mod tests {
     }
 
     #[test]
-    fn test_deserializacion_del_header_genera_previous_block_header_hash_esperado()-> Result<(),&'static str> {
+    fn test_deserializacion_del_header_genera_previous_block_header_hash_esperado(
+    ) -> Result<(), &'static str> {
         let blockeheader: BlockHeader = generar_block_header()?;
         let expected_value = [
             4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
@@ -145,7 +151,8 @@ mod tests {
     }
 
     #[test]
-    fn test_deserializacion_del_header_genera_merkle_root_hash_esperado()-> Result<(),&'static str> {
+    fn test_deserializacion_del_header_genera_merkle_root_hash_esperado() -> Result<(), &'static str>
+    {
         let blockeheader: BlockHeader = generar_block_header()?;
         let expected_value = [
             36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
@@ -156,7 +163,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deserializacion_del_header_genera_time_esperado()-> Result<(),&'static str> {
+    fn test_deserializacion_del_header_genera_time_esperado() -> Result<(), &'static str> {
         let blockeheader: BlockHeader = generar_block_header()?;
         let expected_value = 0x47464544;
         assert_eq!(blockeheader.time, expected_value);
@@ -164,7 +171,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deserializacion_del_header_genera_nbits_esperado()-> Result<(),&'static str> {
+    fn test_deserializacion_del_header_genera_nbits_esperado() -> Result<(), &'static str> {
         let blockeheader: BlockHeader = generar_block_header()?;
         let expected_value = 0x4B4A4948;
         assert_eq!(blockeheader.n_bits, expected_value);
@@ -172,7 +179,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deserializacion_del_header_genera_nonce_esperado()-> Result<(),&'static str> {
+    fn test_deserializacion_del_header_genera_nonce_esperado() -> Result<(), &'static str> {
         let blockeheader: BlockHeader = generar_block_header()?;
         let expected_value = 0x4F4E4D4C;
         assert_eq!(blockeheader.nonce, expected_value);
@@ -180,7 +187,7 @@ mod tests {
     }
 
     #[test]
-    fn test_serializacion_correcta_del_campo_version()-> Result<(),&'static str> {
+    fn test_serializacion_correcta_del_campo_version() -> Result<(), &'static str> {
         let mut block_header_message: Vec<u8> = Vec::new();
         let block = BlockHeader {
             version: 50462976,
@@ -198,7 +205,8 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_serializacion_correcta_del_campo_previous_block_header_hash()-> Result<(),&'static str> {
+    fn test_serializacion_correcta_del_campo_previous_block_header_hash() -> Result<(), &'static str>
+    {
         let mut block_header_message: Vec<u8> = Vec::new();
         let value = [1; 32];
         let block = BlockHeader {
@@ -216,7 +224,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_serializacion_correcta_del_campo_merkle_root_hash()-> Result<(),&'static str> {
+    fn test_serializacion_correcta_del_campo_merkle_root_hash() -> Result<(), &'static str> {
         let mut block_header_message: Vec<u8> = Vec::new();
         let value = [1; 32];
         let block = BlockHeader {
@@ -234,7 +242,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_serializacion_correcta_del_campo_time()-> Result<(),&'static str>{
+    fn test_serializacion_correcta_del_campo_time() -> Result<(), &'static str> {
         let mut block_header_message: Vec<u8> = Vec::new();
         let value = 0x03020100;
         let block = BlockHeader {
@@ -252,7 +260,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_serializacion_correcta_del_campo_nbits()-> Result<(),&'static str> {
+    fn test_serializacion_correcta_del_campo_nbits() -> Result<(), &'static str> {
         let mut block_header_message: Vec<u8> = Vec::new();
         let value = 0x03020100;
         let block = BlockHeader {
@@ -270,7 +278,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_serializacion_correcta_del_campo_nonce()-> Result<(),&'static str> {
+    fn test_serializacion_correcta_del_campo_nonce() -> Result<(), &'static str> {
         let mut block_header_message: Vec<u8> = Vec::new();
         let value = 0x03020100;
         let block = BlockHeader {
@@ -288,7 +296,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn test_el_header_es_hasheado_correctamente(){
+    fn test_el_header_es_hasheado_correctamente() {
         let block_header = BlockHeader {
             version: 0x03020100,
             previous_block_header_hash: [0; 32],

@@ -2,6 +2,7 @@ use super::message_header::HeaderMessage;
 use crate::block_header::BlockHeader;
 use crate::compact_size_uint::CompactSizeUint;
 use std::io::Read;
+use std::net::TcpStream;
 const BLOCK_HEADER_SIZE: usize = 80;
 pub struct HeadersMessage;
 
@@ -35,7 +36,7 @@ impl HeadersMessage {
     /// Dado un stream que implementa el trait Read (desde donde se puede leer) lee el mensaje headers y devuelve
     /// un vector con los headers en caso de que se haya podido leer correctamente o un Error en caso contrario
     pub fn read_from(
-        stream: &mut dyn Read,
+        stream: &mut TcpStream,
     ) -> Result<Vec<BlockHeader>, Box<dyn std::error::Error>> {
         let header = HeaderMessage::read_from(stream, "headers".to_string())?;
         let payload_size = header.payload_size as usize;

@@ -4,11 +4,11 @@ use crate::{
     block_header::BlockHeader, compact_size_uint::CompactSizeUint, transaction::Transaction,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Block {
-    block_header: BlockHeader,
-    txn_count: CompactSizeUint,
-    txn: Vec<Transaction>,
+    pub block_header: BlockHeader,
+    pub txn_count: CompactSizeUint,
+    pub txn: Vec<Transaction>,
 }
 
 impl Block {
@@ -38,7 +38,7 @@ impl Block {
     }
     // Esta funcion se encarga de validar el bloque , primero realiza la proof of work
     // luego realiza la proof of inclusion sobre su lista de transacciones
-    pub fn validate(&mut self) -> (bool, &'static str) {
+    pub fn validate(&self) -> (bool, &'static str) {
         //proof of work
         if !self.block_header.validate() {
             return (false, "El bloque no cumple con la dificultad pedida");
@@ -112,7 +112,6 @@ impl Block {
             current_hash = Self::concatenate_and_hash(hash, current_hash);
         }
         current_hash == self.generate_merkle_root()
-
     }
 }
 
@@ -260,7 +259,6 @@ mod test {
         assert_eq!(block.txn[0], tx);
         Ok(())
     }
-
 
     #[test]
     fn test_merkle_root_de_un_bloque_con_2_transacciones_se_genera_correctamente() {
@@ -417,5 +415,4 @@ mod test {
         let hola = &block.txn[3];
         assert!(block.merkle_proof_of_inclusion(hola, vector));
     }
-
 }

@@ -1,5 +1,5 @@
 use crate::compact_size_uint::CompactSizeUint;
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct TxOut {
     value: i64,                       // Number of satoshis to spend
     pk_script_bytes: CompactSizeUint, // de 1 a 10.000 bytes
