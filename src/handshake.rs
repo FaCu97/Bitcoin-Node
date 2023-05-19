@@ -39,7 +39,7 @@ pub struct Handshake;
 
 impl Handshake {
     pub fn handshake(
-        config: Config,
+        config: Arc<Config>,
         active_nodes: &[Ipv4Addr],
     ) -> Result<Vec<TcpStream>, HandShakeError> {
         let lista_nodos = Arc::new(active_nodes);
@@ -89,12 +89,13 @@ impl Handshake {
 // los threads no pueden manejar un dyn Error
 // En el libro devuelve thread::Result<std::io::Result<()>>
 fn conectar_a_nodo(
-    configuracion: Config,
+    config: Arc<Config>,
     sockets: Arc<RwLock<Vec<TcpStream>>>,
     nodos: &[Ipv4Addr],
 ) -> Result<(), HandShakeError> {
     for nodo in nodos {
-        match connect_to_node(&configuracion, nodo) {
+        let configuracion = config.clone();
+        match connect_to_node(configuracion, nodo) {
             Ok(stream) => {
                 println!("Conectado correctamente a: {:?} \n", nodo);
                 sockets
@@ -113,7 +114,7 @@ fn conectar_a_nodo(
     Ok(())
 }
 
-fn connect_to_node(config: &Config, node_ip: &Ipv4Addr) -> Result<TcpStream, Box<dyn Error>> {
+fn connect_to_node(config: Arc<Config>, node_ip: &Ipv4Addr) -> Result<TcpStream, Box<dyn Error>> {
     let socket_addr = SocketAddr::new((*node_ip).into(), config.testnet_port);
     let mut stream: TcpStream =
         TcpStream::connect_timeout(&socket_addr, Duration::from_secs(config.connect_timeout))?;

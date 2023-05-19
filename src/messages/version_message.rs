@@ -6,6 +6,7 @@ use std::error::Error;
 use std::io::{Read, Write};
 use std::net::SocketAddr;
 use std::str::Utf8Error;
+use std::sync::Arc;
 
 // todo: implementar tests usando mocking, simulando una conexion con un nodo y viendo si se escriben/leen correctamente los mensajes version.
 
@@ -52,11 +53,11 @@ impl VersionMessage {
 }
 
 pub fn get_version_message(
-    config: &Config,
+    config: Arc<Config>,
     socket_addr: SocketAddr,
     local_ip_addr: SocketAddr,
 ) -> Result<VersionMessage, Box<dyn Error>> {
-    let version_payload = get_version_payload(config, socket_addr, local_ip_addr)?;
+    let version_payload = get_version_payload(config.clone(), socket_addr, local_ip_addr)?;
     let version_header = HeaderMessage {
         start_string: config.testnet_start_string,
         command_name: "version".to_string(),

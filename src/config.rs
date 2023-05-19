@@ -5,10 +5,11 @@ use std::io::BufRead;
 use std::io::BufReader;
 use std::io::Read;
 use std::str::FromStr;
+use std::sync::Arc;
 
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
-const CANTIDAD_ATRIBUTOS: usize = 10;
+const CANTIDAD_ATRIBUTOS: usize = 13;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub number_of_nodes: usize,
@@ -21,6 +22,9 @@ pub struct Config {
     pub dns_port: u16,
     pub connect_timeout: u64,
     pub log_path: String,
+    pub blocks_download_per_node: usize,
+    pub fecha_inicio_proyecto: String,
+    pub formato_fecha_inicio_proyecto: String,
 }
 impl Config {
     /// Crea un config leyendo un archivo de configuracion ubicado en la
@@ -31,7 +35,7 @@ impl Config {
     /// Devuelve un io::Error si:
     /// - No se pudo encontrar el archivo en la ruta indicada.
     /// - El archivo tiene un formato invalido.
-    pub fn from(args: &[String]) -> Result<Self, Box<dyn Error>> {
+    pub fn from(args: &[String]) -> Result<Arc<Self>, Box<dyn Error>> {
         if args.len() > 2 {
             return Err(Box::new(io::Error::new(
                 io::ErrorKind::InvalidInput,
@@ -49,7 +53,7 @@ impl Config {
         Self::from_reader(file)
     }
 
-    fn from_reader<T: Read>(content: T) -> Result<Config, Box<dyn Error>> {
+    fn from_reader<T: Read>(content: T) -> Result<Arc<Config>, Box<dyn Error>> {
         let reader = BufReader::new(content);
 
         let mut cfg = Self {
@@ -63,6 +67,9 @@ impl Config {
             dns_port: 0,
             connect_timeout: 0,
             log_path: String::new(),
+            blocks_download_per_node: 0,
+            fecha_inicio_proyecto: String::new(),
+            formato_fecha_inicio_proyecto: String::new(),
         };
 
         let mut number_of_settings_loaded: usize = 0;
@@ -84,7 +91,7 @@ impl Config {
             )?;
         }
         Self::check_number_of_attributes(number_of_settings_loaded)?;
-        Ok(cfg)
+        Ok(Arc::new(cfg))
     }
 
     fn check_number_of_attributes(cantidad_de_lineas: usize) -> Result<(), Box<dyn Error>> {
@@ -142,6 +149,18 @@ impl Config {
             }
             "LOG_PATH" => {
                 self.log_path = String::from(value);
+                *number_of_settings_loaded += 1;
+            }
+            "BLOCKS_DOWNLOAD_PER_NODE" => {
+                self.blocks_download_per_node = usize::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            }
+            "FECHA_INICIO_PROYECTO" => {
+                self.fecha_inicio_proyecto = String::from(value);
+                *number_of_settings_loaded += 1;
+            }
+            "FORMATO_FECHA_INICIO_PROYECTO" => {
+                self.formato_fecha_inicio_proyecto = String::from(value);
                 *number_of_settings_loaded += 1;
             }
             _ => {
