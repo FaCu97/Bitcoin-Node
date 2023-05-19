@@ -83,7 +83,7 @@ impl HeaderMessage {
         let mut header = HeaderMessage::from_le_bytes(buffer_num)?;
         // si no se leyo el header que se queria, sigo leyendo hasta encontrarlo
         while header.command_name != header_command_name {
-            write_in_log(log_sender.messege_log_sender.clone(), format!("Recibo: {} -- IGNORADO", header.command_name).as_str());
+            write_in_log(log_sender.messege_log_sender.clone(), format!("Recibo: {} -- Nodo: {:?} -- IGNORADO", header.command_name, stream).as_str());
             let payload_size = header.payload_size as usize;
             let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
             stream.read_exact(&mut payload_buffer_num)?;
@@ -91,7 +91,7 @@ impl HeaderMessage {
             stream.read_exact(&mut buffer_num)?;
             header = HeaderMessage::from_le_bytes(buffer_num)?;
         }
-        write_in_log(log_sender.messege_log_sender, format!("Recibo: {}", command_name).as_str());
+        write_in_log(log_sender.messege_log_sender, format!("Recibo Correctamente: {} -- Nodo: {:?}" , command_name, stream).as_str());
         Ok(header)
     }
 }

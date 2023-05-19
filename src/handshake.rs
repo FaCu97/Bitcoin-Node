@@ -132,24 +132,8 @@ fn connect_to_node(
     let local_ip_addr = stream.local_addr()?;
     let version_message = get_version_message(config, socket_addr, local_ip_addr)?;
     version_message.write_to(&mut stream)?;
-    VersionMessage::read_from(&mut stream)?;
-    write_in_log(
-        log_sender.info_log_sender.clone(),
-        format!(
-            "Recibo correctamente mensaje `version` del nodo: {:?}",
-            node_ip
-        )
-        .as_str(),
-    );
+    VersionMessage::read_from(log_sender.clone(), &mut stream)?;
     write_verack_message(&mut stream)?;
     read_verack_message(log_sender.clone(), &mut stream)?;
-    write_in_log(
-        log_sender.info_log_sender,
-        format!(
-            "Recibo correctamente mensaje `verack` del nodo: {:?}",
-            node_ip
-        )
-        .as_str(),
-    );
     Ok(stream)
 }
