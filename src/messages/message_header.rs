@@ -67,7 +67,7 @@ impl HeaderMessage {
         stream: &mut TcpStream,
         command_name: String,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        if command_name == "block".to_string() {
+        if command_name == *"block" {
             // will wait a minimum of two more seconds for the stalling node to send the block.
             // If the block still hasn’t arrived, Bitcoin Core will disconnect from the stalling
             // node and attempt to connect to another node.

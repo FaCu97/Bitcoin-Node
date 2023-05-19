@@ -2,6 +2,7 @@ use bitcoin::config::Config;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
+use bitcoin::node::Node;
 use std::error::Error;
 use std::{env, fmt};
 //use std::process::exit;
@@ -50,6 +51,11 @@ fn main() -> Result<(), GenericError> {
         "CANTIDAD DE NODOS: {:?}",
         pointer_to_nodes.read().unwrap().len()
     );
+    let _node = Node {
+        headers,
+        block_chain: blocks,
+        utxo_set: vec![],
+    };
     Ok(())
 }
 
