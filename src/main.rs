@@ -76,11 +76,11 @@ fn main() -> Result<(), GenericError> {
     let (headers, blocks) = headers_and_blocks;
     write_in_log(
         logsender.info_log_sender.clone(),
-        format!("TOTAL DE HEADERS DESCARGADOS: {}\n", headers.len()).as_str(),
+        format!("TOTAL DE HEADERS DESCARGADOS: {}", headers.len()).as_str(),
     );
     write_in_log(
         logsender.info_log_sender.clone(),
-        format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
+        format!("TOTAL DE BLOQUES DESCARGADOS: {}", blocks.len()).as_str(),
     );
 
     let _node = Node {
@@ -90,7 +90,7 @@ fn main() -> Result<(), GenericError> {
     };
     write_in_log(
         logsender.info_log_sender.clone(),
-        "TERMINA CORREECTAMENTE EL PROGRAMA!",
+        "\nTERMINA CORREECTAMENTE EL PROGRAMA!",
     );
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
         .map_err(GenericError::LoggingError)?;

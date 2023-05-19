@@ -355,7 +355,7 @@ pub fn download_blocks(
             .len();
         let bloques_a_descargar = cantidad_headers_descargados - ALTURA_PRIMER_BLOQUE + 1;
         if bloques_descargados == bloques_a_descargar {
-            write_in_log(log_sender.info_log_sender, format!("Se terminaron de descargar todos los bloques correctamente!\nBLOQUES DESCARGADOS: {}", bloques_descargados).as_str());
+            write_in_log(log_sender.info_log_sender, format!("Se terminaron de descargar todos los bloques correctamente!\nBLOQUES DESCARGADOS: {}\n", bloques_descargados).as_str());
             return Ok(());
         }
     }
@@ -631,6 +631,15 @@ fn compare_and_ask_for_last_headers(
                 .write()
                 .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
                 .extend_from_slice(&headers_read);
+            write_in_log(
+                log_sender.info_log_sender.clone(),
+                format!(
+                    "{} headers encontrados al comparar el ultmio mio con el nodo: {:?}",
+                    headers_read.len(),
+                    node
+                )
+                .as_str(),
+            );
             new_headers.extend_from_slice(&headers_read);
         }
         nodes_vec.push(node);
