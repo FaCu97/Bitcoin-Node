@@ -45,7 +45,14 @@ impl fmt::Display for LoggingError {
 impl Error for LoggingError {}
 
 type LogFileSender = Sender<String>;
-type Loggers = (LogFileSender, JoinHandle<()>, LogFileSender, JoinHandle<()>, LogFileSender, JoinHandle<()>);
+type Loggers = (
+    LogFileSender,
+    JoinHandle<()>,
+    LogFileSender,
+    JoinHandle<()>,
+    LogFileSender,
+    JoinHandle<()>,
+);
 
 pub fn write_in_log(log_sender: LogFileSender, msg: &str) {
     if let Err(err) = log_sender.send(msg.to_string()) {
@@ -63,8 +70,16 @@ pub fn set_up_loggers(
 ) -> Result<Loggers, LoggingError> {
     let (error_log_sender, error_handler) = LogWriter::new(error_file_path).create_logger()?;
     let (info_log_sender, info_handler) = LogWriter::new(info_file_path).create_logger()?;
-    let (message_log_sender, message_handler) = LogWriter::new(message_file_path).create_logger()?;
-    Ok((error_log_sender, error_handler, info_log_sender, info_handler, message_log_sender, message_handler))
+    let (message_log_sender, message_handler) =
+        LogWriter::new(message_file_path).create_logger()?;
+    Ok((
+        error_log_sender,
+        error_handler,
+        info_log_sender,
+        info_handler,
+        message_log_sender,
+        message_handler,
+    ))
 }
 
 pub fn shutdown_loggers(
@@ -87,7 +102,11 @@ pub struct LogSender {
 }
 
 impl LogSender {
-    pub fn new(error_log_sender: LogFileSender, info_log_sender: LogFileSender, messege_log_sender: LogFileSender) -> Self {
+    pub fn new(
+        error_log_sender: LogFileSender,
+        info_log_sender: LogFileSender,
+        messege_log_sender: LogFileSender,
+    ) -> Self {
         LogSender {
             error_log_sender,
             info_log_sender,

@@ -37,11 +37,13 @@ impl VersionMessage {
     /// mensaje version segun el protocolo de bitcoin. Devuelve error en caso de que se no se haya podido leer correctamente
     /// del stream o en caso de que los bytes leidos no puedan ser deserializados a un struct del VersionMessage, en caso
     /// contrario, devuelve un Ok() con un VersionMessage deserializado de los bytes que leyo del stream.
-    pub fn read_from(log_sender: LogSender, stream: &mut TcpStream) -> Result<VersionMessage, std::io::Error> {
-        let header = HeaderMessage::read_from(log_sender, stream, "version".to_string()).map_err(|err| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, err.to_string())
-        })?;
-        /* 
+    pub fn read_from(
+        log_sender: LogSender,
+        stream: &mut TcpStream,
+    ) -> Result<VersionMessage, std::io::Error> {
+        let header = HeaderMessage::read_from(log_sender, stream, "version".to_string())
+            .map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidData, err.to_string()))?;
+        /*
         let mut buffer_num = [0; 24];
         stream.read_exact(&mut buffer_num)?;
         let header = HeaderMessage::from_le_bytes(buffer_num).map_err(|err: Utf8Error| {

@@ -134,6 +134,6 @@ fn connect_to_node(
     version_message.write_to(&mut stream)?;
     VersionMessage::read_from(log_sender.clone(), &mut stream)?;
     write_verack_message(&mut stream)?;
-    read_verack_message(log_sender.clone(), &mut stream)?;
+    read_verack_message(log_sender, &mut stream)?;
     Ok(stream)
 }

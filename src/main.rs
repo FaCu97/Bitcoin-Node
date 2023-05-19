@@ -38,9 +38,19 @@ impl Error for GenericError {}
 fn main() -> Result<(), GenericError> {
     let args: Vec<String> = env::args().collect();
     let config: Config = Config::from(&args).map_err(GenericError::ConfigError)?;
-    let (error_log_sender, error_handler, info_log_sender, info_handler, message_log_sender, message_handler) =
-        set_up_loggers(config.clone().error_log_path, config.clone().info_log_path, config.clone().message_log_path)
-            .map_err(GenericError::LoggingError)?;
+    let (
+        error_log_sender,
+        error_handler,
+        info_log_sender,
+        info_handler,
+        message_log_sender,
+        message_handler,
+    ) = set_up_loggers(
+        config.clone().error_log_path,
+        config.clone().info_log_path,
+        config.clone().message_log_path,
+    )
+    .map_err(GenericError::LoggingError)?;
     let logsender = LogSender::new(error_log_sender, info_log_sender, message_log_sender);
     write_in_log(
         logsender.info_log_sender.clone(),
@@ -82,7 +92,8 @@ fn main() -> Result<(), GenericError> {
         logsender.info_log_sender.clone(),
         "TERMINA CORREECTAMENTE EL PROGRAMA!",
     );
-    shutdown_loggers(logsender, error_handler, info_handler, message_handler).map_err(GenericError::LoggingError)?;
+    shutdown_loggers(logsender, error_handler, info_handler, message_handler)
+        .map_err(GenericError::LoggingError)?;
     Ok(())
 }
 
