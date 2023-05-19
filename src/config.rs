@@ -8,7 +8,7 @@ use std::str::FromStr;
 
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
-const CANTIDAD_ATRIBUTOS: usize = 11;
+const CANTIDAD_ATRIBUTOS: usize = 12;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub number_of_nodes: usize,
@@ -22,6 +22,7 @@ pub struct Config {
     pub connect_timeout: u64,
     pub error_log_path: String,
     pub info_log_path: String,
+    pub message_log_path: String,
 }
 impl Config {
     /// Crea un config leyendo un archivo de configuracion ubicado en la
@@ -65,6 +66,7 @@ impl Config {
             connect_timeout: 0,
             error_log_path: String::new(),
             info_log_path: String::new(),
+            message_log_path: String::new(),
         };
 
         let mut number_of_settings_loaded: usize = 0;
@@ -148,6 +150,10 @@ impl Config {
             }
             "INFO_LOG_PATH" => {
                 self.info_log_path = String::from(value);
+                *number_of_settings_loaded += 1;
+            }
+            "MESSAGE_LOG_PATH" => {
+                self.message_log_path = String::from(value);
                 *number_of_settings_loaded += 1;
             }
             _ => {

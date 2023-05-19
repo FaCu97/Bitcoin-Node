@@ -45,6 +45,7 @@ impl fmt::Display for LoggingError {
 impl Error for LoggingError {}
 
 type LogFileSender = Sender<String>;
+type Loggers = (LogFileSender, JoinHandle<()>, LogFileSender, JoinHandle<()>, LogFileSender, JoinHandle<()>);
 
 pub fn write_in_log(log_sender: LogFileSender, msg: &str) {
     if let Err(err) = log_sender.send(msg.to_string()) {
@@ -58,19 +59,23 @@ pub fn write_in_log(log_sender: LogFileSender, msg: &str) {
 pub fn set_up_loggers(
     error_file_path: String,
     info_file_path: String,
-) -> Result<(LogFileSender, JoinHandle<()>, LogFileSender, JoinHandle<()>), LoggingError> {
-    let (error_log_sender, error_handle) = LogWriter::new(error_file_path).create_logger()?;
-    let (info_log_sender, info_handle) = LogWriter::new(info_file_path).create_logger()?;
-    Ok((error_log_sender, error_handle, info_log_sender, info_handle))
+    message_file_path: String,
+) -> Result<Loggers, LoggingError> {
+    let (error_log_sender, error_handler) = LogWriter::new(error_file_path).create_logger()?;
+    let (info_log_sender, info_handler) = LogWriter::new(info_file_path).create_logger()?;
+    let (message_log_sender, message_handler) = LogWriter::new(message_file_path).create_logger()?;
+    Ok((error_log_sender, error_handler, info_log_sender, info_handler, message_log_sender, message_handler))
 }
 
 pub fn shutdown_loggers(
     log_sender: LogSender,
     error_handler: JoinHandle<()>,
     info_handler: JoinHandle<()>,
+    message_handler: JoinHandle<()>,
 ) -> Result<(), LoggingError> {
     shutdown_logger(log_sender.info_log_sender, info_handler)?;
     shutdown_logger(log_sender.error_log_sender, error_handler)?;
+    shutdown_logger(log_sender.messege_log_sender, message_handler)?;
     Ok(())
 }
 
@@ -78,13 +83,15 @@ pub fn shutdown_loggers(
 pub struct LogSender {
     pub error_log_sender: LogFileSender,
     pub info_log_sender: LogFileSender,
+    pub messege_log_sender: LogFileSender,
 }
 
 impl LogSender {
-    pub fn new(error_log_sender: LogFileSender, info_log_sender: LogFileSender) -> Self {
+    pub fn new(error_log_sender: LogFileSender, info_log_sender: LogFileSender, messege_log_sender: LogFileSender) -> Self {
         LogSender {
             error_log_sender,
             info_log_sender,
+            messege_log_sender,
         }
     }
 }
