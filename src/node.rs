@@ -1,13 +1,14 @@
-use crate::{block::Block, transaction::Transaction, tx_out::TxOut};
+use crate::{block::Block, block_header::BlockHeader, transaction::Transaction, tx_out::TxOut};
 
 pub struct Node {
+    pub headers: Vec<BlockHeader>,
     pub block_chain: Vec<Block>,
     pub utxo_set: Vec<TxOut>,
 }
 
 impl Node {
     // funcion para validar un bloque
-    pub fn block_validation(mut block: Block) -> (bool, &'static str) {
+    pub fn block_validation(block: Block) -> (bool, &'static str) {
         block.validate()
     }
 

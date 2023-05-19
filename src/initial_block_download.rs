@@ -11,10 +11,8 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, RwLock};
 use std::{fmt, thread, vec};
 
-// todo: Cambiar la manera en que se pasa el config (?)
 // todo: Pasar constantes a config
 // todo: Agregar validacion de headers
-// todo: Si no se pudo descargar de un nodo, intentar descargar con otro (?)
 
 type DownloadResult = Result<(), DownloadError>;
 
@@ -407,6 +405,7 @@ pub fn initial_block_download(
     let (tx, rx) = channel();
     let tx_cloned = tx.clone();
     let pointer_to_config = Arc::new(RwLock::new(config));
+    let pointer_to_config_clone = pointer_to_config.clone();
     let (pointer_to_headers_clone, pointer_to_nodes_clone, pointer_to_blocks_clone) = (
         Arc::clone(&pointer_to_headers),
         Arc::clone(&nodes),
@@ -414,7 +413,7 @@ pub fn initial_block_download(
     );
     let headers_thread = thread::spawn(move || -> DownloadResult {
         download_headers(
-            pointer_to_config,
+            pointer_to_config_clone,
             pointer_to_nodes_clone,
             pointer_to_headers_clone,
             pointer_to_blocks_clone,
@@ -424,15 +423,16 @@ pub fn initial_block_download(
     });
     let pointer_to_headers_clone_for_blocks = Arc::clone(&pointer_to_headers);
     let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
+    let pointer_to_nodes_clone = nodes.clone();
     let blocks_thread = thread::spawn(move || -> DownloadResult {
         download_blocks(
-            nodes,
+            pointer_to_nodes_clone,
             pointer_to_blocks_clone,
             pointer_to_headers_clone_for_blocks,
             rx,
             tx_cloned,
         )
-        .map_err(|_| DownloadError::CanNotRead("f".to_string()))?;
+        .map_err(|_| DownloadError::CanNotRead("failed to download blocks".to_string()))?;
         Ok(())
     });
     headers_thread
@@ -441,6 +441,12 @@ pub fn initial_block_download(
     blocks_thread
         .join()
         .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))??;
+    compare_and_ask_for_last_blocks(
+        pointer_to_config,
+        nodes,
+        pointer_to_headers.clone(),
+        pointer_to_blocks.clone(),
+    )?;
     let headers = &*pointer_to_headers
         .read()
         .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?;
@@ -448,4 +454,66 @@ pub fn initial_block_download(
         .read()
         .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?;
     Ok((headers.clone(), blocks.clone()))
+}
+
+fn compare_and_ask_for_last_blocks(
+    config: Arc<RwLock<Config>>,
+    nodes: Arc<RwLock<Vec<TcpStream>>>,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    blocks: Arc<RwLock<Vec<Block>>>,
+) -> DownloadResult {
+    let mut nodes_vec: Vec<TcpStream> = vec![];
+    while !nodes
+        .read()
+        .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
+        .is_empty()
+    {
+        let mut node = nodes
+            .write()
+            .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
+            .pop()
+            .ok_or("Error no hay mas nodos para comparar y descargar ultimos headers!\n")
+            .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+        let last_header = headers
+            .read()
+            .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
+            .last()
+            .ok_or("Error no hay headers guardados, no tengo para comparar...\n")
+            .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
+            .hash();
+        GetHeadersMessage::build_getheaders_message(
+            &*config
+                .read()
+                .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?,
+            vec![last_header],
+        )
+        .write_to(&mut node)
+        .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
+        let headers_read = HeadersMessage::read_from(&mut node).map_err(|err| DownloadError::ReadNodeError(err.to_string()))?;
+        if headers_read.len() > 0 {
+            headers
+                .write()
+                .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
+                .extend_from_slice(&headers_read);
+            let mut inventory = vec![];
+            for block_header in &headers_read {
+                inventory.push(Inventory::new_block(block_header.hash()));
+            }
+            GetDataMessage::new(inventory).write_to(&mut node).map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
+            for _ in 0..headers_read.len() {
+                let block = BlockMessage::read_from(&mut node).map_err(|err| DownloadError::ReadNodeError(err.to_string()))?;
+                println!("NUEVO BLOQUE AGREGADOOOOO!!!!\n");
+                blocks
+                    .write()
+                    .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
+                    .push(block);
+            }
+        }
+        nodes_vec.push(node);
+    }
+    nodes
+        .write()
+        .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
+        .extend(nodes_vec);
+    Ok(())
 }

@@ -68,8 +68,8 @@ impl HeaderMessage {
         command_name: String,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         if command_name == "block".to_string() {
-            // will wait a minimum of two more seconds for the stalling node to send the block. 
-            // If the block still hasn’t arrived, Bitcoin Core will disconnect from the stalling 
+            // will wait a minimum of two more seconds for the stalling node to send the block.
+            // If the block still hasn’t arrived, Bitcoin Core will disconnect from the stalling
             // node and attempt to connect to another node.
             stream.set_read_timeout(Some(Duration::from_secs(2)))?;
         }
