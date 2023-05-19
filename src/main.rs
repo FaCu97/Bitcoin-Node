@@ -51,7 +51,7 @@ fn main() -> Result<(), GenericError> {
         "CANTIDAD DE NODOS: {:?}",
         pointer_to_nodes.read().unwrap().len()
     );
-    let node = Node{
+    let _node = Node {
         headers,
         block_chain: blocks,
         utxo_set: vec![],

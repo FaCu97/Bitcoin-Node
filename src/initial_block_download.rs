@@ -223,9 +223,9 @@ fn download_headers(
         .map_err(|err| DownloadError::LockError(err.to_string()))?
         .push(node);
     let last_headers = compare_and_ask_for_last_headers(config_clone, nodes, headers_clone)?;
-    if last_headers.len() > 0 {
-        tx.send(last_headers.clone())
-                .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
+    if !last_headers.is_empty() {
+        tx.send(last_headers)
+            .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
     }
 
     Ok(())
@@ -256,7 +256,6 @@ pub fn download_blocks(
 ) -> Result<(), Box<dyn Error>> {
     // recieves in the channel the vec of headers sent by the function downloading headers
     for recieved in rx {
-
         // acá recibo 2000 block headers
         println!("RECIBO {:?} HEADERS\n", recieved.len());
         let mut n_threads = 8;
@@ -265,10 +264,9 @@ pub fn download_blocks(
             n_threads = 1;
         }
 
-        let blocks_headers_chunks;
         let chunk_size = (recieved.len() as f64 / n_threads as f64).ceil() as usize;
         // divides the vec into 8 with the same lenght (or same lenght but the last with less)
-        blocks_headers_chunks = Arc::new(RwLock::new(
+        let blocks_headers_chunks = Arc::new(RwLock::new(
             recieved
                 .chunks(chunk_size)
                 .map(|chunk| chunk.to_vec())
@@ -406,7 +404,6 @@ pub fn initial_block_download(
     let (tx, rx) = channel();
     let tx_cloned = tx.clone();
     let pointer_to_config = Arc::new(RwLock::new(config));
-    let pointer_to_config_clone = pointer_to_config.clone();
     let (pointer_to_headers_clone, pointer_to_nodes_clone, pointer_to_blocks_clone) = (
         Arc::clone(&pointer_to_headers),
         Arc::clone(&nodes),
@@ -414,7 +411,7 @@ pub fn initial_block_download(
     );
     let headers_thread = thread::spawn(move || -> DownloadResult {
         download_headers(
-            pointer_to_config_clone,
+            pointer_to_config,
             pointer_to_nodes_clone,
             pointer_to_headers_clone,
             pointer_to_blocks_clone,
@@ -424,10 +421,9 @@ pub fn initial_block_download(
     });
     let pointer_to_headers_clone_for_blocks = Arc::clone(&pointer_to_headers);
     let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
-    let pointer_to_nodes_clone = nodes.clone();
     let blocks_thread = thread::spawn(move || -> DownloadResult {
         download_blocks(
-            pointer_to_nodes_clone,
+            nodes,
             pointer_to_blocks_clone,
             pointer_to_headers_clone_for_blocks,
             rx,
@@ -450,11 +446,6 @@ pub fn initial_block_download(
         .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?;
     Ok((headers.clone(), blocks.clone()))
 }
-
-
-
-
-
 
 /// Once the headers are downloaded, this function recieves the nodes and headers  downloaded
 /// and sends a getheaders message to each node to compare and get a header that was not downloaded.
@@ -494,9 +485,10 @@ fn compare_and_ask_for_last_headers(
         )
         .write_to(&mut node)
         .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
-        let headers_read = HeadersMessage::read_from(&mut node).map_err(|err| DownloadError::ReadNodeError(err.to_string()))?;
+        let headers_read = HeadersMessage::read_from(&mut node)
+            .map_err(|err| DownloadError::ReadNodeError(err.to_string()))?;
         // si se recibio un header nuevo lo agrego
-        if headers_read.len() > 0 {
+        if !headers_read.is_empty() {
             headers
                 .write()
                 .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
