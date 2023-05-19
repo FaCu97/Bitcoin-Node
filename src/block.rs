@@ -4,11 +4,11 @@ use crate::{
     block_header::BlockHeader, compact_size_uint::CompactSizeUint, transaction::Transaction,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Block {
-    block_header: BlockHeader,
-    txn_count: CompactSizeUint,
-    txn: Vec<Transaction>,
+    pub block_header: BlockHeader,
+    pub txn_count: CompactSizeUint,
+    pub txn: Vec<Transaction>,
 }
 
 impl Block {
@@ -38,7 +38,7 @@ impl Block {
     }
     // Esta funcion se encarga de validar el bloque , primero realiza la proof of work
     // luego realiza la proof of inclusion sobre su lista de transacciones
-    pub fn validate(&mut self) -> (bool, &'static str) {
+    pub fn validate(&self) -> (bool, &'static str) {
         //proof of work
         if !self.block_header.validate() {
             return (false, "El bloque no cumple con la dificultad pedida");

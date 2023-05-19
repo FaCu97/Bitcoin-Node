@@ -128,20 +128,23 @@ fn open_log_file(log_file: &String) -> Result<File, LoggingError> {
 
 /*
 #[cfg(test)]
-mod test{
-    use std::{io::{BufReader, BufRead}, fs::File};
+mod test {
+    use std::{
+        fs::File,
+        io::{BufRead, BufReader},
+    };
 
     use super::LogWriter;
 
-
     #[test]
-    fn test_el_archivo_se_crea_correctamente(){
-        let log_writer: Result<LogWriter, std::io::Error>=LogWriter::create_log_writer("src/log.txt");
+    fn test_el_archivo_se_crea_correctamente() {
+        let log_writer: Result<LogWriter, std::io::Error> =
+            LogWriter::create_log_writer("src/log.txt");
         assert!(log_writer.is_ok());
     }
     #[test]
-    fn test_se_escribe_correctamentamente_en_el_archivo()->Result<(),std::io::Error>{
-        let mut log_writer: LogWriter=LogWriter::create_log_writer("src/log.txt")?;
+    fn test_se_escribe_correctamentamente_en_el_archivo() -> Result<(), std::io::Error> {
+        let mut log_writer: LogWriter = LogWriter::create_log_writer("src/log.txt")?;
         let contenido_escrito = "Hola Mundo";
         log_writer.write(contenido_escrito)?;
         let file = File::open("src/log.txt")?;
@@ -152,10 +155,9 @@ mod test{
             let linea = linea_resultado?.to_string();
             lineas.push(linea);
         }
-        let contenido_esperado=lineas[0].as_str();
-        assert_eq!(contenido_escrito,contenido_esperado);
+        let contenido_esperado = lineas[0].as_str();
+        assert_eq!(contenido_escrito, contenido_esperado);
         Ok(())
     }
 }
-
-*/
+ */

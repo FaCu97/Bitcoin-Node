@@ -3,6 +3,7 @@ pub mod block_header;
 pub mod compact_size_uint;
 pub mod config;
 pub mod handshake;
+pub mod initial_block_download;
 pub mod log_writer;
 pub mod messages;
 pub mod network;

@@ -1,5 +1,5 @@
 use crate::{compact_size_uint::CompactSizeUint, outpoint::Outpoint};
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct TxIn {
     previous_output: Outpoint,
     script_bytes: CompactSizeUint,

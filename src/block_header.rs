@@ -1,5 +1,5 @@
 use bitcoin_hashes::{sha256d, Hash};
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct BlockHeader {
     pub version: i32,
     pub previous_block_header_hash: [u8; 32],
@@ -112,6 +112,8 @@ impl BlockHeader {
         self.merkle_root_hash == *received_hash
     }
 }
+unsafe impl Send for BlockHeader {}
+unsafe impl Sync for BlockHeader {}
 
 #[cfg(test)]
 mod tests {
