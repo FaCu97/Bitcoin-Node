@@ -24,7 +24,9 @@ impl TxIn {
             sequence,
         }
     }
-
+    /// recibe un vector de byes que contiene un txin y un offset indicando la posicion donde empieza el txin
+    /// devuelve un txin completando los campos con lo que esta en los bytes en caso de que todo este bien
+    /// y un string indicando el error cuando algo falla. tambien actualiza el offset
     pub fn unmarshalling(bytes: &Vec<u8>, offset: &mut usize) -> Result<TxIn, &'static str> {
         if bytes.len() - *offset < 41 {
             return Err(
