@@ -68,6 +68,9 @@ const FECHA_INICIO_PROYECTO: &str = "2023-04-10 00:06:14";
 const FORMATO_FECHA_INICIO_PROYECTO: &str = "%Y-%m-%d %H:%M:%S";
 const ALTURA_PRIMER_BLOQUE: usize = 428246;
 
+/// Searches for the block headers that matches the defined timestamp defined by config.
+/// If it is found, returns them and set the boolean to true.
+/// In case of error it returns it.
 fn search_first_header_block_to_download(
     headers: Vec<BlockHeader>,
     found: &mut bool,
@@ -87,6 +90,10 @@ fn search_first_header_block_to_download(
     Ok(first_headers_from_blocks_to_download)
 }
 
+
+/// Downloads the Block Headers from the received node and stores them in the received header list. 
+/// Starts sending them through the Block Download Channel when it finds the expected Block Header
+/// If something fails, an error is returned
 fn download_headers_from_node(
     config: Arc<RwLock<Config>>,
     mut node: TcpStream,
@@ -165,6 +172,9 @@ fn download_headers_from_node(
     Ok(node)
 }
 
+/// Download the headers from a node of the list.
+/// If it fails, the node is discarded and try to download from another node.
+/// If all the nodes fail, retuns an error.
 fn download_headers(
     config: Arc<RwLock<Config>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
@@ -320,6 +330,14 @@ pub fn download_blocks(
     Ok(())
 }
 
+
+/// Downloads all the blocks from the same node, in the same thread.
+/// The blocks are stored in the blocks list received by parameter.
+/// In the end, the node is also return to the list of nodes
+/// ## Errors
+/// In case of Read or Write error on the node, the function is terminated, discarding the problematic node.
+/// The downloaded blocks upon the error are discarded, so the whole block chunk can be downloaded again from another node
+/// In other cases, it returns error.
 fn download_blocks_single_thread(
     block_headers: Vec<BlockHeader>,
     mut node: TcpStream,
@@ -373,8 +391,10 @@ fn download_blocks_single_thread(
     Ok(())
 }
 
-/// Realiza la solicitud al nodo de los bloques recibidos
-/// En caso de error en el envío del mensaje,
+/// Requests the blocks to the node.
+/// ## Errors
+/// In case of error while sending the message, it returns the block headers back to the channel so
+/// they can be downloaded from another node. If this cannot be done, returns an error.
 fn request_blocks_from_node(
     mut node: &TcpStream,
     chunk_llamada: &[BlockHeader],
@@ -400,6 +420,11 @@ fn request_blocks_from_node(
     }
 }
 
+
+/// Receives the blocks previously requested to the node.
+/// Returns an array with the blocks.
+/// In case of error while receiving the message, it returns the block headers back to the channel so
+/// they can be downloaded from another node. If this cannot be done, returns an error.
 fn receive_requested_blocks_from_node(
     mut node: TcpStream,
     chunk_llamada: &[BlockHeader],
