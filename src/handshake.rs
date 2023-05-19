@@ -1,3 +1,4 @@
+use crate::log_writer::{LogSender, write_in_log};
 use crate::messages::message_header::{read_verack_message, write_verack_message};
 use crate::messages::version_message::{get_version_message, VersionMessage};
 use std::error::Error;
@@ -40,8 +41,10 @@ pub struct Handshake;
 impl Handshake {
     pub fn handshake(
         config: Config,
+        log_sender: LogSender,
         active_nodes: &[Ipv4Addr],
     ) -> Result<Vec<TcpStream>, HandShakeError> {
+        write_in_log(log_sender.info_log_sender.clone(), "INICIO DE HANDSHAKE");
         let lista_nodos = Arc::new(active_nodes);
         let chunk_size = (lista_nodos.len() as f64 / config.n_threads as f64).ceil() as usize;
         let active_nodes_chunks = Arc::new(RwLock::new(
@@ -60,19 +63,14 @@ impl Handshake {
                 .map_err(|err| HandShakeError::LockError(format!("{}", err)))?[i]
                 .clone();
             let configuracion = config.clone();
+            let log_sender_clone = log_sender.clone();
             let sockets: Arc<RwLock<Vec<TcpStream>>> = Arc::clone(&sockets_lock);
             thread_handles.push(thread::spawn(move || -> Result<(), HandShakeError> {
-                conectar_a_nodo(configuracion, sockets, &chunk)?;
+                conectar_a_nodo(configuracion, log_sender_clone, sockets, &chunk)?;
                 Ok(())
             }));
         }
-        println!(
-            "{:?}",
-            sockets_lock
-                .read()
-                .map_err(|err| HandShakeError::LockError(format!("{}", err)))?
-                .len()
-        );
+        
         for handle in thread_handles {
             handle
                 .join()
@@ -82,6 +80,8 @@ impl Handshake {
             .map_err(|err| HandShakeError::LockError(format!("{:?}", err)))?
             .into_inner()
             .map_err(|err| HandShakeError::LockError(format!("{}", err)))?;
+        write_in_log(log_sender.info_log_sender.clone(), format!("\n{:?} nodos conectados", sockets.len()).as_str());
+        write_in_log(log_sender.info_log_sender, "Se completo correctamente el handshake\n");
         Ok(sockets)
     }
 }
@@ -90,30 +90,28 @@ impl Handshake {
 // En el libro devuelve thread::Result<std::io::Result<()>>
 fn conectar_a_nodo(
     configuracion: Config,
+    log_sender: LogSender,
     sockets: Arc<RwLock<Vec<TcpStream>>>,
     nodos: &[Ipv4Addr],
 ) -> Result<(), HandShakeError> {
     for nodo in nodos {
-        match connect_to_node(&configuracion, nodo) {
+        match connect_to_node(&configuracion, log_sender.clone(), nodo) {
             Ok(stream) => {
-                println!("Conectado correctamente a: {:?} \n", nodo);
+                write_in_log(log_sender.info_log_sender.clone(),format!("Conectado correctamente a: {:?}", nodo).as_str());
                 sockets
                     .write()
                     .map_err(|err| HandShakeError::LockError(format!("{}", err)))?
                     .push(stream);
             }
             Err(err) => {
-                println!(
-                    "Error {:?}. No se pudo conectar a: {:?}, voy a intenar conectarme a otro \n",
-                    err, nodo
-                );
+                write_in_log(log_sender.error_log_sender.clone(),format!("No se pudo conectar al nodo: {:?}, voy a intenar conectarme a otro. Error {:?}.", nodo, err).as_str());
             }
         };
     }
     Ok(())
 }
 
-fn connect_to_node(config: &Config, node_ip: &Ipv4Addr) -> Result<TcpStream, Box<dyn Error>> {
+fn connect_to_node(config: &Config, log_sender: LogSender, node_ip: &Ipv4Addr) -> Result<TcpStream, Box<dyn Error>> {
     let socket_addr = SocketAddr::new((*node_ip).into(), config.testnet_port);
     let mut stream: TcpStream =
         TcpStream::connect_timeout(&socket_addr, Duration::from_secs(config.connect_timeout))?;
@@ -121,17 +119,10 @@ fn connect_to_node(config: &Config, node_ip: &Ipv4Addr) -> Result<TcpStream, Box
     let local_ip_addr = stream.local_addr()?;
     let version_message = get_version_message(config, socket_addr, local_ip_addr)?;
     version_message.write_to(&mut stream)?;
-    let version_response = VersionMessage::read_from(&mut stream)?;
-    println!(
-        "RECIBO MENSAJE VERSION DEL NODO {:?}: {:?}\n",
-        node_ip, version_response
-    );
-
+    VersionMessage::read_from(&mut stream)?;
+    write_in_log(log_sender.info_log_sender.clone(), format!("Recibo correctamente mensaje `version` del nodo: {:?}", node_ip).as_str());
     write_verack_message(&mut stream)?;
-    println!(
-        "RECIBO MENSAJE VERACK DEL NODO {:?}: {:?}\n",
-        node_ip,
-        read_verack_message(&mut stream)
-    );
+    read_verack_message(&mut stream)?;
+    write_in_log(log_sender.info_log_sender.clone(), format!("Recibo correctamente mensaje `verack` del nodo: {:?}", node_ip).as_str());
     Ok(stream)
 }

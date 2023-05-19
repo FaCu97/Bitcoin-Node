@@ -29,7 +29,7 @@ impl fmt::Display for LoggingError {
                 write!(f, "Error trying to open/create the log file: {}", msg)
             }
             LoggingError::WritingInFileError(msg) => {
-                write!(f, "Error trying to write the log file: {}", msg)
+                write!(f, "Error trying to write the log file or send through log thread channel: {}", msg)
             }
             LoggingError::ThreadJoinError(msg) => {
                 write!(f, "Error trying to join the log thread: {}", msg)
@@ -44,16 +44,35 @@ impl Error for LoggingError {}
 type LogFileSender = Sender<String>;
 
 
- pub fn set_up_loggers(error_file_path: String, info_file_path: String) -> Result<(LogFileSender, JoinHandle<()>, LogFileSender, JoinHandle<()>), LoggingError> {
+
+pub fn write_in_log(log_sender: LogFileSender, msg: &str) {
+    if let Err(err) = log_sender.send(msg.to_string()) {
+        println!("Error al intentar escribir {} en el log!, error: {}\n", msg.to_string(), err.to_string());
+    };
+}
+
+pub fn set_up_loggers(error_file_path: String, info_file_path: String) -> Result<(LogFileSender, JoinHandle<()>, LogFileSender, JoinHandle<()>), LoggingError> {
     let (error_log_sender, error_handle) = LogWriter::new(error_file_path).create_logger()?;
     let (info_log_sender, info_handle) = LogWriter::new(info_file_path).create_logger()?;
     Ok((error_log_sender, error_handle, info_log_sender, info_handle))
 }
 
-pub fn shutdown_loggers(error_log: LogFileSender, error_handler: JoinHandle<()>, info_log: LogFileSender, info_handler: JoinHandle<()>) -> Result<(), LoggingError> {
-    shutdown_logger(info_log, info_handler)?;
-    shutdown_logger(error_log, error_handler)?;
+pub fn shutdown_loggers(log_sender: LogSender, error_handler: JoinHandle<()>, info_handler: JoinHandle<()>) -> Result<(), LoggingError> {
+    shutdown_logger(log_sender.info_log_sender, info_handler)?;
+    shutdown_logger(log_sender.error_log_sender, error_handler)?;
     Ok(())
+}
+
+#[derive(Debug, Clone)]
+pub struct LogSender {
+    pub error_log_sender: LogFileSender,
+    pub info_log_sender: LogFileSender,
+}
+
+impl LogSender {
+    pub fn new(error_log_sender: LogFileSender, info_log_sender: LogFileSender) -> Self {
+        LogSender { error_log_sender , info_log_sender }
+    }
 }
 /// Representa a la estructura que escribe en el archivo Log
 pub struct LogWriter {
@@ -100,7 +119,7 @@ impl LogWriter {
         }
         let handle = thread::spawn(move || {
             for log in rx {
-                if let Err(err) = writeln!(file, "-{}", log) {
+                if let Err(err) = writeln!(file, "{}", log) {
                     println!(
                         "Error {} al escribir en el log: {}",
                         LoggingError::WritingInFileError(err.to_string()),

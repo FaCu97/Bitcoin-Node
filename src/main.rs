@@ -1,11 +1,10 @@
 use bitcoin::config::Config;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
-use bitcoin::log_writer::{LogWriter, set_up_loggers, LoggingError, shutdown_loggers};
+use bitcoin::log_writer::{set_up_loggers, LoggingError, shutdown_loggers, write_in_log, LogSender};
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
 use std::error::Error;
-use std::sync::mpsc::Sender;
 use std::{env, fmt};
 use std::sync::{Arc, RwLock};
 
@@ -39,14 +38,14 @@ impl Error for GenericError {}
 fn main() -> Result<(), GenericError> {
     let args: Vec<String> = env::args().collect();
     let config: Config = Config::from(&args).map_err(GenericError::ConfigError)?;
-    let (error_log, error_handler, info_log, info_handler) = set_up_loggers(config.clone().error_log_path, config.clone().info_log_path).map_err(GenericError::LoggingError)?;
-    let active_nodes = get_active_nodes_from_dns_seed(config.clone())
+    let (error_log_sender, error_handler, info_log_sender, info_handler) = set_up_loggers(config.clone().error_log_path, config.clone().info_log_path).map_err(GenericError::LoggingError)?;
+    let logsender = LogSender::new(error_log_sender, info_log_sender);
+    write_in_log(logsender.info_log_sender.clone(), "Se leyo correctamente el archivo de configuracion\n");
+    let active_nodes = get_active_nodes_from_dns_seed(config.clone(), logsender.clone())
         .map_err(GenericError::ConnectionToDnsError)?;
-    let sockets = Handshake::handshake(config.clone(), &active_nodes)
+    let sockets = Handshake::handshake(config.clone(), logsender.clone(), &active_nodes)
         .map_err(GenericError::HandShakeError)?;
-    println!("Sockets: {:?}", sockets);
-    println!("CANTIDAD SOCKETS: {:?}", sockets.len());
-    println!("{:?}", config.user_agent);
+    /* 
     // Acá iría la descarga de los headers
     let pointer_to_nodes = Arc::new(RwLock::new(sockets));
     let (headers, blocks) = initial_block_download(config, pointer_to_nodes.clone())
@@ -62,7 +61,8 @@ fn main() -> Result<(), GenericError> {
         block_chain: blocks,
         utxo_set: vec![],
     };
-    shutdown_loggers(error_log, error_handler, info_log, info_handler).map_err(GenericError::LoggingError)?;
+    */
+    shutdown_loggers(logsender, error_handler, info_handler).map_err(GenericError::LoggingError)?;
     Ok(())
 }
 
