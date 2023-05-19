@@ -90,8 +90,7 @@ fn search_first_header_block_to_download(
     Ok(first_headers_from_blocks_to_download)
 }
 
-
-/// Downloads the Block Headers from the received node and stores them in the received header list. 
+/// Downloads the Block Headers from the received node and stores them in the received header list.
 /// Starts sending them through the Block Download Channel when it finds the expected Block Header
 /// If something fails, an error is returned
 fn download_headers_from_node(
@@ -330,7 +329,6 @@ pub fn download_blocks(
     Ok(())
 }
 
-
 /// Downloads all the blocks from the same node, in the same thread.
 /// The blocks are stored in the blocks list received by parameter.
 /// In the end, the node is also return to the list of nodes
@@ -419,7 +417,6 @@ fn request_blocks_from_node(
         }
     }
 }
-
 
 /// Receives the blocks previously requested to the node.
 /// Returns an array with the blocks.
