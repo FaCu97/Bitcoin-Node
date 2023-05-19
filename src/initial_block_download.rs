@@ -337,8 +337,7 @@ fn download_blocks_single_thread(
     );
     let chunk_size = 16;
     for chunk_llamada in block_headers.chunks(chunk_size) {
-        match request_blocks_from_node(&mut node, chunk_llamada, &block_headers_thread, tx.clone())
-        {
+        match request_blocks_from_node(&node, chunk_llamada, &block_headers_thread, tx.clone()) {
             Ok(_) => {}
             Err(DownloadError::WriteNodeError(_)) => return Ok(()),
             Err(error) => return Err(error),
@@ -379,7 +378,7 @@ fn download_blocks_single_thread(
 fn request_blocks_from_node(
     mut node: &TcpStream,
     chunk_llamada: &[BlockHeader],
-    block_headers_thread: &Vec<BlockHeader>,
+    block_headers_thread: &[BlockHeader],
     tx: Sender<Vec<BlockHeader>>,
 ) -> DownloadResult {
     //  Acá ya separé los 250 en chunks de 16 para las llamadas
@@ -391,12 +390,12 @@ fn request_blocks_from_node(
         Ok(_) => Ok(()),
         Err(err) => {
             println!("ERORRRRRR: DEVUELVO LOS HEADERS DEL NODO --- NO PUEDO HACER LA SOLICITUD DE BLOQUES");
-            tx.send(block_headers_thread.clone())
+            tx.send(block_headers_thread.to_vec())
                 .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
             // falló el envio del mensaje, tengo que intentar con otro nodo
             // si hago return, termino el thread.
             // tengo que enviar todos los bloques que tenía ese thread
-            return Err(DownloadError::ReadNodeError(format!("{:?}", err)));
+            Err(DownloadError::ReadNodeError(format!("{:?}", err)))
         }
     }
 }
@@ -404,7 +403,7 @@ fn request_blocks_from_node(
 fn receive_requested_blocks_from_node(
     mut node: TcpStream,
     chunk_llamada: &[BlockHeader],
-    block_headers_thread: &Vec<BlockHeader>,
+    block_headers_thread: &[BlockHeader],
     tx: Sender<Vec<BlockHeader>>,
 ) -> Result<(TcpStream, Vec<Block>), DownloadError> {
     // Acá tengo que recibir los 16 bloques (o menos) de la llamada
@@ -414,7 +413,7 @@ fn receive_requested_blocks_from_node(
             Ok(bloque) => bloque,
             Err(err) => {
                 println!("ERORRRRRR: DEVUELVO LOS HEADERS DEL NODO");
-                tx.send(block_headers_thread.clone())
+                tx.send(block_headers_thread.to_vec())
                     .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
                 // falló la recepción del mensaje, tengo que intentar con otro nodo
                 // termino el nodo con el return
