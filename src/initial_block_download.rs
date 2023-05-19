@@ -215,7 +215,9 @@ fn download_headers(
             )
             .as_str(),
         );
-
+        if let DownloadError::ThreadChannelError(_) = err {
+            return Err(DownloadError::ThreadChannelError("Error se cerro el channel que comunica la descarga de headers y bloques en paralelo".to_string()));
+        }
         // clear list of blocks in case they where already been downloaded
         blocks
             .write()
@@ -498,7 +500,7 @@ fn receive_requested_blocks_from_node(
                     .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
                 // falló la recepción del mensaje, tengo que intentar con otro nodo
                 // termino el nodo con el return
-                return Err(DownloadError::WriteNodeError(format!(
+                return Err(DownloadError::ReadNodeError(format!(
                     "Error al recibir el mensaje `block`: {:?}",
                     err
                 )));
@@ -634,7 +636,7 @@ fn compare_and_ask_for_last_headers(
             write_in_log(
                 log_sender.info_log_sender.clone(),
                 format!(
-                    "{} headers encontrados al comparar el ultmio mio con el nodo: {:?}",
+                    "{} headers encontrados al comparar el ultimo mio con el nodo: {:?}",
                     headers_read.len(),
                     node
                 )
