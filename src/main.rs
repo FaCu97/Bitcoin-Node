@@ -42,10 +42,14 @@ fn main() -> Result<(), GenericError> {
     println!("{:?}", config.user_agent);
     // Acá iría la descarga de los headers
     let pointer_to_nodes = Arc::new(RwLock::new(sockets));
-    let (headers, blocks) =
-        initial_block_download(config, pointer_to_nodes).map_err(GenericError::DownloadError)?;
+    let (headers, blocks) = initial_block_download(config, pointer_to_nodes.clone())
+        .map_err(GenericError::DownloadError)?;
     println!("DESCARGUE {:?} HEADERS\n", headers.len());
     println!("DESCARGUE {:?} BLOQUES\n", blocks.len());
+    println!(
+        "CANTIDAD DE NODOS: {:?}",
+        pointer_to_nodes.read().unwrap().len()
+    );
     Ok(())
 }
 
