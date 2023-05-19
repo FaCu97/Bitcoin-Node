@@ -142,7 +142,7 @@ fn connect_to_node(
         .as_str(),
     );
     write_verack_message(&mut stream)?;
-    read_verack_message(&mut stream)?;
+    read_verack_message(log_sender.clone(), &mut stream)?;
     write_in_log(
         log_sender.info_log_sender,
         format!(

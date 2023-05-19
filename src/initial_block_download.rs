@@ -116,7 +116,7 @@ fn download_headers_from_node(
         .write_to(&mut node)
         .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
     // read first 2000 headers from headers message answered from node
-    let mut headers_read = HeadersMessage::read_from(&mut node).map_err(|_| {
+    let mut headers_read = HeadersMessage::read_from(log_sender.clone(),&mut node).map_err(|_| {
         DownloadError::ReadNodeError("error al leer primeros 2000 headers".to_string())
     })?;
     // store headers in `global` vec `headers_guard`
@@ -136,7 +136,7 @@ fn download_headers_from_node(
             .write_to(&mut node)
             .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
         // read next 2000 headers (or less if they are the last ones)
-        headers_read = HeadersMessage::read_from(&mut node).map_err(|_| {
+        headers_read = HeadersMessage::read_from(log_sender.clone(),&mut node).map_err(|_| {
             DownloadError::ReadNodeError("error al leer headers message".to_string())
         })?;
         if headers
@@ -403,6 +403,7 @@ fn download_blocks_single_thread(
         }
         let received_blocks;
         (node, received_blocks) = match receive_requested_blocks_from_node(
+            log_sender.clone(),
             node,
             chunk_llamada,
             &block_headers_thread,
@@ -479,6 +480,7 @@ fn request_blocks_from_node(
 /// In case of error while receiving the message, it returns the block headers back to the channel so
 /// they can be downloaded from another node. If this cannot be done, returns an error.
 fn receive_requested_blocks_from_node(
+    log_sender: LogSender,
     mut node: TcpStream,
     chunk_llamada: &[BlockHeader],
     block_headers_thread: &[BlockHeader],
@@ -487,7 +489,7 @@ fn receive_requested_blocks_from_node(
     // Acá tengo que recibir los 16 bloques (o menos) de la llamada
     let mut current_blocks: Vec<Block> = Vec::new();
     for _ in 0..chunk_llamada.len() {
-        let bloque = match BlockMessage::read_from(&mut node) {
+        let bloque = match BlockMessage::read_from(log_sender.clone(), &mut node) {
             Ok(bloque) => bloque,
             Err(err) => {
                 println!("ERORRRRRR: DEVUELVO LOS HEADERS DEL NODO");
@@ -611,7 +613,7 @@ fn compare_and_ask_for_last_headers(
         )
         .write_to(&mut node)
         .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
-        let headers_read = match HeadersMessage::read_from(&mut node) {
+        let headers_read = match HeadersMessage::read_from(log_sender.clone(),&mut node) {
             Ok(headers) => headers,
             Err(err) => {
                 write_in_log(
