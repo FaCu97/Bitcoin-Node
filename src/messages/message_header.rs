@@ -3,6 +3,8 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str::Utf8Error;
 use std::time::Duration;
+
+use crate::log_writer::{write_in_log, LogSender};
 // todo: implementar test de read_from usando mocking
 // todo: implementar test de write_to usando mocking
 // todo: implementar test de write_verack_message, read_verack_message, write_sendheaders_message usando mocking
@@ -64,6 +66,7 @@ impl HeaderMessage {
     /// y devuelve un HeaderMessage si se pudo leer correctamente uno desde el stream
     /// o Error si lo leido no corresponde a el header de un mensaje del protocolo de bitcoin
     pub fn read_from(
+        log_sender: LogSender,
         stream: &mut TcpStream,
         command_name: String,
     ) -> Result<Self, Box<dyn std::error::Error>> {
@@ -80,6 +83,14 @@ impl HeaderMessage {
         let mut header = HeaderMessage::from_le_bytes(buffer_num)?;
         // si no se leyo el header que se queria, sigo leyendo hasta encontrarlo
         while header.command_name != header_command_name {
+            write_in_log(
+                log_sender.messege_log_sender.clone(),
+                format!(
+                    "Recibo: {} -- Nodo: {:?} -- IGNORADO",
+                    header.command_name, stream
+                )
+                .as_str(),
+            );
             let payload_size = header.payload_size as usize;
             let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
             stream.read_exact(&mut payload_buffer_num)?;
@@ -87,6 +98,14 @@ impl HeaderMessage {
             stream.read_exact(&mut buffer_num)?;
             header = HeaderMessage::from_le_bytes(buffer_num)?;
         }
+        write_in_log(
+            log_sender.messege_log_sender,
+            format!(
+                "Recibo Correctamente: {} -- Nodo: {:?}",
+                command_name, stream
+            )
+            .as_str(),
+        );
         Ok(header)
     }
 }
@@ -118,9 +137,10 @@ pub fn write_sendheaders_message(stream: &mut dyn Write) -> Result<(), Box<dyn s
 /// Recibe un stream que implemente el trait Read (algo donde se pueda Leer) y lee el mensaje verack segun
 /// el protocolo de bitcoin, si se lee correctamente devuelve Ok(HeaderMessage) y sino devuelve un error
 pub fn read_verack_message(
+    log_sender: LogSender,
     stream: &mut TcpStream,
 ) -> Result<HeaderMessage, Box<dyn std::error::Error>> {
-    HeaderMessage::read_from(stream, "verack".to_string())
+    HeaderMessage::read_from(log_sender, stream, "verack".to_string())
 }
 
 /// Recibe un String que representa el nombre del comando del Header Message

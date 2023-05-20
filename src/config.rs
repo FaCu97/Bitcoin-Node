@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
-const CANTIDAD_ATRIBUTOS: usize = 13;
+const CANTIDAD_ATRIBUTOS: usize = 15;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub number_of_nodes: usize,
@@ -21,7 +21,9 @@ pub struct Config {
     pub n_threads: usize,
     pub dns_port: u16,
     pub connect_timeout: u64,
-    pub log_path: String,
+    pub error_log_path: String,
+    pub info_log_path: String,
+    pub message_log_path: String,
     pub blocks_download_per_node: usize,
     pub fecha_inicio_proyecto: String,
     pub formato_fecha_inicio_proyecto: String,
@@ -66,7 +68,9 @@ impl Config {
             n_threads: 0,
             dns_port: 0,
             connect_timeout: 0,
-            log_path: String::new(),
+            error_log_path: String::new(),
+            info_log_path: String::new(),
+            message_log_path: String::new(),
             blocks_download_per_node: 0,
             fecha_inicio_proyecto: String::new(),
             formato_fecha_inicio_proyecto: String::new(),
@@ -147,8 +151,16 @@ impl Config {
                 self.connect_timeout = u64::from_str(value)?;
                 *number_of_settings_loaded += 1;
             }
-            "LOG_PATH" => {
-                self.log_path = String::from(value);
+            "ERROR_LOG_PATH" => {
+                self.error_log_path = String::from(value);
+                *number_of_settings_loaded += 1;
+            }
+            "INFO_LOG_PATH" => {
+                self.info_log_path = String::from(value);
+                *number_of_settings_loaded += 1;
+            }
+            "MESSAGE_LOG_PATH" => {
+                self.message_log_path = String::from(value);
                 *number_of_settings_loaded += 1;
             }
             "BLOCKS_DOWNLOAD_PER_NODE" => {
