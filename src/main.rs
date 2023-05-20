@@ -1,3 +1,4 @@
+use bitcoin::block_broadcasting::listen_for_incoming_blocks;
 use bitcoin::config::Config;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
@@ -63,7 +64,7 @@ fn main() -> Result<(), GenericError> {
     // Acá iría la descarga de los headers
     let pointer_to_nodes = Arc::new(RwLock::new(sockets));
     let headers_and_blocks =
-        match initial_block_download(config, logsender.clone(), pointer_to_nodes) {
+        match initial_block_download(config, logsender.clone(), pointer_to_nodes.clone()) {
             Ok(headers_and_blocks) => headers_and_blocks,
             Err(err) => {
                 write_in_log(
@@ -82,7 +83,8 @@ fn main() -> Result<(), GenericError> {
         logsender.info_log_sender.clone(),
         format!("TOTAL DE BLOQUES DESCARGADOS: {}", blocks.len()).as_str(),
     );
-
+    //listen_for_incoming_blocks(logsender.clone(), pointer_to_nodes, headers.clone(), blocks.clone());
+    //println!("SALI DE LA FUNCION!!\n");
     let _node = Node {
         headers,
         block_chain: blocks,

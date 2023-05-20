@@ -1,5 +1,5 @@
 use crate::log_writer::{write_in_log, LogSender};
-use crate::messages::message_header::{read_verack_message, write_verack_message};
+use crate::messages::message_header::{read_verack_message, write_verack_message, write_sendheaders_message};
 use crate::messages::version_message::{get_version_message, VersionMessage};
 use std::error::Error;
 use std::net::{Ipv4Addr, SocketAddr, TcpStream};
@@ -82,7 +82,7 @@ impl Handshake {
             .map_err(|err| HandShakeError::LockError(format!("{}", err)))?;
         write_in_log(
             log_sender.info_log_sender.clone(),
-            format!("\n{:?} nodos conectados", sockets.len()).as_str(),
+            format!("{:?} nodos conectados", sockets.len()).as_str(),
         );
         write_in_log(
             log_sender.info_log_sender,
@@ -135,5 +135,6 @@ fn connect_to_node(
     VersionMessage::read_from(log_sender.clone(), &mut stream)?;
     write_verack_message(&mut stream)?;
     read_verack_message(log_sender, &mut stream)?;
+    write_sendheaders_message(&mut stream)?;
     Ok(stream)
 }

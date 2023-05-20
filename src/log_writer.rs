@@ -141,7 +141,7 @@ impl LogWriter {
         let mut file = open_log_file(&self.log_file)?;
         let local = Local::now();
         let date = format!(
-            "\n{} Actual date: {}-{}-{} Hour: {}:{} {}\n",
+            "\n{} Actual date: {}-{}-{} Hour: {:02}:{:02} {:02}\n",
             CENTER_DATE_LINE,
             local.day(),
             local.month(),
@@ -159,7 +159,8 @@ impl LogWriter {
         }
         let handle = thread::spawn(move || {
             for log in rx {
-                if let Err(err) = writeln!(file, "{}", log) {
+                let date = format!("{}:{}:{:02}", Local::now().hour(), Local::now().minute(), Local::now().second());
+                if let Err(err) = writeln!(file, "{}: {}", date, log) {
                     println!(
                         "Error {} al escribir en el log: {}",
                         LoggingError::WritingInFileError(err.to_string()),

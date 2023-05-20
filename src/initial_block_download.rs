@@ -148,7 +148,7 @@ fn download_headers_from_node(
                     .map_err(|err| DownloadError::FirstBlockNotFoundError(err.to_string()))?;
             write_in_log(
                 log_sender.info_log_sender.clone(),
-                "\nEncontre primer bloque a descargar! Empieza descarga de bloques\n",
+                "Encontre primer bloque a descargar! Empieza descarga de bloques\n",
             );
             tx.send(first_block_headers_to_download)
                 .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
@@ -256,13 +256,14 @@ fn download_headers(
         .write()
         .map_err(|err| DownloadError::LockError(err.to_string()))?
         .push(node);
+    /* 
     let last_headers =
         compare_and_ask_for_last_headers(config, log_sender.clone(), nodes, headers_clone)?;
     if !last_headers.is_empty() {
         write_in_log(
             log_sender.info_log_sender,
             format!(
-                "Agrego ultimo {} headers enocontrados al comparar con todos los nodos",
+                "Agrego ultimos {} headers enocontrados al comparar con todos los nodos",
                 last_headers.len()
             )
             .as_str(),
@@ -270,6 +271,7 @@ fn download_headers(
         tx.send(last_headers)
             .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
     }
+    */
     Ok(())
 }
 
@@ -305,7 +307,9 @@ pub fn download_blocks(
         if recieved.len() < 250 {
             n_threads = 1;
         }
-
+        if recieved.len() == 0 {
+            return Err("Se recibio una lista con 0 elementos!".to_string().into());
+        }
         let chunk_size = (recieved.len() as f64 / n_threads as f64).ceil() as usize;
         // divides the vec into 8 with the same lenght (or same lenght but the last with less)
         let blocks_headers_chunks = Arc::new(RwLock::new(
@@ -358,7 +362,7 @@ pub fn download_blocks(
             .len();
         let bloques_a_descargar = cantidad_headers_descargados - ALTURA_PRIMER_BLOQUE + 1;
         if bloques_descargados == bloques_a_descargar {
-            write_in_log(log_sender.info_log_sender, format!("Se terminaron de descargar todos los bloques correctamente!\nBLOQUES DESCARGADOS: {}\n", bloques_descargados).as_str());
+            write_in_log(log_sender.info_log_sender, format!("Se terminaron de descargar todos los bloques correctamente! BLOQUES DESCARGADOS: {}\n", bloques_descargados).as_str());
             return Ok(());
         }
     }
@@ -474,7 +478,7 @@ fn request_blocks_from_node(
             // falló el envio del mensaje, tengo que intentar con otro nodo
             // si hago return, termino el thread.
             // tengo que enviar todos los bloques que tenía ese thread
-            Err(DownloadError::ReadNodeError(format!("{:?}", err)))
+            Err(DownloadError::WriteNodeError(format!("{:?}", err)))
         }
     }
 }
