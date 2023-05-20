@@ -81,11 +81,12 @@ impl BlockHeader {
         let nonce_bytes = self.nonce.to_le_bytes();
         marshaled_block_header.extend_from_slice(&nonce_bytes);
     }
+    /* 
     fn reverse_bytes(bytes: &[u8]) -> Vec<u8> {
         let mut reversed_bytes = bytes.to_vec();
         reversed_bytes.reverse();
         reversed_bytes
-    }
+    } */
     pub fn hash(&self) -> [u8; 32] {
         let mut block_header_marshaled: Vec<u8> = Vec::new();
         self.marshalling(&mut block_header_marshaled);
