@@ -81,7 +81,7 @@ fn main() -> Result<(), GenericError> {
     );
     write_in_log(
         logsender.info_log_sender.clone(),
-        format!("TOTAL DE BLOQUES DESCARGADOS: {}", blocks.len()).as_str(),
+        format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
     );
     //listen_for_incoming_blocks(logsender.clone(), pointer_to_nodes, headers.clone(), blocks.clone());
     //println!("SALI DE LA FUNCION!!\n");
@@ -92,7 +92,7 @@ fn main() -> Result<(), GenericError> {
     };
     write_in_log(
         logsender.info_log_sender.clone(),
-        "\nTERMINA CORREECTAMENTE EL PROGRAMA!",
+        "TERMINA CORRECTAMENTE EL PROGRAMA!",
     );
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
         .map_err(GenericError::LoggingError)?;

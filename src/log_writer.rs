@@ -8,7 +8,6 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-const FINAL_LOGGING_SEPARATION: &str = "------------------------------------------------------------------------------------------------------------------------";
 const CENTER_DATE_LINE: &str = "-------------------------------------------";
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -187,8 +186,6 @@ fn open_log_file(log_file: &String) -> Result<File, LoggingError> {
 /// error en caso de que no se pueda mandar el mensaje por el channel o no se pueda hacer join correctamente al thread
 fn shutdown_logger(tx: LogFileSender, handler: JoinHandle<()>) -> Result<(), LoggingError> {
     tx.send("Closing log\n".to_string())
-        .map_err(|err| LoggingError::WritingInFileError(err.to_string()))?;
-    tx.send(FINAL_LOGGING_SEPARATION.to_string())
         .map_err(|err| LoggingError::WritingInFileError(err.to_string()))?;
     drop(tx);
     handler

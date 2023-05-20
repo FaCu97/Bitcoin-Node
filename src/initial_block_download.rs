@@ -103,7 +103,7 @@ fn download_headers_from_node(
 ) -> Result<TcpStream, DownloadError> {
     write_in_log(
         log_sender.info_log_sender.clone(),
-        format!("Empiezo descarga de headers con nodo: {:?}\n", node).as_str(),
+        format!("Empiezo descarga de headers con nodo: {:?}\n", node.peer_addr()).as_str(),
     );
 
     let mut first_block_found = false;
@@ -392,7 +392,7 @@ fn download_blocks_single_thread(
         format!(
             "Voy a descargar {:?} bloques del nodo {:?}",
             block_headers.len(),
-            node
+            node.peer_addr()
         )
         .as_str(),
     );
