@@ -81,20 +81,13 @@ impl BlockHeader {
         let nonce_bytes = self.nonce.to_le_bytes();
         marshaled_block_header.extend_from_slice(&nonce_bytes);
     }
-    fn reverse_bytes(bytes: &[u8]) -> Vec<u8> {
-        let mut reversed_bytes = bytes.to_vec();
-        reversed_bytes.reverse();
-        reversed_bytes
-    }
+    
     pub fn hash(&self) -> [u8; 32] {
         let mut block_header_marshaled: Vec<u8> = Vec::new();
         self.marshalling(&mut block_header_marshaled);
         let hash_block = sha256d::Hash::hash(&block_header_marshaled);
-        let hash_be = *hash_block.as_byte_array();
-        let hash_le = Self::reverse_bytes(&hash_be);
-        let mut hash:[u8;32] = [0;32];
-        hash.copy_from_slice(&hash_le);
-        hash
+        *hash_block.as_byte_array()
+
     }
 
     // Esta funcion realiza la proof of work
@@ -112,7 +105,8 @@ impl BlockHeader {
             target[(posicion_inicial_mantisa as usize) + i] = mantisa[i];
         }
 
-        let block_hash: [u8; 32] = self.hash();
+        let mut block_hash: [u8; 32] = self.hash();
+        block_hash.reverse();
         if block_hash < target {
             return true;
         }
