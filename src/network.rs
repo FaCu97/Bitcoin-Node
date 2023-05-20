@@ -2,6 +2,7 @@ use std::{
     error::Error,
     fmt,
     net::{Ipv4Addr, SocketAddr, ToSocketAddrs},
+    sync::Arc,
 };
 
 use crate::{
@@ -22,11 +23,11 @@ impl Error for ConnectionToDnsError {}
 
 /// Devuelve una lista de direcciones Ipv4 obtenidas del dns seed
 pub fn get_active_nodes_from_dns_seed(
-    config: Config,
+    config: Arc<Config>,
     log_sender: LogSender,
 ) -> Result<Vec<Ipv4Addr>, ConnectionToDnsError> {
     let mut node_ips = Vec::new();
-    let host = config.dns_seed;
+    let host = config.dns_seed.clone();
     let port = config.dns_port;
 
     let addrs = (host, port)

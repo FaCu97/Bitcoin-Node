@@ -40,7 +40,7 @@ pub struct Handshake;
 
 impl Handshake {
     pub fn handshake(
-        config: Config,
+        config: Arc<Config>,
         log_sender: LogSender,
         active_nodes: &[Ipv4Addr],
     ) -> Result<Vec<TcpStream>, HandShakeError> {
@@ -95,13 +95,13 @@ impl Handshake {
 // los threads no pueden manejar un dyn Error
 // En el libro devuelve thread::Result<std::io::Result<()>>
 fn conectar_a_nodo(
-    configuracion: Config,
+    configuracion: Arc<Config>,
     log_sender: LogSender,
     sockets: Arc<RwLock<Vec<TcpStream>>>,
     nodos: &[Ipv4Addr],
 ) -> Result<(), HandShakeError> {
     for nodo in nodos {
-        match connect_to_node(&configuracion, log_sender.clone(), nodo) {
+        match connect_to_node(configuracion.clone(), log_sender.clone(), nodo) {
             Ok(stream) => {
                 write_in_log(
                     log_sender.info_log_sender.clone(),
@@ -121,7 +121,7 @@ fn conectar_a_nodo(
 }
 
 fn connect_to_node(
-    config: &Config,
+    config: Arc<Config>,
     log_sender: LogSender,
     node_ip: &Ipv4Addr,
 ) -> Result<TcpStream, Box<dyn Error>> {

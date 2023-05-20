@@ -37,7 +37,7 @@ impl Error for GenericError {}
 
 fn main() -> Result<(), GenericError> {
     let args: Vec<String> = env::args().collect();
-    let config: Config = Config::from(&args).map_err(GenericError::ConfigError)?;
+    let config: Arc<Config> = Config::from(&args).map_err(GenericError::ConfigError)?;
     let (
         error_log_sender,
         error_handler,
@@ -46,9 +46,9 @@ fn main() -> Result<(), GenericError> {
         message_log_sender,
         message_handler,
     ) = set_up_loggers(
-        config.clone().error_log_path,
-        config.clone().info_log_path,
-        config.clone().message_log_path,
+        config.error_log_path.clone(),
+        config.info_log_path.clone(),
+        config.message_log_path.clone(),
     )
     .map_err(GenericError::LoggingError)?;
     let logsender = LogSender::new(error_log_sender, info_log_sender, message_log_sender);
