@@ -1,4 +1,4 @@
-//use bitcoin::block_broadcasting::listen_for_incoming_blocks;
+use bitcoin::block_broadcasting::BlockBroadcasting;
 use bitcoin::config::Config;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
@@ -83,19 +83,38 @@ fn main() -> Result<(), GenericError> {
         logsender.info_log_sender.clone(),
         format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
     );
-    /* 
-    listen_for_incoming_blocks(
+    
+    let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
         logsender.clone(),
         pointer_to_nodes,
         headers.clone(),
         blocks.clone(),
-    );*/
-    //println!("SALI DE LA FUNCION!!\n");
+    );
     let _node = Node {
         headers,
         block_chain: blocks,
         utxo_set: vec![],
     };
+
+    loop {
+        let mut input = String::new();
+        
+        match std::io::stdin().read_line(&mut input) {
+            Ok(_) => {
+                let command = input.trim();
+                if command == "exit" {
+                    block_listener.finish().unwrap();
+                    break;
+                }
+                // Resto del código para manejar el comando ingresado
+                println!("Comando ingresado: {}", command);
+            }
+            Err(error) => {
+                println!("Error al leer la entrada: {}", error);
+            }
+        }
+    }
+
     write_in_log(
         logsender.info_log_sender.clone(),
         "TERMINA CORRECTAMENTE EL PROGRAMA!",
