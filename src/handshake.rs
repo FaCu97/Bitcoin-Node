@@ -1,5 +1,7 @@
 use crate::log_writer::{write_in_log, LogSender};
-use crate::messages::message_header::{read_verack_message, write_verack_message, write_sendheaders_message};
+use crate::messages::message_header::{
+    read_verack_message, write_sendheaders_message, write_verack_message,
+};
 use crate::messages::version_message::{get_version_message, VersionMessage};
 use std::error::Error;
 use std::net::{Ipv4Addr, SocketAddr, TcpStream};

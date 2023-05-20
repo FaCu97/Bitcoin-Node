@@ -60,7 +60,7 @@ impl Block {
         hashs_concatenated[32..(32 + 32)].copy_from_slice(&second_hash[..32]);
         *sha256::Hash::hash(&hashs_concatenated).as_byte_array()
     }
-    //funcion que se encarga de reducir los elementos del vector de tx_ids , agruparlos
+    // funcion que se encarga de reducir los elementos del vector de tx_ids , agruparlos
     // de a pares hasearlos y guardarlos nuevamente en un vector el cual sera procesado
     // recursivamente hasta obtener el merkle root hash
     fn recursive_generation_merkle_root(vector: Vec<[u8; 32]>) -> [u8; 32] {

@@ -87,7 +87,8 @@ impl HeaderMessage {
                 log_sender.messege_log_sender.clone(),
                 format!(
                     "IGNORADO -- Recibo: {} -- Nodo: {:?}",
-                    header.command_name, stream.peer_addr()?
+                    header.command_name,
+                    stream.peer_addr()?
                 )
                 .as_str(),
             );
@@ -102,7 +103,8 @@ impl HeaderMessage {
             log_sender.messege_log_sender,
             format!(
                 "Recibo Correctamente: {} -- Nodo: {:?}",
-                command_name, stream.peer_addr()?
+                command_name,
+                stream.peer_addr()?
             )
             .as_str(),
         );

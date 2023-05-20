@@ -159,7 +159,12 @@ impl LogWriter {
         }
         let handle = thread::spawn(move || {
             for log in rx {
-                let date = format!("{}:{}:{:02}", Local::now().hour(), Local::now().minute(), Local::now().second());
+                let date = format!(
+                    "{}:{}:{:02}",
+                    Local::now().hour(),
+                    Local::now().minute(),
+                    Local::now().second()
+                );
                 if let Err(err) = writeln!(file, "{}: {}", date, log) {
                     println!(
                         "Error {} al escribir en el log: {}",

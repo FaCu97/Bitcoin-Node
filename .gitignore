@@ -1,5 +1,5 @@
 target
 .vscode
-/src/error.txt
-/src/info.txt
-/src/message.txt
+/error.txt
+/info.txt
+/message.txt
