@@ -141,13 +141,14 @@ impl LogWriter {
         let mut file = open_log_file(&self.log_file)?;
         let local = Local::now();
         let date = format!(
-            "\n{} Actual date: {}-{}-{} Hour: {:02}:{:02} {:02}\n",
+            "\n{} Actual date: {}-{}-{} Hour: {:02}:{:02}:{:02} {}\n",
             CENTER_DATE_LINE,
             local.day(),
             local.month(),
             local.year(),
             local.hour(),
             local.minute(),
+            local.second(),
             CENTER_DATE_LINE
         );
         if let Err(err) = writeln!(file, "{}", date) {
