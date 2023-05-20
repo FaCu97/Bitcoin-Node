@@ -86,8 +86,9 @@ impl HeaderMessage {
             write_in_log(
                 log_sender.messege_log_sender.clone(),
                 format!(
-                    "Recibo: {} -- Nodo: {:?} -- IGNORADO",
-                    header.command_name, stream
+                    "IGNORADO -- Recibo: {} -- Nodo: {:?}",
+                    header.command_name,
+                    stream.peer_addr()?
                 )
                 .as_str(),
             );
@@ -102,7 +103,8 @@ impl HeaderMessage {
             log_sender.messege_log_sender,
             format!(
                 "Recibo Correctamente: {} -- Nodo: {:?}",
-                command_name, stream
+                command_name,
+                stream.peer_addr()?
             )
             .as_str(),
         );
@@ -147,7 +149,7 @@ pub fn read_verack_message(
 /// y devuelve los bytes que representan ese string (ASCII) seguido de 0x00 para
 /// completar los 12 bytes
 /// little-endian
-fn command_name_to_bytes(command: &String) -> [u8; 12] {
+pub fn command_name_to_bytes(command: &String) -> [u8; 12] {
     let mut command_name_bytes = [0; 12];
     let command_bytes = command.as_bytes();
     command_name_bytes[..command_bytes.len()]
