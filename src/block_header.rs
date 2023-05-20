@@ -81,7 +81,11 @@ impl BlockHeader {
         let nonce_bytes = self.nonce.to_le_bytes();
         marshaled_block_header.extend_from_slice(&nonce_bytes);
     }
-    
+    fn reverse_bytes(bytes: &[u8]) -> Vec<u8> {
+        let mut reversed_bytes = bytes.to_vec();
+        reversed_bytes.reverse();
+        reversed_bytes
+    }
     pub fn hash(&self) -> [u8; 32] {
         let mut block_header_marshaled: Vec<u8> = Vec::new();
         self.marshalling(&mut block_header_marshaled);
@@ -315,9 +319,9 @@ mod tests {
         }
         let expected_hash = sha256d::Hash::hash(&block_header_message_expected);
         let expected_hash_be =  *expected_hash.as_byte_array();
-        let expected_hash_le = BlockHeader::reverse_bytes(&expected_hash_be);
+        // let expected_hash_le = BlockHeader::reverse_bytes(&expected_hash_be);
         let mut hash_expected:[u8;32] = [0;32];
-        hash_expected.copy_from_slice(&expected_hash_le);
+        hash_expected.copy_from_slice(&expected_hash_be);
         let hash: [u8; 32] = block_header.hash();
         assert_eq!(hash,hash_expected )
     }
