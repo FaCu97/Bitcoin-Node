@@ -471,7 +471,7 @@ fn request_blocks_from_node(
     match GetDataMessage::new(inventory).write_to(&mut node) {
         Ok(_) => Ok(()),
         Err(err) => {
-            write_in_log(log_sender.error_log_sender,format!("Error: No puedo pedir {:?} cantidad de bloques del nodo: {:?}. Se los voy a pedir a otro nodo", chunk_llamada.len(), node).as_str());
+            write_in_log(log_sender.error_log_sender,format!("Error: No puedo pedir {:?} cantidad de bloques del nodo: {:?}. Se los voy a pedir a otro nodo", chunk_llamada.len(), node.peer_addr()).as_str());
 
             tx.send(block_headers_thread.to_vec())
                 .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
@@ -500,7 +500,7 @@ fn receive_requested_blocks_from_node(
         let bloque = match BlockMessage::read_from(log_sender.clone(), &mut node) {
             Ok(bloque) => bloque,
             Err(err) => {
-                write_in_log(log_sender.error_log_sender,format!("No puedo descargar {:?} de bloques del nodo: {:?}. Se los voy a pedir a otro nodo y descarto este. Error: {err}", chunk_llamada.len(), node).as_str());
+                write_in_log(log_sender.error_log_sender,format!("No puedo descargar {:?} de bloques del nodo: {:?}. Se los voy a pedir a otro nodo y descarto este. Error: {err}", chunk_llamada.len(), node.peer_addr()).as_str());
                 tx.send(block_headers_thread.to_vec())
                     .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
                 // falló la recepción del mensaje, tengo que intentar con otro nodo
