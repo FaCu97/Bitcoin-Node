@@ -42,7 +42,7 @@ impl VersionMessage {
         log_sender: LogSender,
         stream: &mut TcpStream,
     ) -> Result<VersionMessage, std::io::Error> {
-        let header = HeaderMessage::read_from(log_sender, stream, "version".to_string())
+        let header = HeaderMessage::read_from(log_sender, stream, "version".to_string(), None)
             .map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidData, err.to_string()))?;
         /*
         let mut buffer_num = [0; 24];

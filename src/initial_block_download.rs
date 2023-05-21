@@ -137,7 +137,7 @@ fn download_headers_from_node(
         .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
     // read first 2000 headers from headers message answered from node
     let mut headers_read =
-        HeadersMessage::read_from(log_sender.clone(), &mut node).map_err(|_| {
+        HeadersMessage::read_from(log_sender.clone(), &mut node, None).map_err(|_| {
             DownloadError::ReadNodeError("error al leer primeros 2000 headers".to_string())
         })?;
     // store headers in `global` vec `headers_guard`
@@ -157,7 +157,7 @@ fn download_headers_from_node(
             .write_to(&mut node)
             .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
         // read next 2000 headers (or less if they are the last ones)
-        headers_read = HeadersMessage::read_from(log_sender.clone(), &mut node).map_err(|_| {
+        headers_read = HeadersMessage::read_from(log_sender.clone(), &mut node, None).map_err(|_| {
             DownloadError::ReadNodeError("error al leer headers message".to_string())
         })?;
         validate_headers(log_sender.clone(), headers_read.clone())?;
@@ -640,7 +640,7 @@ fn compare_and_ask_for_last_headers(
         GetHeadersMessage::build_getheaders_message(config.clone(), vec![last_header])
             .write_to(&mut node)
             .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
-        let headers_read = match HeadersMessage::read_from(log_sender.clone(), &mut node) {
+        let headers_read = match HeadersMessage::read_from(log_sender.clone(), &mut node, None) {
             Ok(headers) => headers,
             Err(err) => {
                 write_in_log(

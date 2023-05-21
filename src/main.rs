@@ -62,8 +62,10 @@ fn main() -> Result<(), GenericError> {
     let sockets = Handshake::handshake(config.clone(), logsender.clone(), &active_nodes)
         .map_err(GenericError::HandShakeError)?;
     // Acá iría la descarga de los headers
+
     let pointer_to_nodes = Arc::new(RwLock::new(sockets));
-    let headers_and_blocks =
+    
+     let headers_and_blocks =
         match initial_block_download(config, logsender.clone(), pointer_to_nodes.clone()) {
             Ok(headers_and_blocks) => headers_and_blocks,
             Err(err) => {
@@ -83,18 +85,22 @@ fn main() -> Result<(), GenericError> {
         logsender.info_log_sender.clone(),
         format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
     );
-    
+    let _node = Node {
+        headers: headers.clone(),
+        block_chain: blocks.clone(),
+        utxo_set: vec![],
+    };
+
+
+
+  //  let headers: Vec<_> = Vec::new();
+  //  let blocks: Vec<_> = Vec::new();
     let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
         logsender.clone(),
         pointer_to_nodes,
         headers.clone(),
         blocks.clone(),
     );
-    let _node = Node {
-        headers,
-        block_chain: blocks,
-        utxo_set: vec![],
-    };
 
     loop {
         let mut input = String::new();
@@ -106,8 +112,6 @@ fn main() -> Result<(), GenericError> {
                     block_listener.finish().unwrap();
                     break;
                 }
-                // Resto del código para manejar el comando ingresado
-                println!("Comando ingresado: {}", command);
             }
             Err(error) => {
                 println!("Error al leer la entrada: {}", error);

@@ -3,6 +3,7 @@ use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str::Utf8Error;
 use std::time::Duration;
+use std::sync::{Arc, RwLock};
 
 use crate::log_writer::{write_in_log, LogSender};
 // todo: implementar test de read_from usando mocking
@@ -69,6 +70,7 @@ impl HeaderMessage {
         log_sender: LogSender,
         stream: &mut TcpStream,
         command_name: String,
+        finish: Option<Arc<RwLock<bool>>>
     ) -> Result<Self, Box<dyn std::error::Error>> {
         if command_name == *"block" {
             // will wait a minimum of two more seconds for the stalling node to send the block.
@@ -82,7 +84,7 @@ impl HeaderMessage {
         stream.read_exact(&mut buffer_num)?;
         let mut header = HeaderMessage::from_le_bytes(buffer_num)?;
         // si no se leyo el header que se queria, sigo leyendo hasta encontrarlo
-        while header.command_name != header_command_name {
+        while header.command_name != header_command_name && !is_terminated(finish.clone()) {
             write_in_log(
                 log_sender.messege_log_sender.clone(),
                 format!(
@@ -111,6 +113,14 @@ impl HeaderMessage {
         Ok(header)
     }
 }
+
+pub fn is_terminated(finish: Option<Arc<RwLock<bool>>>) -> bool {
+    match finish {
+        Some(m) => *m.read().unwrap(),
+        None => false,
+    }
+}
+
 
 /// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje verack segun
 /// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error
@@ -142,7 +152,7 @@ pub fn read_verack_message(
     log_sender: LogSender,
     stream: &mut TcpStream,
 ) -> Result<HeaderMessage, Box<dyn std::error::Error>> {
-    HeaderMessage::read_from(log_sender, stream, "verack".to_string())
+    HeaderMessage::read_from(log_sender, stream, "verack".to_string(), None)
 }
 
 /// Recibe un String que representa el nombre del comando del Header Message

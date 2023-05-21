@@ -4,7 +4,7 @@ use crate::{
     block_header::BlockHeader,
     log_writer::{write_in_log, LogSender},
     messages::{
-        headers_message::HeadersMessage,
+        headers_message::{HeadersMessage, is_terminated},
         message_header::{command_name_to_bytes, HeaderMessage},
     },
     node,
@@ -49,6 +49,7 @@ impl Error for BroadcastingError {}
 
 pub struct BlockBroadcasting {
     nodes_handle: Arc<Mutex<Vec<JoinHandle<()>>>>,
+    finish: Arc<RwLock<bool>>
 }
 
 impl BlockBroadcasting {
@@ -59,24 +60,30 @@ impl BlockBroadcasting {
         headers: Vec<BlockHeader>,
         blocks: Vec<Block>,
     ) -> Self {
+        let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<()>> = vec![];
         println!("cantidad de nodos: {:?}", nodes.read().unwrap().len());
-        for _ in 0..nodes.read().unwrap().len() {
-            let node = nodes.write().unwrap().pop().unwrap();
+        let cant_nodos = nodes.read().unwrap().len();
+        for _ in 0..cant_nodos {
+            let node = nodes.try_write().unwrap().pop().unwrap();
             nodes_handle.push(listen_for_incoming_blocks_from_node(
                 log_sender.clone(),
                 node,
                 headers.clone(),
                 blocks.clone(),
+                finish.clone(),
             ))
         }
         let nodes_handle_mutex = Arc::new(Mutex::new(nodes_handle));
         BlockBroadcasting {
             nodes_handle: nodes_handle_mutex,
+            finish,
         }
     } 
     pub fn finish(&self) -> Result<(), BroadcastingError>{
-        for i in 0..self.nodes_handle.lock().unwrap().len()  {
+        *self.finish.write().unwrap() = true;
+        let cant_nodos = self.nodes_handle.lock().unwrap().len();
+        for _ in 0..cant_nodos  {
             self.nodes_handle.lock().unwrap().pop().unwrap().join().unwrap();
          //   handle.join().unwrap();
         }
@@ -84,7 +91,6 @@ impl BlockBroadcasting {
     }
 }
 
-    
 
 
 
@@ -93,14 +99,17 @@ pub fn listen_for_incoming_blocks_from_node(
     mut node: TcpStream,
     headers: Vec<BlockHeader>,
     blocks: Vec<Block>,
+    finish: Arc<RwLock<bool>>
 ) -> JoinHandle<()> {
     let log_sender_clone = log_sender.clone();
     let t = thread::spawn(move || {
-        loop {
+        while !is_terminated(Some(finish.clone())) {
             println!("Estoy esperando leer algo\n");
-            let header = HeadersMessage::read_from(log_sender_clone.clone(), &mut node).unwrap();
+            let header = HeadersMessage::read_from(log_sender_clone.clone(), &mut node, Some(finish.clone())).unwrap();
             // pedir bloques
         }
     });
     t
 }
+
+
