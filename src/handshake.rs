@@ -67,9 +67,8 @@ impl Handshake {
             let configuracion = config.clone();
             let log_sender_clone = log_sender.clone();
             let sockets: Arc<RwLock<Vec<TcpStream>>> = Arc::clone(&sockets_lock);
-            thread_handles.push(thread::spawn(move || -> Result<(), HandShakeError> {
-                conectar_a_nodo(configuracion, log_sender_clone, sockets, &chunk)?;
-                Ok(())
+            thread_handles.push(thread::spawn(move || {
+                conectar_a_nodo(configuracion, log_sender_clone, sockets, &chunk)
             }));
         }
 
