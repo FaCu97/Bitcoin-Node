@@ -45,10 +45,12 @@ impl fmt::Display for BroadcastingError {
 }
 
 impl Error for BroadcastingError {}
-#[derive(Debug)]
 
+type BroadcastingResult = Result<(), BroadcastingError>;
+
+#[derive(Debug)]
 pub struct BlockBroadcasting {
-    nodes_handle: Arc<Mutex<Vec<JoinHandle<()>>>>,
+    nodes_handle: Arc<Mutex<Vec<JoinHandle<BroadcastingResult>>>>,
     finish: Arc<RwLock<bool>>
 }
 
@@ -61,7 +63,7 @@ impl BlockBroadcasting {
         blocks: Vec<Block>,
     ) -> Self {
         let finish = Arc::new(RwLock::new(false));
-        let mut nodes_handle: Vec<JoinHandle<()>> = vec![];
+        let mut nodes_handle: Vec<JoinHandle<BroadcastingResult>> = vec![];
         println!("cantidad de nodos: {:?}", nodes.read().unwrap().len());
         let cant_nodos = nodes.read().unwrap().len();
         for _ in 0..cant_nodos {
@@ -80,7 +82,7 @@ impl BlockBroadcasting {
             finish,
         }
     } 
-    pub fn finish(&self) -> Result<(), BroadcastingError>{
+    pub fn finish(&self) -> BroadcastingResult {
         *self.finish.write().unwrap() = true;
         let cant_nodos = self.nodes_handle.lock().unwrap().len();
         for _ in 0..cant_nodos  {
@@ -100,16 +102,44 @@ pub fn listen_for_incoming_blocks_from_node(
     headers: Vec<BlockHeader>,
     blocks: Vec<Block>,
     finish: Arc<RwLock<bool>>
-) -> JoinHandle<()> {
+) -> JoinHandle<BroadcastingResult> {
     let log_sender_clone = log_sender.clone();
-    let t = thread::spawn(move || {
+    let t = thread::spawn(move || -> BroadcastingResult {
         while !is_terminated(Some(finish.clone())) {
             println!("Estoy esperando leer algo\n");
-            let header = HeadersMessage::read_from(log_sender_clone.clone(), &mut node, Some(finish.clone())).unwrap();
+            let new_headers = match HeadersMessage::read_from(log_sender_clone.clone(), &mut node, Some(finish.clone())){
+              Ok(headers) => headers,
+              Err(err) => {
+                write_in_log(
+                    log_sender.error_log_sender.clone(),
+                    format!("Error al recibir headers durante broadcasting. Error: {}", err).as_str(),
+                );
+                continue;
+              }  
+            };
+            if is_terminated(Some(finish.clone())){
+                return Ok(());
+            }
+            for header in new_headers {
+                if !header.validate() {
+                    write_in_log(
+                        log_sender.error_log_sender.clone(),
+                        "Error en validacion de la proof of work de header",
+                    );
+                } else {
+                    let last_header = headers.last().ok_or("No se pudo obtener el último header")
+                    .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
+                    if *last_header != header {
+                        println!("%%%%%%%    HEADERS SON DISTINTOS!!!    %%%%%%%")
+                    }
+                }
+            }
+            
             // pedir bloques
+
         }
+        Ok(())
     });
     t
 }
-
 

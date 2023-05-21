@@ -65,26 +65,15 @@ fn main() -> Result<(), GenericError> {
 
     let pointer_to_nodes = Arc::new(RwLock::new(sockets));
     
-     let headers_and_blocks =
-        match initial_block_download(config, logsender.clone(), pointer_to_nodes.clone()) {
-            Ok(headers_and_blocks) => headers_and_blocks,
-            Err(err) => {
-                write_in_log(
-                    logsender.error_log_sender,
-                    format!("Error al descargar los bloques: {}", err).as_str(),
-                );
-                return Err(GenericError::DownloadError(err));
-            }
-        };
+    let headers_and_blocks = initial_block_download(config, logsender.clone(), pointer_to_nodes.clone())
+        .map_err(|err| {
+            write_in_log(
+                logsender.error_log_sender.clone(),
+                format!("Error al descargar los bloques: {}", err).as_str(),
+            );
+            GenericError::DownloadError(err)
+        })?;
     let (headers, blocks) = headers_and_blocks;
-    write_in_log(
-        logsender.info_log_sender.clone(),
-        format!("TOTAL DE HEADERS DESCARGADOS: {}", headers.len()).as_str(),
-    );
-    write_in_log(
-        logsender.info_log_sender.clone(),
-        format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
-    );
     let _node = Node {
         headers: headers.clone(),
         block_chain: blocks.clone(),
@@ -102,9 +91,26 @@ fn main() -> Result<(), GenericError> {
         blocks.clone(),
     );
 
+    if let Err(err) = handle_input(block_listener) {
+        println!("Error al leer la entrada por terminal. {}", err);
+    }
+
+    write_in_log(
+        logsender.info_log_sender.clone(),
+        "TERMINA CORRECTAMENTE EL PROGRAMA!",
+    );
+    shutdown_loggers(logsender, error_handler, info_handler, message_handler)
+        .map_err(GenericError::LoggingError)?;
+    Ok(())
+}
+
+
+
+
+fn handle_input(block_listener: BlockBroadcasting) -> Result<(), std::io::Error> {
     loop {
         let mut input = String::new();
-        
+
         match std::io::stdin().read_line(&mut input) {
             Ok(_) => {
                 let command = input.trim();
@@ -119,12 +125,6 @@ fn main() -> Result<(), GenericError> {
         }
     }
 
-    write_in_log(
-        logsender.info_log_sender.clone(),
-        "TERMINA CORRECTAMENTE EL PROGRAMA!",
-    );
-    shutdown_loggers(logsender, error_handler, info_handler, message_handler)
-        .map_err(GenericError::LoggingError)?;
     Ok(())
 }
 

@@ -568,7 +568,7 @@ pub fn initial_block_download(
         Arc::clone(&pointer_to_blocks),
     );
     let log_sender_clone = log_sender.clone();
-    let headers_thread = thread::spawn(move || {
+    let headers_thread = thread::spawn(move || 
         download_headers(
             config_cloned,
             log_sender_clone,
@@ -577,20 +577,21 @@ pub fn initial_block_download(
             pointer_to_blocks_clone,
             tx,
         )
-    });
+    );
     let pointer_to_headers_clone_for_blocks = Arc::clone(&pointer_to_headers);
     let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
-    let blocks_thread = thread::spawn(move || {
+    let log_sender_clone = log_sender.clone();
+    let blocks_thread = thread::spawn(move || 
         download_blocks(
             config.clone(),
-            log_sender,
+            log_sender_clone,
             nodes,
             pointer_to_blocks_clone,
             pointer_to_headers_clone_for_blocks,
             rx,
             tx_cloned,
         )
-    });
+    );
     headers_thread
         .join()
         .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))??;
@@ -603,6 +604,15 @@ pub fn initial_block_download(
     let blocks = &*pointer_to_blocks
         .read()
         .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?;
+    write_in_log(
+        log_sender.info_log_sender.clone(),
+        format!("TOTAL DE HEADERS DESCARGADOS: {}", headers.len()).as_str(),
+    );
+    write_in_log(
+        log_sender.info_log_sender,
+        format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
+    );
+    
     Ok((headers.clone(), blocks.clone()))
 }
 
