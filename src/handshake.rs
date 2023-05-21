@@ -41,6 +41,9 @@ impl Error for HandShakeError {}
 pub struct Handshake;
 
 impl Handshake {
+    /// Realiza la conexión a los nodos con múltiples threads
+    /// Recibe las direcciones IP de los nodos.
+    /// Devuelve un vector de sockets o un error si no se pudo completar.
     pub fn handshake(
         config: Arc<Config>,
         log_sender: LogSender,
@@ -67,9 +70,8 @@ impl Handshake {
             let configuracion = config.clone();
             let log_sender_clone = log_sender.clone();
             let sockets: Arc<RwLock<Vec<TcpStream>>> = Arc::clone(&sockets_lock);
-            thread_handles.push(thread::spawn(move || -> Result<(), HandShakeError> {
-                conectar_a_nodo(configuracion, log_sender_clone, sockets, &chunk)?;
-                Ok(())
+            thread_handles.push(thread::spawn(move || {
+                connect_to_nodes(configuracion, log_sender_clone, sockets, &chunk)
             }));
         }
 
@@ -94,9 +96,10 @@ impl Handshake {
     }
 }
 
-// los threads no pueden manejar un dyn Error
-// En el libro devuelve thread::Result<std::io::Result<()>>
-fn conectar_a_nodo(
+/// Realiza la conexión con todos los nodos de la lista recibida por parámetro.
+/// Guarda el los mismos en la lista de sockets recibida.
+/// En caso de no poder conectarse, continua intentando con el siguiente.
+fn connect_to_nodes(
     configuracion: Arc<Config>,
     log_sender: LogSender,
     sockets: Arc<RwLock<Vec<TcpStream>>>,
@@ -122,6 +125,9 @@ fn conectar_a_nodo(
     Ok(())
 }
 
+/// Realiza la conexión con un nodo.
+/// Envía y recibe los mensajes necesarios para establecer la conexión
+/// De vuelve el socket o un error
 fn connect_to_node(
     config: Arc<Config>,
     log_sender: LogSender,
