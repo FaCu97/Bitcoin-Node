@@ -1,5 +1,5 @@
-use bitcoin::block::Block;
-use bitcoin::block_header::BlockHeader;
+use bitcoin::blocks::block::Block;
+use bitcoin::blocks::block_header::BlockHeader;
 //use bitcoin::block_broadcasting::listen_for_incoming_blocks;
 use bitcoin::config::Config;
 use bitcoin::handshake::{HandShakeError, Handshake};
