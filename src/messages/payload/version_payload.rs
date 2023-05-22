@@ -98,10 +98,10 @@ fn get_nonce_from_bytes(bytes: &[u8], counter: &mut usize) -> u64 {
 }
 /// recibe un vector de bytes y un contador que representa las posiciones leidas del vector y devuelve
 /// un CompactSizeUint deserializado de los bytes, que representa el campo "user_agent_bytes" del payload del mensaje version e incrementa el contador en la cantidad
-/// de bytes leidos (variable)
+/// de bytes leidos (variable). si hay error en el unmarshalling devuelve un CompactSizeUnit en 0
 fn get_user_agent_bytes_from_bytes(bytes: &[u8], counter: &mut usize) -> CompactSizeUint {
-    let hola = CompactSizeUint::unmarshalling(bytes, &mut *counter);
-    match hola {
+    let user_agent_bytes = CompactSizeUint::unmarshalling(bytes, &mut *counter);
+    match user_agent_bytes {
         Ok(valor) => valor,
         Err(_e) => CompactSizeUint::new(0),
     }

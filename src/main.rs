@@ -7,8 +7,7 @@ use bitcoin::logwriter::log_writer::{
 };
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
-use bitcoin_hashes::{sha256d, Hash};
-//use bitcoin_hashes::hex;
+use hex::ToHex;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
@@ -39,15 +38,6 @@ impl fmt::Display for GenericError {
 }
 
 impl Error for GenericError {}
-use hex::{self, ToHex};
-
-fn string_to_bytes(input: &str) -> Result<[u8; 32], hex::FromHexError> {
-    let bytes = hex::decode(input)?;
-    let mut result = [0; 32];
-    result.copy_from_slice(&bytes[..32]);
-    Ok(result)
-}
-
 
 fn main() -> Result<(), GenericError> {
     let args: Vec<String> = env::args().collect();
@@ -89,7 +79,7 @@ fn main() -> Result<(), GenericError> {
             },
         )?;
     let (headers, blocks) = headers_and_blocks;
-    let _node = Node {
+    let node = Node {
         headers: headers.clone(),
         block_chain: blocks.clone(),
         utxo_set: vec![],
@@ -109,6 +99,36 @@ fn main() -> Result<(), GenericError> {
         println!("Error al leer la entrada por terminal. {}", err);
     }
 
+    // esta parte es para explicar el comportamiento en la demo !! 
+    let mut header_1 = node.headers[0].hash();
+    header_1.reverse();
+    let mut header_2 = node.headers[1].hash();
+    header_2.reverse();
+    let header_1_hex=header_1.encode_hex::<String>();
+    let header_2_hex=header_2.encode_hex::<String>();
+    println!("header 1 : {}",header_1_hex);
+    println!("header 2 : {}",header_2_hex);
+
+    
+    let mut bloque_1 = node.block_chain[0].block_header.hash();
+    bloque_1.reverse();
+    let bloque1_hex: String = bloque_1.encode_hex::<String>();
+    let validate = node.block_chain[0].validate();
+    println!("validate devuelve: {}, {}",validate.0,validate.1);
+    println!("bloque : {}",bloque1_hex);
+    println!("cantidad de transacciones en el bloque : {}",node.block_chain[0].txn_count.decoded_value());
+    println!("version del bloque : {:x}",node.block_chain[0].block_header.version);
+    println!("nbits del bloque : {:x}",node.block_chain[0].block_header.n_bits);
+    println!("nonce del bloque : {:x}",node.block_chain[0].block_header.nonce);
+    let transaccion = &node.block_chain[0].txn[0];
+    let mut hash = transaccion.hash();
+    hash.reverse();
+    let hash_hex: String = hash.encode_hex::<String>();
+    println!("hash de la primera transaccion : {}",hash_hex);
+    println!("version de la transaccion : {}",transaccion.version);
+    println!("inputs de la transaccion : {}",transaccion.txin_count.decoded_value());
+    println!("outputs de la transaccion : {}",transaccion.txout_count.decoded_value());
+    println!("lock time de la transaccion : {}",transaccion.lock_time);
     write_in_log(
         logsender.info_log_sender.clone(),
         "TERMINA CORRECTAMENTE EL PROGRAMA!",

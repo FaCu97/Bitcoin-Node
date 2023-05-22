@@ -1,4 +1,4 @@
-use bitcoin_hashes::{Hash, sha256d};
+use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{compact_size_uint::CompactSizeUint, transactions::transaction::Transaction};
 
@@ -36,6 +36,14 @@ impl Block {
             txn,
         })
     }
+    fn marshalling(&self, bytes: &mut Vec<u8>) {
+        self.block_header.marshalling(bytes);
+        bytes.extend_from_slice(&self.txn_count.marshalling());
+        for tx in &self.txn {
+            tx.marshalling(bytes);
+        }
+    }
+
     // Esta funcion se encarga de validar el bloque , primero realiza la proof of work
     // luego realiza la proof of inclusion sobre su lista de transacciones
     pub fn validate(&self) -> (bool, &'static str) {
@@ -45,22 +53,29 @@ impl Block {
         }
         //proof of inclusion
         let merkle_root_hash: [u8; 32] = self.generate_merkle_root();
-        if !self.block_header.is_same_merkle_root_hash(&merkle_root_hash) {
+        if !self
+            .block_header
+            .is_same_merkle_root_hash(&merkle_root_hash)
+        {
             return (
                 false,
                 "El merkle root generado es distinto al provisto por el block header",
             );
         }
+        let mut weight = Vec::new();
+        self.marshalling(&mut weight);
+        if weight.len() > 1048576 {
+            return (false, "El bloque ocupa mas de un megabyte");
+        }
         (true, "El bloque es valido")
     }
-    
+
     // Esta funcion se encarga de concatenar los hashes recibidos y luego hashearlos
     fn concatenate_and_hash(first_hash: [u8; 32], second_hash: [u8; 32]) -> [u8; 32] {
         let mut hashs_concatenated: [u8; 64] = [0; 64];
         hashs_concatenated[..32].copy_from_slice(&first_hash[..32]);
         hashs_concatenated[32..(32 + 32)].copy_from_slice(&second_hash[..32]);
         *sha256d::Hash::hash(&hashs_concatenated).as_byte_array()
-
     }
     // funcion que se encarga de reducir los elementos del vector de tx_ids , agruparlos
     // de a pares hasearlos y guardarlos nuevamente en un vector el cual sera procesado
@@ -106,12 +121,13 @@ impl Block {
     // construir el merkle root en el siguiente orden : desde las hojas hacia la raiz
     pub fn merkle_proof_of_inclusion(
         &self,
-        transaction_to_find: &Transaction,
+        transaction_to_find: [u8; 32],
         vector_hash: Vec<[u8; 32]>,
     ) -> bool {
-        let mut current_hash: [u8; 32] = transaction_to_find.hash();
+        //let mut current_hash: [u8; 32] = transaction_to_find.hash();
+        let mut current_hash = transaction_to_find;
         for hash in vector_hash {
-            current_hash = Self::concatenate_and_hash(hash, current_hash);
+            current_hash = Self::concatenate_and_hash(current_hash,hash);
         }
         current_hash == self.generate_merkle_root()
     }
@@ -119,6 +135,10 @@ impl Block {
 
 #[cfg(test)]
 mod test {
+    use std::{vec};
+
+    use hex::ToHex;
+
     use crate::{
         blocks::block_header::BlockHeader,
         compact_size_uint::CompactSizeUint,
@@ -126,6 +146,13 @@ mod test {
     };
 
     use super::Block;
+
+    fn string_to_bytes(input: &str) -> Result<[u8; 32], hex::FromHexError> {
+        let bytes = hex::decode(input)?;
+        let mut result = [0; 32];
+        result.copy_from_slice(&bytes[..32]);
+        Ok(result)
+    }
 
     fn crear_txins(cantidad: u128) -> Vec<TxIn> {
         let mut tx_in: Vec<TxIn> = Vec::new();
@@ -355,6 +382,45 @@ mod test {
     }
 
     #[test]
+    fn test_generacion_correcta_del_merkle_root_hash_de_bloque_de_la_mainnet() {
+        // bloque 00000000000000127a638dfa7b517f1045217884cb986ab8f653b8be0ab37447
+        // esos reverse son parapasar el verdadero id ya que en la pagina los hashes
+        // estan cargados en LE
+        // link a la pagina : https://tbtc.bitaps.com/00000000000000127a638dfa7b517f1045217884cb986ab8f653b8be0ab37447
+        let mut transactions: Vec<[u8; 32]> = Vec::new();
+        let mut coinbase =
+            string_to_bytes("129f32d171b2a0c4ad5fd21f7504ae483845d311214f79eb927db49dfb28b838")
+                .unwrap();
+        coinbase.reverse();
+        transactions.push(coinbase);
+        let mut tx_1 =
+            string_to_bytes("aefeb6fb10f2f6a63a3cd4f70f1b7f8b193881a10ae5832a595e938d1630f1b9")
+                .unwrap();
+        tx_1.reverse();
+        transactions.push(tx_1);
+        let mut tx_2 =
+            string_to_bytes("4b0d8fd869e252803909aed9642bc8af28ebd18f2c4045b9b41679eda0ff79dd")
+                .unwrap();
+        tx_2.reverse();
+        transactions.push(tx_2);
+        let mut tx_3 =
+            string_to_bytes("dbd558c896afe59a6dce2dc26bc32f4679b336ff0b1c0f2f8aaee846c5732333")
+                .unwrap();
+        tx_3.reverse();
+        transactions.push(tx_3);
+        let mut tx_4 =
+            string_to_bytes("88030de1d5f1b023893f8258df1796863756d99eef5c91a5528362f73497ac51")
+                .unwrap();
+        tx_4.reverse();
+        transactions.push(tx_4);
+        let mut merkle_root = Block::recursive_generation_merkle_root(transactions);
+        merkle_root.reverse();
+        let hash_generated = merkle_root.encode_hex::<String>();
+        let hash_expected = "bc689ae06069c1381eb92aabef250bb576d8aac8aedec9b7533a37351b6dedf8";
+        assert_eq!(hash_generated, hash_expected);
+    }
+
+    #[test]
     fn test_merkle_proof_of_inclusion_funciona_correctamente() {
         let block_header: BlockHeader = BlockHeader {
             version: (0x30201000),
@@ -406,16 +472,16 @@ mod test {
             tx_out_count,
             lock_time,
         ));
-        let first_hash: [u8; 32] = txn[0].hash();
-        let second_hash: [u8; 32] = txn[1].hash();
-        let third_hash: [u8; 32] = txn[2].hash();
-        let expected_hash_1 = Block::concatenate_and_hash(first_hash, second_hash);
+        let first_hash: [u8; 32] = txn[1].hash();
+        let second_hash: [u8; 32] = txn[2].hash();
+        let third_hash: [u8; 32] = txn[3].hash();
+        let expected_hash_1 = Block::concatenate_and_hash(second_hash, third_hash);
         let mut vector: Vec<[u8; 32]> = Vec::new();
-        vector.push(third_hash);
+        vector.push(first_hash);
         vector.push(expected_hash_1);
 
         let block: Block = Block::new(block_header, txn_count_bytes, txn);
-        let hola = &block.txn[3];
-        assert!(block.merkle_proof_of_inclusion(hola, vector));
+        let searched_transaction = &block.txn[0].hash();
+        assert!(block.merkle_proof_of_inclusion(*searched_transaction, vector));
     }
 }

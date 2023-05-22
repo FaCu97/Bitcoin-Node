@@ -53,7 +53,9 @@ impl TxIn {
         }
         let mut signature_script: Vec<u8> = Vec::new();
         let amount_bytes_to_read: usize = script_bytes.decoded_value() as usize;
-        signature_script.extend_from_slice(&bytes[*offset..(*offset + amount_bytes_to_read - bytes_for_height)]);
+        signature_script.extend_from_slice(
+            &bytes[*offset..(*offset + amount_bytes_to_read - bytes_for_height)],
+        );
         *offset += amount_bytes_to_read - bytes_for_height;
         let mut sequence_bytes: [u8; 4] = [0; 4];
         sequence_bytes.copy_from_slice(&bytes[*offset..*offset + 4]);
@@ -87,8 +89,9 @@ impl TxIn {
         let script_bytes: Vec<u8> = self.script_bytes.marshalling();
         bytes.extend_from_slice(&script_bytes);
         if self.is_coinbase() {
-            // este unwrap es valido ?? Estamos chequeando previamente que no sea None
-            bytes.extend_from_slice(self.height.as_ref().unwrap());
+            if let Some(height) = &self.height {
+                bytes.extend_from_slice(height)
+            }
         }
         bytes.extend_from_slice(&self.signature_script);
         let sequence_bytes: [u8; 4] = self.sequence.to_le_bytes();
