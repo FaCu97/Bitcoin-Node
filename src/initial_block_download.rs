@@ -136,8 +136,8 @@ fn download_headers_from_node(
     .write_to(&mut node)
     .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
     // read first 2000 headers from headers message answered from node
-    let mut headers_read: Vec<BlockHeader> =
-        HeadersMessage::read_from(log_sender.clone(), &mut node).map_err(|_| {
+    let mut headers_read =
+        HeadersMessage::read_from(log_sender.clone(), &mut node, None).map_err(|_| {
             DownloadError::ReadNodeError("error al leer primeros 2000 headers".to_string())
         })?;
     // store headers in `global` vec `headers_guard`
@@ -157,9 +157,10 @@ fn download_headers_from_node(
             .write_to(&mut node)
             .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
         // read next 2000 headers (or less if they are the last ones)
-        headers_read = HeadersMessage::read_from(log_sender.clone(), &mut node).map_err(|_| {
-            DownloadError::ReadNodeError("error al leer headers message".to_string())
-        })?;
+        headers_read =
+            HeadersMessage::read_from(log_sender.clone(), &mut node, None).map_err(|_| {
+                DownloadError::ReadNodeError("error al leer headers message".to_string())
+            })?;
         validate_headers(log_sender.clone(), headers_read.clone())?;
         if headers
             .read()
@@ -196,7 +197,7 @@ fn download_headers_from_node(
             .map_err(|err| DownloadError::LockError(err.to_string()))?
             .extend_from_slice(&headers_read);
         println!(
-            "{:?} headers descargados\n",
+            "{:?} headers descargados",
             headers
                 .read()
                 .map_err(|err| DownloadError::LockError(err.to_string()))?
@@ -594,29 +595,30 @@ pub fn initial_block_download(
         Arc::clone(&pointer_to_blocks),
     );
     let log_sender_clone = log_sender.clone();
-    let headers_thread = thread::spawn(move || 
+    let headers_thread = thread::spawn(move || {
         download_headers(
             config_cloned,
-            log_sender_clone,
+            log_sender_clone.clone(),
             pointer_to_nodes_clone,
             pointer_to_headers_clone,
             pointer_to_blocks_clone,
             tx,
         )
-    );
+    });
     let pointer_to_headers_clone_for_blocks = Arc::clone(&pointer_to_headers);
     let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
-    let blocks_thread = thread::spawn(move || 
+    let log_sender_clone = log_sender.clone();
+    let blocks_thread = thread::spawn(move || {
         download_blocks(
             config.clone(),
-            log_sender,
+            log_sender_clone,
             nodes,
             pointer_to_blocks_clone,
             pointer_to_headers_clone_for_blocks,
             rx,
             tx_cloned,
         )
-    );
+    });
     headers_thread
         .join()
         .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))??;
@@ -629,6 +631,15 @@ pub fn initial_block_download(
     let blocks = &*pointer_to_blocks
         .read()
         .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?;
+    write_in_log(
+        log_sender.info_log_sender.clone(),
+        format!("TOTAL DE HEADERS DESCARGADOS: {}", headers.len()).as_str(),
+    );
+    write_in_log(
+        log_sender.info_log_sender,
+        format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
+    );
+
     Ok((headers.clone(), blocks.clone()))
 }
 
@@ -703,7 +714,7 @@ fn compare_and_ask_for_last_headers(
         GetHeadersMessage::build_getheaders_message(config.clone(), vec![last_header])
             .write_to(&mut node)
             .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
-        let headers_read = match HeadersMessage::read_from(log_sender.clone(), &mut node) {
+        let headers_read = match HeadersMessage::read_from(log_sender.clone(), &mut node, None) {
             Ok(headers) => headers,
             Err(err) => {
                 write_in_log(

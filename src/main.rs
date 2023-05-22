@@ -1,3 +1,4 @@
+use bitcoin::block_broadcasting::{BlockBroadcasting, BroadcastingError};
 use bitcoin::config::Config;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
@@ -18,6 +19,7 @@ pub enum GenericError {
     ConfigError(Box<dyn Error>),
     ConnectionToDnsError(ConnectionToDnsError),
     LoggingError(LoggingError),
+    BroadcastingError(BroadcastingError),
 }
 
 impl fmt::Display for GenericError {
@@ -30,6 +32,7 @@ impl fmt::Display for GenericError {
                 write!(f, "CONNECTION TO DNS ERROR: {}", msg)
             }
             GenericError::LoggingError(msg) => write!(f, "LOGGING ERROR: {}", msg),
+            GenericError::BroadcastingError(msg) => write!(f, "BLOCK BROADCASTING ERROR: {}", msg),
         }
     }
 }
@@ -62,63 +65,42 @@ fn main() -> Result<(), GenericError> {
     let sockets = Handshake::handshake(config.clone(), logsender.clone(), &active_nodes)
         .map_err(GenericError::HandShakeError)?;
     // Acá iría la descarga de los headers
+
     let pointer_to_nodes = Arc::new(RwLock::new(sockets));
+
     let headers_and_blocks =
-        match initial_block_download(config, logsender.clone(), pointer_to_nodes) {
-            Ok(headers_and_blocks) => headers_and_blocks,
-            Err(err) => {
+        initial_block_download(config, logsender.clone(), pointer_to_nodes.clone()).map_err(
+            |err| {
                 write_in_log(
-                    logsender.error_log_sender,
+                    logsender.error_log_sender.clone(),
                     format!("Error al descargar los bloques: {}", err).as_str(),
                 );
-                return Err(GenericError::DownloadError(err));
-            }
-        };
+                GenericError::DownloadError(err)
+            },
+        )?;
     let (headers, blocks) = headers_and_blocks;
-    write_in_log(
-        logsender.info_log_sender.clone(),
-        format!("TOTAL DE HEADERS DESCARGADOS: {}", headers.len()).as_str(),
-    );
-    write_in_log(
-        logsender.info_log_sender.clone(),
-        format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
-    );
     let node = Node {
-        headers,
-        block_chain: blocks,
+        headers: headers.clone(),
+        block_chain: blocks.clone(),
         utxo_set: vec![],
     };
 
-    // esta parte es para explicar el comportamiento en la demo !! 
-    let mut header_1 = node.headers[0].hash();
-    header_1.reverse();
-    let mut header_2 = node.headers[1].hash();
-    header_2.reverse();
-    let header_1_hex=header_1.encode_hex::<String>();
-    let header_2_hex=header_2.encode_hex::<String>();
-    println!("header 1 : {}",header_1_hex);
-    println!("header 2 : {}",header_2_hex);
+    //  let headers: Vec<_> = Vec::new();
+    //  let blocks: Vec<_> = Vec::new();
+    let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
+        logsender.clone(),
+        pointer_to_nodes,
+        Arc::new(RwLock::new(headers)),
+        Arc::new(RwLock::new(blocks)),
+    )
+    .map_err(GenericError::BroadcastingError)?;
 
-    
-    let mut bloque_1 = node.block_chain[0].block_header.hash();
-    bloque_1.reverse();
-    let bloque1_hex: String = bloque_1.encode_hex::<String>();
-    let validate = node.block_chain[0].validate();
-    println!("validate devuelve: {}, {}",validate.0,validate.1);
-    println!("bloque : {}",bloque1_hex);
-    println!("cantidad de transacciones en el bloque : {}",node.block_chain[0].txn_count.decoded_value());
-    println!("version del bloque : {:x}",node.block_chain[0].block_header.version);
-    println!("nbits del bloque : {:x}",node.block_chain[0].block_header.n_bits);
-    println!("nonce del bloque : {:x}",node.block_chain[0].block_header.nonce);
-    let transaccion = &node.block_chain[0].txn[0];
-    let mut hash = transaccion.hash();
-    hash.reverse();
-    let hash_hex: String = hash.encode_hex::<String>();
-    println!("hash de la primera transaccion : {}",hash_hex);
-    println!("version de la transaccion : {}",transaccion.version);
-    println!("inputs de la transaccion : {}",transaccion.txin_count.decoded_value());
-    println!("outputs de la transaccion : {}",transaccion.txout_count.decoded_value());
-    println!("lock time de la transaccion : {}",transaccion.lock_time);
+    if let Err(err) = handle_input(block_listener) {
+        println!("Error al leer la entrada por terminal. {}", err);
+    }
+
+    // esta parte es para explicar el comportamiento en la demo !!
+    mostrar_comportamiento_del_nodo(node);
     write_in_log(
         logsender.info_log_sender.clone(),
         "TERMINA CORRECTAMENTE EL PROGRAMA!",
@@ -126,6 +108,78 @@ fn main() -> Result<(), GenericError> {
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
         .map_err(GenericError::LoggingError)?;
     Ok(())
+}
+
+fn handle_input(block_listener: BlockBroadcasting) -> Result<(), GenericError> {
+    loop {
+        let mut input = String::new();
+
+        match std::io::stdin().read_line(&mut input) {
+            Ok(_) => {
+                let command = input.trim();
+                if command == "exit" {
+                    block_listener
+                        .finish()
+                        .map_err(GenericError::BroadcastingError)?;
+                    break;
+                }
+            }
+            Err(error) => {
+                println!("Error al leer la entrada: {}", error);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn mostrar_comportamiento_del_nodo(node: Node) {
+    let mut header_1 = node.headers[0].hash();
+    header_1.reverse();
+    let mut header_2 = node.headers[1].hash();
+    header_2.reverse();
+    let header_1_hex = header_1.encode_hex::<String>();
+    let header_2_hex = header_2.encode_hex::<String>();
+    println!("header 1 : {}", header_1_hex);
+    println!("header 2 : {}", header_2_hex);
+
+    let mut bloque_1 = node.block_chain[0].block_header.hash();
+    bloque_1.reverse();
+    let bloque1_hex: String = bloque_1.encode_hex::<String>();
+    let validate = node.block_chain[0].validate();
+    println!("validate devuelve: {}, {}", validate.0, validate.1);
+    println!("bloque : {}", bloque1_hex);
+    println!(
+        "cantidad de transacciones en el bloque : {}",
+        node.block_chain[0].txn_count.decoded_value()
+    );
+    println!(
+        "version del bloque : {:x}",
+        node.block_chain[0].block_header.version
+    );
+    println!(
+        "nbits del bloque : {:x}",
+        node.block_chain[0].block_header.n_bits
+    );
+    println!(
+        "nonce del bloque : {:x}",
+        node.block_chain[0].block_header.nonce
+    );
+    let transaccion = &node.block_chain[0].txn[0];
+    let mut hash = transaccion.hash();
+    hash.reverse();
+    let hash_hex: String = hash.encode_hex::<String>();
+    println!("hash de la primera transaccion : {}", hash_hex);
+    println!("version de la transaccion : {}", transaccion.version);
+    println!(
+        "inputs de la transaccion : {}",
+        transaccion.txin_count.decoded_value()
+    );
+    println!(
+        "outputs de la transaccion : {}",
+        transaccion.txout_count.decoded_value()
+    );
+    println!("lock time de la transaccion : {}", transaccion.lock_time);
 }
 
 #[cfg(test)]

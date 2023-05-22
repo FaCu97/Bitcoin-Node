@@ -22,7 +22,7 @@ impl BlockMessage {
         log_sender: LogSender,
         stream: &mut TcpStream,
     ) -> Result<Block, Box<dyn std::error::Error>> {
-        let header = HeaderMessage::read_from(log_sender, stream, "block".to_string())?;
+        let header = HeaderMessage::read_from(log_sender, stream, "block".to_string(), None)?;
         //println!("Header recibido: {:?}\n", header);
         let payload_size = header.payload_size as usize;
         let mut buffer_num = vec![0; payload_size];
