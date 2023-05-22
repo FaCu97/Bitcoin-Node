@@ -1,6 +1,6 @@
 use std::{error::Error, io::Read, net::TcpStream};
 
-use crate::{logwriter::log_writer::{LogSender}, block::Block};
+use crate::{block::Block, logwriter::log_writer::LogSender};
 
 use super::message_header::HeaderMessage;
 

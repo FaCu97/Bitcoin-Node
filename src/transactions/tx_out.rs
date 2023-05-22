@@ -74,7 +74,7 @@ impl TxOut {
 
 #[cfg(test)]
 mod tests {
-    use crate::{compact_size_uint::CompactSizeUint};
+    use crate::compact_size_uint::CompactSizeUint;
 
     use super::TxOut;
 

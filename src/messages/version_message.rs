@@ -1,7 +1,7 @@
 use super::message_header::*;
-use super::payload::version_payload::{VersionPayload, get_version_payload};
+use super::payload::version_payload::{get_version_payload, VersionPayload};
 use crate::config::Config;
-use crate::logwriter::log_writer::{ LogSender};
+use crate::logwriter::log_writer::LogSender;
 use std::error::Error;
 use std::io::{Read, Write};
 use std::net::SocketAddr;
