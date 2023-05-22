@@ -1,7 +1,7 @@
 use bitcoin_hashes::{sha256, Hash};
 
 use crate::{
-    block_header::BlockHeader, compact_size_uint::CompactSizeUint, transaction::Transaction,
+    block_header::BlockHeader, compact_size_uint::CompactSizeUint, transactions::transaction::Transaction,
 };
 
 #[derive(Debug, Clone)]
@@ -118,8 +118,7 @@ impl Block {
 #[cfg(test)]
 mod test {
     use crate::{
-        block_header::BlockHeader, compact_size_uint::CompactSizeUint, outpoint::Outpoint,
-        transaction::Transaction, tx_in::TxIn, tx_out::TxOut,
+        block_header::BlockHeader, compact_size_uint::CompactSizeUint, transactions::{tx_in::TxIn, outpoint::Outpoint, tx_out::TxOut, transaction::Transaction}
     };
 
     use super::Block;

@@ -1,6 +1,8 @@
 use bitcoin_hashes::{sha256d, Hash};
 
-use crate::{compact_size_uint::CompactSizeUint, tx_in::TxIn, tx_out::TxOut};
+use crate::{compact_size_uint::CompactSizeUint};
+
+use super::{tx_in::TxIn, tx_out::TxOut};
 #[derive(Debug, PartialEq, Clone)]
 pub struct Transaction {
     version: i32,
@@ -105,7 +107,7 @@ impl Transaction {
 mod test {
     use super::Transaction;
     use crate::{
-        compact_size_uint::CompactSizeUint, outpoint::Outpoint, tx_in::TxIn, tx_out::TxOut,
+        compact_size_uint::CompactSizeUint, transactions::{tx_in::TxIn, outpoint::Outpoint, tx_out::TxOut}
     };
     use bitcoin_hashes::{sha256d, Hash};
 

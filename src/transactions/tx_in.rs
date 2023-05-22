@@ -1,4 +1,6 @@
-use crate::{compact_size_uint::CompactSizeUint, outpoint::Outpoint};
+use crate::{compact_size_uint::CompactSizeUint};
+
+use super::outpoint::Outpoint;
 #[derive(Debug, PartialEq, Clone)]
 pub struct TxIn {
     previous_output: Outpoint,
@@ -98,7 +100,7 @@ impl TxIn {
 
 mod test {
     use super::TxIn;
-    use crate::{compact_size_uint::CompactSizeUint, outpoint::Outpoint};
+    use crate::{compact_size_uint::CompactSizeUint, transactions::outpoint::Outpoint};
 
     fn simular_flujo_de_datos(
         tx_id: [u8; 32],

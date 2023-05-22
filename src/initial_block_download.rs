@@ -1,5 +1,5 @@
 use crate::config::Config;
-use crate::log_writer::{write_in_log, LogSender};
+use crate::logwriter::log_writer::{write_in_log, LogSender};
 use crate::messages::{
     block_message::BlockMessage, get_data_message::GetDataMessage,
     getheaders_message::GetHeadersMessage, headers_message::HeadersMessage, inventory::Inventory,

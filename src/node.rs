@@ -1,4 +1,4 @@
-use crate::{block::Block, block_header::BlockHeader, transaction::Transaction, tx_out::TxOut};
+use crate::{block::Block, block_header::BlockHeader, transactions::{tx_out::TxOut, transaction::Transaction}};
 
 pub struct Node {
     pub headers: Vec<BlockHeader>,

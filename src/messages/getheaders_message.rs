@@ -1,5 +1,5 @@
-use super::getheaders_payload::GetHeadersPayload;
 use super::message_header::{get_checksum, HeaderMessage};
+use super::payload::getheaders_payload::GetHeadersPayload;
 use crate::compact_size_uint::CompactSizeUint;
 use crate::config::Config;
 use std::io::Write;
