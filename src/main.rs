@@ -66,15 +66,17 @@ fn main() -> Result<(), GenericError> {
     // Acá iría la descarga de los headers
 
     let pointer_to_nodes = Arc::new(RwLock::new(sockets));
-    
-    let headers_and_blocks = initial_block_download(config, logsender.clone(), pointer_to_nodes.clone())
-        .map_err(|err| {
-            write_in_log(
-                logsender.error_log_sender.clone(),
-                format!("Error al descargar los bloques: {}", err).as_str(),
-            );
-            GenericError::DownloadError(err)
-        })?;
+
+    let headers_and_blocks =
+        initial_block_download(config, logsender.clone(), pointer_to_nodes.clone()).map_err(
+            |err| {
+                write_in_log(
+                    logsender.error_log_sender.clone(),
+                    format!("Error al descargar los bloques: {}", err).as_str(),
+                );
+                GenericError::DownloadError(err)
+            },
+        )?;
     let (headers, blocks) = headers_and_blocks;
     let _node = Node {
         headers: headers.clone(),
@@ -82,16 +84,15 @@ fn main() -> Result<(), GenericError> {
         utxo_set: vec![],
     };
 
-
-
-  //  let headers: Vec<_> = Vec::new();
-  //  let blocks: Vec<_> = Vec::new();
+    //  let headers: Vec<_> = Vec::new();
+    //  let blocks: Vec<_> = Vec::new();
     let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
         logsender.clone(),
         pointer_to_nodes,
         headers.clone(),
         blocks.clone(),
-    ).map_err(GenericError::BroadcastingError)?;
+    )
+    .map_err(GenericError::BroadcastingError)?;
 
     if let Err(err) = handle_input(block_listener) {
         println!("Error al leer la entrada por terminal. {}", err);
@@ -106,9 +107,6 @@ fn main() -> Result<(), GenericError> {
     Ok(())
 }
 
-
-
-
 fn handle_input(block_listener: BlockBroadcasting) -> Result<(), GenericError> {
     loop {
         let mut input = String::new();
@@ -117,7 +115,9 @@ fn handle_input(block_listener: BlockBroadcasting) -> Result<(), GenericError> {
             Ok(_) => {
                 let command = input.trim();
                 if command == "exit" {
-                    block_listener.finish().map_err(GenericError::BroadcastingError)?;
+                    block_listener
+                        .finish()
+                        .map_err(GenericError::BroadcastingError)?;
                     break;
                 }
             }

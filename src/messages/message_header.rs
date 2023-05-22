@@ -2,8 +2,8 @@ use bitcoin_hashes::{sha256d, Hash};
 use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::str::Utf8Error;
-use std::time::Duration;
 use std::sync::{Arc, RwLock};
+use std::time::Duration;
 
 use crate::logwriter::log_writer::{write_in_log, LogSender};
 // todo: implementar test de read_from usando mocking
@@ -70,7 +70,7 @@ impl HeaderMessage {
         log_sender: LogSender,
         stream: &mut TcpStream,
         command_name: String,
-        finish: Option<Arc<RwLock<bool>>>
+        finish: Option<Arc<RwLock<bool>>>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         if command_name == *"block" {
             // will wait a minimum of two more seconds for the stalling node to send the block.
@@ -120,7 +120,6 @@ pub fn is_terminated(finish: Option<Arc<RwLock<bool>>>) -> bool {
         None => false,
     }
 }
-
 
 /// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje verack segun
 /// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error

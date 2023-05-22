@@ -157,9 +157,10 @@ fn download_headers_from_node(
             .write_to(&mut node)
             .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
         // read next 2000 headers (or less if they are the last ones)
-        headers_read = HeadersMessage::read_from(log_sender.clone(), &mut node, None).map_err(|_| {
-            DownloadError::ReadNodeError("error al leer headers message".to_string())
-        })?;
+        headers_read =
+            HeadersMessage::read_from(log_sender.clone(), &mut node, None).map_err(|_| {
+                DownloadError::ReadNodeError("error al leer headers message".to_string())
+            })?;
         validate_headers(log_sender.clone(), headers_read.clone())?;
         if headers
             .read()
@@ -584,7 +585,7 @@ pub fn initial_block_download(
         Arc::clone(&pointer_to_blocks),
     );
     let log_sender_clone = log_sender.clone();
-    let headers_thread = thread::spawn(move || 
+    let headers_thread = thread::spawn(move || {
         download_headers(
             config_cloned,
             log_sender_clone,
@@ -593,11 +594,11 @@ pub fn initial_block_download(
             pointer_to_blocks_clone,
             tx,
         )
-    );
+    });
     let pointer_to_headers_clone_for_blocks = Arc::clone(&pointer_to_headers);
     let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
     let log_sender_clone = log_sender.clone();
-    let blocks_thread = thread::spawn(move || 
+    let blocks_thread = thread::spawn(move || {
         download_blocks(
             config.clone(),
             log_sender_clone,
@@ -607,7 +608,7 @@ pub fn initial_block_download(
             rx,
             tx_cloned,
         )
-    );
+    });
     headers_thread
         .join()
         .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))??;
@@ -628,7 +629,7 @@ pub fn initial_block_download(
         log_sender.info_log_sender,
         format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
     );
-    
+
     Ok((headers.clone(), blocks.clone()))
 }
 

@@ -11,7 +11,6 @@ use std::{
 const CENTER_DATE_LINE: &str = "-------------------------------------------";
 const LINEA_FINAL_LOG: &str = "-----------------------------------------------------------------------------------------------------------------------------";
 
-
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum LoggingError {
     WritingInFileError(String),

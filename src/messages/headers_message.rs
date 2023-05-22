@@ -4,7 +4,7 @@ use crate::compact_size_uint::CompactSizeUint;
 use crate::logwriter::log_writer::LogSender;
 use std::io::Read;
 use std::net::TcpStream;
-use std::sync::{RwLock, Arc};
+use std::sync::{Arc, RwLock};
 const BLOCK_HEADER_SIZE: usize = 80;
 pub struct HeadersMessage;
 
@@ -40,10 +40,11 @@ impl HeadersMessage {
     pub fn read_from(
         log_sender: LogSender,
         stream: &mut TcpStream,
-        finish: Option<Arc<RwLock<bool>>>
+        finish: Option<Arc<RwLock<bool>>>,
     ) -> Result<Vec<BlockHeader>, Box<dyn std::error::Error>> {
-        let header = HeaderMessage::read_from(log_sender, stream, "headers".to_string(), finish.clone())?;
-        if is_terminated(finish){
+        let header =
+            HeaderMessage::read_from(log_sender, stream, "headers".to_string(), finish.clone())?;
+        if is_terminated(finish) {
             let headers: Vec<BlockHeader> = Vec::new();
             return Ok(headers);
         }
