@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     config::Config,
-    log_writer::{write_in_log, LogSender},
+    logwriter::log_writer::{write_in_log, LogSender},
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]

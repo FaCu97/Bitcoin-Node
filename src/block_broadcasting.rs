@@ -1,24 +1,18 @@
-
 use crate::{
-    block::Block,
-    block_header::BlockHeader,
-    log_writer::{write_in_log, LogSender},
+    
     messages::{
         headers_message::{HeadersMessage, is_terminated},
-        message_header::{command_name_to_bytes, HeaderMessage},
     },
-    node,
+    logwriter::log_writer::{LogSender, write_in_log}, blocks::{block_header::BlockHeader, block::Block},
 };
 use std::{
     fmt,
-    io::Read,
     net::TcpStream,
     sync::{Arc, RwLock, Mutex},
     thread::{self, JoinHandle},
     error::Error,
 };
 
-const HEADERS: &str = "headers\0\0\0\0\0";
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BroadcastingError {
@@ -142,4 +136,3 @@ pub fn listen_for_incoming_blocks_from_node(
     });
     t
 }
-
