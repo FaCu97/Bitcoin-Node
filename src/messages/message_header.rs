@@ -101,15 +101,17 @@ impl HeaderMessage {
             stream.read_exact(&mut buffer_num)?;
             header = HeaderMessage::from_le_bytes(buffer_num)?;
         }
-        write_in_log(
-            log_sender.messege_log_sender,
-            format!(
-                "Recibo Correctamente: {} -- Nodo: {:?}",
-                command_name,
-                stream.peer_addr()?
-            )
-            .as_str(),
-        );
+        if !is_terminated(finish) {
+            write_in_log(
+                log_sender.messege_log_sender,
+                format!(
+                    "Recibo Correctamente: {} -- Nodo: {:?}",
+                    command_name,
+                    stream.peer_addr()?
+                )
+                .as_str(),
+            );    
+        }
         Ok(header)
     }
 }

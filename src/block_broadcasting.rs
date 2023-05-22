@@ -139,7 +139,7 @@ pub fn listen_for_incoming_blocks_from_node(
                 if !header.validate() {
                     write_in_log(
                         log_sender.error_log_sender.clone(),
-                        "Error en validacion de la proof of work de header",
+                        "Error en validacion de la proof of work de nuevo header",
                     );
                 } else {
                     let last_header = *headers
@@ -155,6 +155,7 @@ pub fn listen_for_incoming_blocks_from_node(
                         log_sender.info_log_sender.clone(),
                         "Recibo un nuevo header, lo agrego a la cadena de headers!",
                         );
+                        
                     }
                 }
             }
