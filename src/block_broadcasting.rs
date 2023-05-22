@@ -70,7 +70,8 @@ impl BlockBroadcasting {
                 .try_write()
                 .map_err(|err| BroadcastingError::LockError(err.to_string()))?
                 .pop()
-                .unwrap();
+                .ok_or("Error no hay mas nodos para descargar los headers!\n")
+                .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
             nodes_handle.push(listen_for_incoming_blocks_from_node(
                 log_sender.clone(),
                 node,
@@ -100,11 +101,10 @@ impl BlockBroadcasting {
                 .lock()
                 .map_err(|err| BroadcastingError::LockError(err.to_string()))?
                 .pop()
-                .unwrap()
+                .ok_or("Error no hay mas nodos para descargar los headers!\n")
+                .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?
                 .join()
-                .unwrap()
-                .unwrap();
-            //   handle.join().unwrap();
+                .map_err(|err| BroadcastingError::ThreadJoinError(format!("{:?}", err)))??;
         }
         Ok(())
     }
@@ -118,9 +118,9 @@ pub fn listen_for_incoming_blocks_from_node(
     finish: Arc<RwLock<bool>>,
 ) -> JoinHandle<BroadcastingResult> {
     let log_sender_clone = log_sender.clone();
-    let t = thread::spawn(move || -> BroadcastingResult {
+    let join_handle = thread::spawn(move || -> BroadcastingResult {
         while !is_terminated(Some(finish.clone())) {
-            println!("Estoy esperando leer algo\n");
+            println!("Escuchando por nuevos bloques...\n");
             let new_headers = match HeadersMessage::read_from(
                 log_sender_clone.clone(),
                 &mut node,
@@ -163,5 +163,5 @@ pub fn listen_for_incoming_blocks_from_node(
         }
         Ok(())
     });
-    t
+    join_handle
 }
