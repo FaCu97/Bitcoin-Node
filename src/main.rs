@@ -89,8 +89,8 @@ fn main() -> Result<(), GenericError> {
     let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
         logsender.clone(),
         pointer_to_nodes,
-        headers.clone(),
-        blocks.clone(),
+        Arc::new(RwLock::new(headers)),
+        Arc::new(RwLock::new(blocks)),
     )
     .map_err(GenericError::BroadcastingError)?;
 

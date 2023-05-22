@@ -56,8 +56,8 @@ impl BlockBroadcasting {
     pub fn listen_for_incoming_blocks(
         log_sender: LogSender,
         nodes: Arc<RwLock<Vec<TcpStream>>>,
-        headers: Vec<BlockHeader>,
-        blocks: Vec<Block>,
+        headers: Arc<RwLock<Vec<BlockHeader>>>,
+        blocks: Arc<RwLock<Vec<Block>>>,
     ) -> Result<Self, BroadcastingError> {
         let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<BroadcastingResult>> = vec![];
@@ -113,12 +113,12 @@ impl BlockBroadcasting {
 pub fn listen_for_incoming_blocks_from_node(
     log_sender: LogSender,
     mut node: TcpStream,
-    headers: Vec<BlockHeader>,
-    blocks: Vec<Block>,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    blocks: Arc<RwLock<Vec<Block>>>,
     finish: Arc<RwLock<bool>>,
 ) -> JoinHandle<BroadcastingResult> {
     let log_sender_clone = log_sender.clone();
-    let join_handle = thread::spawn(move || -> BroadcastingResult {
+    thread::spawn(move || -> BroadcastingResult {
         while !is_terminated(Some(finish.clone())) {
             println!("Escuchando por nuevos bloques...\n");
             let new_headers = match HeadersMessage::read_from(
@@ -149,12 +149,14 @@ pub fn listen_for_incoming_blocks_from_node(
                         "Error en validacion de la proof of work de header",
                     );
                 } else {
-                    let last_header = headers
+                    let last_header = *headers
+                        .read()
+                        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
                         .last()
                         .ok_or("No se pudo obtener el último header")
                         .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
-                    if *last_header != header {
-                        println!("%%%%%%%    HEADERS SON DISTINTOS!!!    %%%%%%%")
+                    if last_header != header {
+                       println!("%%%%%%%    HEADERS SON DISTINTOS!!!    %%%%%%%")
                     }
                 }
             }
@@ -162,6 +164,5 @@ pub fn listen_for_incoming_blocks_from_node(
             // pedir bloques
         }
         Ok(())
-    });
-    join_handle
+    })
 }
