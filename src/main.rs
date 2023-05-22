@@ -4,7 +4,7 @@ use bitcoin::block_header::BlockHeader;
 use bitcoin::config::Config;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
-use bitcoin::log_writer::{
+use bitcoin::logwriter::log_writer::{
     set_up_loggers, shutdown_loggers, write_in_log, LogSender, LoggingError,
 };
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
@@ -96,7 +96,7 @@ fn main() -> Result<(), GenericError> {
         logsender.info_log_sender.clone(),
         format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
     );
-    /* 
+    /*
     listen_for_incoming_blocks(
         logsender.clone(),
         pointer_to_nodes,

@@ -1,12 +1,14 @@
+use crate::blocks::block::Block;
+use crate::blocks::block_header::BlockHeader;
 use crate::config::Config;
-use crate::log_writer::{write_in_log, LogSender};
+use crate::logwriter::log_writer::{write_in_log, LogSender};
 use crate::messages::{
     block_message::BlockMessage, get_data_message::GetDataMessage,
     getheaders_message::GetHeadersMessage, headers_message::HeadersMessage, inventory::Inventory,
 };
-use crate::{block::Block, block_header::BlockHeader};
 use chrono::{TimeZone, Utc};
 use std::error::Error;
+use std::fs::read_to_string;
 use std::net::TcpStream;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, RwLock};
@@ -54,20 +56,9 @@ impl fmt::Display for DownloadError {
 
 impl Error for DownloadError {}
 
-// HASH DEL BLOQUE 2000000: [140, 59, 62, 211, 170, 119, 142, 174, 205, 203, 233, 29, 174, 87, 25, 124, 225, 186, 160, 215, 195, 62, 134, 208, 13, 1, 0, 0, 0, 0, 0, 0]
-const GENESIS_BLOCK: [u8; 32] = [
-    140, 59, 62, 211, 170, 119, 142, 174, 205, 203, 233, 29, 174, 87, 25, 124, 225, 186, 160, 215,
-    195, 62, 134, 208, 13, 1, 0, 0, 0, 0, 0, 0,
-];
-
-//const GENESIS_BLOCK: [u8; 32] = [
-//    0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79, 0xba,
-//    0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43,
-//];
-
-const ALTURA_PRIMER_BLOQUE_A_DESCARGAR: usize = 428000;
+const ALTURA_PRIMER_BLOQUE_A_DESCARGAR: usize = 2428000;
 const ALTURA_BLOQUES_A_DESCARGAR: usize = ALTURA_PRIMER_BLOQUE_A_DESCARGAR + 2000;
-const ALTURA_PRIMER_BLOQUE: usize = 428246;
+const ALTURA_PRIMER_BLOQUE: usize = 2428246;
 
 /// Searches for the block headers that matches the defined timestamp defined by config.
 /// If it is found, returns them and set the boolean to true.
@@ -131,12 +122,21 @@ fn download_headers_from_node(
 
     let mut first_block_found = false;
     // write first getheaders message with genesis block
-
-    GetHeadersMessage::build_getheaders_message(config.clone(), vec![GENESIS_BLOCK])
-        .write_to(&mut node)
-        .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
+    let last_header_hash_downloaded_from_disc = headers
+        .read()
+        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .last()
+        .ok_or("No se pudo obtener el último elemento del vector de 2000 headers")
+        .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
+        .hash();
+    GetHeadersMessage::build_getheaders_message(
+        config.clone(),
+        vec![last_header_hash_downloaded_from_disc],
+    )
+    .write_to(&mut node)
+    .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
     // read first 2000 headers from headers message answered from node
-    let mut headers_read =
+    let mut headers_read: Vec<BlockHeader> =
         HeadersMessage::read_from(log_sender.clone(), &mut node).map_err(|_| {
             DownloadError::ReadNodeError("error al leer primeros 2000 headers".to_string())
         })?;
@@ -196,7 +196,7 @@ fn download_headers_from_node(
             .map_err(|err| DownloadError::LockError(err.to_string()))?
             .extend_from_slice(&headers_read);
         println!(
-            "{:?}\n",
+            "{:?} headers descargados\n",
             headers
                 .read()
                 .map_err(|err| DownloadError::LockError(err.to_string()))?
@@ -313,7 +313,7 @@ fn download_headers(
 ///
 /// ### Devuelve:
 /// - Ok o un error si no se puede completar la descarga
-pub fn download_blocks(
+fn download_blocks(
     config: Arc<Config>,
     log_sender: LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
@@ -465,7 +465,7 @@ fn download_blocks_single_thread(
         .as_str(),
     );
     println!(
-        "{:?}",
+        "{:?} bloques descargados",
         blocks_pointer_clone
             .read()
             .map_err(|err| DownloadError::LockError(err.to_string()))?
@@ -557,6 +557,22 @@ pub fn initial_block_download(
     let config_cloned = config.clone();
     let headers = vec![];
     let pointer_to_headers = Arc::new(RwLock::new(headers));
+    download_first_2000000_headers(
+        config.clone(),
+        log_sender.clone(),
+        pointer_to_headers.clone(),
+    )
+    .map_err(|err| {
+        write_in_log(
+            log_sender.error_log_sender.clone(),
+            format!("Error al descargar primeros 2 millones de headers de disco. {err}").as_str(),
+        );
+        DownloadError::CanNotRead(format!(
+            "Error al leer primeros 2 millones de headers. {}",
+            err
+        ))
+    })?;
+
     let blocks: Vec<Block> = vec![];
     let pointer_to_blocks = Arc::new(RwLock::new(blocks));
     // channel to comunicate headers download thread with blocks download thread
@@ -606,6 +622,43 @@ pub fn initial_block_download(
     Ok((headers.clone(), blocks.clone()))
 }
 
+fn download_first_2000000_headers(
+    config: Arc<Config>,
+    log_sender: LogSender,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+) -> Result<(), Box<dyn Error>> {
+    write_in_log(
+        log_sender.info_log_sender.clone(),
+        "Empiezo descarga de los primeros 2000000 de headers de disco",
+    );
+    let first_headers = read_to_string(config.archivo_headers.as_str())?;
+    let mut i = 2000;
+    for file_headers in first_headers.lines() {
+        let file_headers = &file_headers[1..file_headers.len() - 1];
+        let headers_to_add: Result<Vec<u8>, Box<dyn Error>> = file_headers
+            .split(',')
+            .map(|value| value.trim().parse::<u8>().map_err(Box::<dyn Error>::from))
+            .collect();
+        let headers_to_add = headers_to_add?;
+        let unmarshalled_headers: Vec<BlockHeader> =
+            HeadersMessage::unmarshalling(&headers_to_add)?;
+
+        headers
+            .write()
+            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .extend_from_slice(&unmarshalled_headers);
+        println!("{:?} headers descargados", i);
+        i += 2000;
+    }
+    write_in_log(
+        log_sender.info_log_sender,
+        "Termino descarga de los primeros 2000000 de headers de disco",
+    );
+
+    Ok(())
+}
+
+/*
 /// Once the headers are downloaded, this function recieves the nodes and headers  downloaded
 /// and sends a getheaders message to each node to compare and get a header that was not downloaded.
 /// it returns error in case of failure.
@@ -677,3 +730,4 @@ fn compare_and_ask_for_last_headers(
         .extend(nodes_vec);
     Ok(new_headers)
 }
+*/
