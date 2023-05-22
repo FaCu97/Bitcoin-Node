@@ -1,3 +1,5 @@
+use bitcoin::blocks::block::Block;
+use bitcoin::blocks::block_header::BlockHeader;
 //use bitcoin::block_broadcasting::listen_for_incoming_blocks;
 use bitcoin::config::Config;
 use bitcoin::handshake::{HandShakeError, Handshake};
@@ -7,6 +9,8 @@ use bitcoin::logwriter::log_writer::{
 };
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
+use bitcoin_hashes::{sha256d, Hash};
+//use bitcoin_hashes::hex;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
@@ -35,6 +39,15 @@ impl fmt::Display for GenericError {
 }
 
 impl Error for GenericError {}
+use hex::{self, ToHex};
+
+fn string_to_bytes(input: &str) -> Result<[u8; 32], hex::FromHexError> {
+    let bytes = hex::decode(input)?;
+    let mut result = [0; 32];
+    result.copy_from_slice(&bytes[..32]);
+    Ok(result)
+}
+
 
 fn main() -> Result<(), GenericError> {
     let args: Vec<String> = env::args().collect();
@@ -91,11 +104,82 @@ fn main() -> Result<(), GenericError> {
         blocks.clone(),
     );*/
     //println!("SALI DE LA FUNCION!!\n");
-    let _node = Node {
+    let node = Node {
         headers,
         block_chain: blocks,
         utxo_set: vec![],
-    };
+    }; 
+    let validate = node.block_chain[0].validate();
+    let root = node.block_chain[0].generate_merkle_root();
+    let merkle = node.block_chain[0].block_header.merkle_root_hash;
+    let hex_root = root.encode_hex::<String>();
+    let hex_merkle = merkle.encode_hex::<String>();
+
+    println!("{}",validate.0);
+    println!("esperada: {}",hex_merkle);
+    println!("nuestra: {}",hex_root);
+    //let mut transaction = node.block_chain[0].txn[1].hash();
+    let aux= &node.block_chain[0].txn[0];
+    let mut coinbase_transaction = aux.hash();
+    coinbase_transaction.reverse();
+    
+    let hex_tx = coinbase_transaction.encode_hex::<String>();
+    let version = aux.version;
+    let txin_count = aux.txin_count.decoded_value();
+    let txout_count = aux.txout_count.decoded_value();
+    let lock_time = aux.lock_time;
+    let mut block_header = node.block_chain[0].block_header.hash();
+    block_header.reverse();
+    let tx_count = node.block_chain[0].txn_count.decoded_value();
+    let hex_hdr = block_header.encode_hex::<String>();
+    let mut  header = node.headers[0].hash();
+    header.reverse();
+    let aux_1 = *sha256d::Hash::hash(&header).as_byte_array();
+    let aux_string = aux_1.encode_hex::<String>();
+
+    let hex_string = header.encode_hex::<String>();
+    let mut bytes =Vec::new(); 
+    aux.marshalling(& mut bytes);
+    let mut coin_hash = *sha256d::Hash::hash(&bytes).as_byte_array();
+    coin_hash.reverse();
+    let coin_string = coin_hash.encode_hex::<String>();
+    println!("header del bloque  : {}",hex_hdr);
+/* 
+    println!(" el header : {}",hex_string);
+    println!("transaction del bloque  : {}",hex_tx);
+    println!("header del bloque  : {}",hex_hdr);
+    println!("el tx_count es {}",tx_count);
+    println!("el version es {}",version);
+    println!("el txin_count es {}",txin_count);
+    println!("el txout_count es {}",txout_count);
+    println!("el lock_time es {}",lock_time);
+    println!("coin_hash: {}",coin_string);
+*/
+ 
+    /*// bloque 00000000000000127a638dfa7b517f1045217884cb986ab8f653b8be0ab37447
+    let mut transactions: Vec<[u8; 32]> = Vec::new();
+    let mut coinbase = string_to_bytes("129f32d171b2a0c4ad5fd21f7504ae483845d311214f79eb927db49dfb28b838").unwrap();
+    coinbase.reverse();
+    transactions.push(coinbase);
+    let mut tx_1 = string_to_bytes("aefeb6fb10f2f6a63a3cd4f70f1b7f8b193881a10ae5832a595e938d1630f1b9").unwrap();
+    tx_1.reverse();
+    transactions.push(tx_1);
+    let mut tx_2 = string_to_bytes("4b0d8fd869e252803909aed9642bc8af28ebd18f2c4045b9b41679eda0ff79dd").unwrap();
+    tx_2.reverse();
+    transactions.push(tx_2);
+    let mut tx_3 = string_to_bytes("dbd558c896afe59a6dce2dc26bc32f4679b336ff0b1c0f2f8aaee846c5732333").unwrap();
+    tx_3.reverse();
+    transactions.push(tx_3);
+    let mut tx_4 = string_to_bytes("88030de1d5f1b023893f8258df1796863756d99eef5c91a5528362f73497ac51").unwrap();
+    tx_4.reverse();
+    transactions.push(tx_4);
+    println!("{:?}",transactions[0]);
+    println!("{}",transactions.len());
+    let mut  merkle_root = Block::recursive_generation_merkle_root(transactions);
+    merkle_root.reverse();
+    let hex_string = merkle_root.encode_hex::<String>();
+    println!("{}",hex_string);
+*/
     write_in_log(
         logsender.info_log_sender.clone(),
         "TERMINA CORRECTAMENTE EL PROGRAMA!",

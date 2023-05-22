@@ -5,12 +5,12 @@ use crate::compact_size_uint::CompactSizeUint;
 use super::{tx_in::TxIn, tx_out::TxOut};
 #[derive(Debug, PartialEq, Clone)]
 pub struct Transaction {
-    version: i32,
-    txin_count: CompactSizeUint,
+    pub version: i32,
+    pub txin_count: CompactSizeUint,
     tx_in: Vec<TxIn>,
-    txout_count: CompactSizeUint,
+    pub txout_count: CompactSizeUint,
     tx_out: Vec<TxOut>,
-    lock_time: u32,
+    pub lock_time: u32,
 }
 
 impl Transaction {
@@ -69,6 +69,10 @@ impl Transaction {
     pub fn marshalling(&self, bytes: &mut Vec<u8>) {
         let version_bytes: [u8; 4] = self.version.to_le_bytes();
         bytes.extend_from_slice(&version_bytes);
+/*        if self.tx_in[0].is_coinbase(){
+            let hola = [0x00,0x01];
+            bytes.extend_from_slice(&hola);
+        }*/
         bytes.extend_from_slice(&self.txin_count.marshalling());
         for tx_in in &self.tx_in {
             tx_in.marshalling(bytes);
@@ -77,6 +81,12 @@ impl Transaction {
         for tx_out in &self.tx_out {
             tx_out.marshalling(bytes);
         }
+ /*       if self.tx_in[0].is_coinbase(){
+            let mut hola = [0;34];
+            hola[0] = 0x01;
+            hola[1] = 0x20;
+            bytes.extend_from_slice(&hola);
+        }*/
         let locktime_bytes: [u8; 4] = self.lock_time.to_le_bytes();
         bytes.extend_from_slice(&locktime_bytes);
     }
@@ -229,14 +239,15 @@ mod test {
         let tx_id: [u8; 32] = [0; 32];
         let index_outpoint: u32 = 0xffffffff;
         let outpoint: Outpoint = Outpoint::new(tx_id, index_outpoint);
-        let compact_txin: CompactSizeUint = CompactSizeUint::new(1);
+        let compact_txin: CompactSizeUint = CompactSizeUint::new(5);
+        let height = Some(vec![1,1,1,1]);
         let signature_script: Vec<u8> = vec![1];
         let sequence: u32 = 0xffffffff;
         let mut tx_in: Vec<TxIn> = Vec::new();
         tx_in.push(TxIn::new(
             outpoint,
             compact_txin,
-            None,
+            height,
             signature_script,
             sequence,
         ));
