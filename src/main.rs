@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 use bitcoin::block_broadcasting::{BlockBroadcasting, BroadcastingError};
+=======
+use bitcoin::blocks::block::Block;
+use bitcoin::blocks::block_header::BlockHeader;
+//use bitcoin::block_broadcasting::listen_for_incoming_blocks;
+>>>>>>> main
 use bitcoin::config::Config;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
@@ -7,6 +13,8 @@ use bitcoin::logwriter::log_writer::{
 };
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
+use bitcoin_hashes::{sha256d, Hash};
+//use bitcoin_hashes::hex;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
@@ -37,6 +45,15 @@ impl fmt::Display for GenericError {
 }
 
 impl Error for GenericError {}
+use hex::{self, ToHex};
+
+fn string_to_bytes(input: &str) -> Result<[u8; 32], hex::FromHexError> {
+    let bytes = hex::decode(input)?;
+    let mut result = [0; 32];
+    result.copy_from_slice(&bytes[..32]);
+    Ok(result)
+}
+
 
 fn main() -> Result<(), GenericError> {
     let args: Vec<String> = env::args().collect();

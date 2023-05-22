@@ -538,6 +538,16 @@ fn receive_requested_blocks_from_node(
                 )));
             }
         };
+        let validation_result = bloque.validate();
+        if !validation_result.0 {
+            write_in_log(log_sender.error_log_sender,format!("El bloque no pasó la validación. {:?}. Se los voy a pedir a otro nodo y descarto este.", validation_result.1).as_str());
+            tx.send(block_headers_thread.to_vec())
+                .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
+            return Err(DownloadError::ReadNodeError(format!(
+                "Error al recibir el mensaje `block`: {:?}",
+                validation_result.1
+            )));
+        }
         current_blocks.push(bloque);
     }
     Ok((node, current_blocks))
@@ -585,20 +595,20 @@ pub fn initial_block_download(
         Arc::clone(&pointer_to_blocks),
     );
     let log_sender_clone = log_sender.clone();
-    let headers_thread = thread::spawn(move || {
+    let headers_thread = thread::spawn(move || 
         download_headers(
             config_cloned,
-            log_sender_clone,
+            log_sender_clone.clone(),
             pointer_to_nodes_clone,
             pointer_to_headers_clone,
             pointer_to_blocks_clone,
             tx,
         )
-    });
+    );
     let pointer_to_headers_clone_for_blocks = Arc::clone(&pointer_to_headers);
     let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
     let log_sender_clone = log_sender.clone();
-    let blocks_thread = thread::spawn(move || {
+    let blocks_thread = thread::spawn(move || 
         download_blocks(
             config.clone(),
             log_sender_clone,
@@ -608,7 +618,7 @@ pub fn initial_block_download(
             rx,
             tx_cloned,
         )
-    });
+    );
     headers_thread
         .join()
         .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))??;
