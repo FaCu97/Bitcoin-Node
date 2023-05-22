@@ -59,6 +59,7 @@ impl BlockBroadcasting {
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         blocks: Arc<RwLock<Vec<Block>>>,
     ) -> Result<Self, BroadcastingError> {
+        write_in_log(log_sender.info_log_sender.clone(), "Empiezo a escuchar por nuevos bloques");
         let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<BroadcastingResult>> = vec![];
         let cant_nodos = nodes
