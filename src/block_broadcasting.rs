@@ -115,7 +115,7 @@ pub fn listen_for_incoming_blocks_from_node(
     log_sender: LogSender,
     mut node: TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
-    blocks: Arc<RwLock<Vec<Block>>>,
+    _blocks: Arc<RwLock<Vec<Block>>>,
     finish: Arc<RwLock<bool>>,
 ) -> JoinHandle<BroadcastingResult> {
     let log_sender_clone = log_sender.clone();
@@ -127,15 +127,7 @@ pub fn listen_for_incoming_blocks_from_node(
                 Some(finish.clone()),
             ) {
                 Ok(headers) => headers,
-                Err(err) => {
-                    write_in_log(
-                        log_sender.error_log_sender.clone(),
-                        format!(
-                            "Error al recibir headers durante broadcasting. Error: {}",
-                            err
-                        )
-                        .as_str(),
-                    );
+                Err(_) => {
                     continue;
                 }
             };
