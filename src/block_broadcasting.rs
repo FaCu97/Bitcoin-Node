@@ -156,7 +156,12 @@ pub fn listen_for_incoming_blocks_from_node(
                         .ok_or("No se pudo obtener el último header")
                         .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
                     if last_header != header {
-                       println!("%%%%%%%    HEADERS SON DISTINTOS!!!    %%%%%%%")
+                       println!("%%%%%%%    Recibo nuevo header!!!    %%%%%%%");
+                       headers.write().map_err(|err| BroadcastingError::LockError(err.to_string()))?.push(header);
+                       write_in_log(
+                        log_sender.info_log_sender.clone(),
+                        "Recibo un nuevo header, lo agrego a la cadena de headers!",
+                        );
                     }
                 }
             }
