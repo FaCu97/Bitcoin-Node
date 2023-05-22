@@ -1,4 +1,4 @@
-use bitcoin_hashes::{sha256, Hash, sha256d};
+use bitcoin_hashes::{Hash, sha256d};
 
 use crate::{
     block_header::BlockHeader, compact_size_uint::CompactSizeUint, transaction::Transaction,
@@ -44,8 +44,7 @@ impl Block {
             return (false, "El bloque no cumple con la dificultad pedida");
         }
         //proof of inclusion
-        let mut merkle_root_hash: [u8; 32] = self.generate_merkle_root();
-        merkle_root_hash.reverse();
+        let merkle_root_hash: [u8; 32] = self.generate_merkle_root();
         if !self.block_header.is_same_merkle_root_hash(&merkle_root_hash) {
             return (
                 false,
@@ -60,9 +59,8 @@ impl Block {
         let mut hashs_concatenated: [u8; 64] = [0; 64];
         hashs_concatenated[..32].copy_from_slice(&first_hash[..32]);
         hashs_concatenated[32..(32 + 32)].copy_from_slice(&second_hash[..32]);
-        let mut vector = *sha256d::Hash::hash(&hashs_concatenated).as_byte_array();
-        //vector.reverse();
-        vector
+        *sha256d::Hash::hash(&hashs_concatenated).as_byte_array()
+
     }
     // funcion que se encarga de reducir los elementos del vector de tx_ids , agruparlos
     // de a pares hasearlos y guardarlos nuevamente en un vector el cual sera procesado
@@ -100,9 +98,7 @@ impl Block {
     pub fn generate_merkle_root(&self) -> [u8; 32] {
         let mut merkle_transactions: Vec<[u8; 32]> = Vec::new();
         for tx in &self.txn {
-            let mut aux =tx.hash();
-            aux.reverse();
-            merkle_transactions.push(aux);
+            merkle_transactions.push(tx.hash());
         }
         Self::recursive_generation_merkle_root(merkle_transactions)
     }

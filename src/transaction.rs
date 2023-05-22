@@ -1,4 +1,4 @@
-use bitcoin_hashes::{sha256d, Hash, sha256};
+use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{compact_size_uint::CompactSizeUint, tx_in::TxIn, tx_out::TxOut};
 #[derive(Debug, PartialEq, Clone)]
@@ -236,14 +236,15 @@ mod test {
         let tx_id: [u8; 32] = [0; 32];
         let index_outpoint: u32 = 0xffffffff;
         let outpoint: Outpoint = Outpoint::new(tx_id, index_outpoint);
-        let compact_txin: CompactSizeUint = CompactSizeUint::new(1);
+        let compact_txin: CompactSizeUint = CompactSizeUint::new(5);
+        let height = Some(vec![1,1,1,1]);
         let signature_script: Vec<u8> = vec![1];
         let sequence: u32 = 0xffffffff;
         let mut tx_in: Vec<TxIn> = Vec::new();
         tx_in.push(TxIn::new(
             outpoint,
             compact_txin,
-            None,
+            height,
             signature_script,
             sequence,
         ));

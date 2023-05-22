@@ -110,7 +110,14 @@ fn main() -> Result<(), GenericError> {
         utxo_set: vec![],
     }; 
     let validate = node.block_chain[0].validate();
+    let root = node.block_chain[0].generate_merkle_root();
+    let merkle = node.block_chain[0].block_header.merkle_root_hash;
+    let hex_root = root.encode_hex::<String>();
+    let hex_merkle = merkle.encode_hex::<String>();
+
     println!("{}",validate.0);
+    println!("esperada: {}",hex_merkle);
+    println!("nuestra: {}",hex_root);
     //let mut transaction = node.block_chain[0].txn[1].hash();
     let aux= &node.block_chain[0].txn[0];
     let mut coinbase_transaction = aux.hash();
@@ -136,6 +143,7 @@ fn main() -> Result<(), GenericError> {
     let mut coin_hash = *sha256d::Hash::hash(&bytes).as_byte_array();
     coin_hash.reverse();
     let coin_string = coin_hash.encode_hex::<String>();
+    println!("header del bloque  : {}",hex_hdr);
 /* 
     println!(" el header : {}",hex_string);
     println!("transaction del bloque  : {}",hex_tx);
