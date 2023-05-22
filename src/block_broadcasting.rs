@@ -55,12 +55,12 @@ impl BlockBroadcasting {
         nodes: Arc<RwLock<Vec<TcpStream>>>,
         headers: Vec<BlockHeader>,
         blocks: Vec<Block>,
-    ) -> Self {
+    ) -> Result<Self, BroadcastingError> {
         let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<BroadcastingResult>> = vec![];
-        let cant_nodos = nodes.read().unwrap().len();
+        let cant_nodos = nodes.read().map_err(|err| BroadcastingError::LockError(err.to_string()))?.len();
         for _ in 0..cant_nodos {
-            let node = nodes.try_write().unwrap().pop().unwrap();
+            let node = nodes.try_write().map_err(|err| BroadcastingError::LockError(err.to_string()))?.pop().unwrap();
             nodes_handle.push(listen_for_incoming_blocks_from_node(
                 log_sender.clone(),
                 node,
@@ -70,16 +70,16 @@ impl BlockBroadcasting {
             ))
         }
         let nodes_handle_mutex = Arc::new(Mutex::new(nodes_handle));
-        BlockBroadcasting {
+        Ok(BlockBroadcasting {
             nodes_handle: nodes_handle_mutex,
             finish,
-        }
+        })
     } 
     pub fn finish(&self) -> BroadcastingResult {
-        *self.finish.write().unwrap() = true;
+        *self.finish.write().map_err(|err| BroadcastingError::LockError(err.to_string()))? = true;
         let cant_nodos = self.nodes_handle.lock().unwrap().len();
         for _ in 0..cant_nodos  {
-            self.nodes_handle.lock().unwrap().pop().unwrap().join().unwrap().unwrap();
+            self.nodes_handle.lock().map_err(|err| BroadcastingError::LockError(err.to_string()))?.pop().unwrap().join().unwrap().unwrap();
          //   handle.join().unwrap();
         }
         Ok(())

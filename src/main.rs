@@ -1,4 +1,4 @@
-use bitcoin::block_broadcasting::BlockBroadcasting;
+use bitcoin::block_broadcasting::{BlockBroadcasting, BroadcastingError};
 use bitcoin::config::Config;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
@@ -18,6 +18,7 @@ pub enum GenericError {
     ConfigError(Box<dyn Error>),
     ConnectionToDnsError(ConnectionToDnsError),
     LoggingError(LoggingError),
+    BroadcastingError(BroadcastingError),
 }
 
 impl fmt::Display for GenericError {
@@ -30,6 +31,7 @@ impl fmt::Display for GenericError {
                 write!(f, "CONNECTION TO DNS ERROR: {}", msg)
             }
             GenericError::LoggingError(msg) => write!(f, "LOGGING ERROR: {}", msg),
+            GenericError::BroadcastingError(msg) => write!(f, "BLOCK BROADCASTING ERROR: {}", msg),
         }
     }
 }
@@ -89,7 +91,7 @@ fn main() -> Result<(), GenericError> {
         pointer_to_nodes,
         headers.clone(),
         blocks.clone(),
-    );
+    ).map_err(GenericError::BroadcastingError)?;
 
     if let Err(err) = handle_input(block_listener) {
         println!("Error al leer la entrada por terminal. {}", err);
@@ -107,7 +109,7 @@ fn main() -> Result<(), GenericError> {
 
 
 
-fn handle_input(block_listener: BlockBroadcasting) -> Result<(), std::io::Error> {
+fn handle_input(block_listener: BlockBroadcasting) -> Result<(), GenericError> {
     loop {
         let mut input = String::new();
 
@@ -115,7 +117,7 @@ fn handle_input(block_listener: BlockBroadcasting) -> Result<(), std::io::Error>
             Ok(_) => {
                 let command = input.trim();
                 if command == "exit" {
-                    block_listener.finish().unwrap();
+                    block_listener.finish().map_err(GenericError::BroadcastingError)?;
                     break;
                 }
             }
