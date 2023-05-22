@@ -4,7 +4,7 @@ use std::net::TcpStream;
 use std::str::Utf8Error;
 use std::time::Duration;
 
-use crate::log_writer::{write_in_log, LogSender};
+use crate::logwriter::log_writer::{write_in_log, LogSender};
 // todo: implementar test de read_from usando mocking
 // todo: implementar test de write_to usando mocking
 // todo: implementar test de write_verack_message, read_verack_message, write_sendheaders_message usando mocking

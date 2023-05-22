@@ -74,7 +74,9 @@ impl TxOut {
 
 #[cfg(test)]
 mod tests {
-    use crate::{compact_size_uint::CompactSizeUint, tx_out::TxOut};
+    use crate::compact_size_uint::CompactSizeUint;
+
+    use super::TxOut;
 
     fn simular_flujo_de_datos(value: i64, compact_size_value: u128) -> Vec<u8> {
         let mut bytes: Vec<u8> = Vec::new();

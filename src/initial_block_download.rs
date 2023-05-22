@@ -1,10 +1,11 @@
+use crate::blocks::block::Block;
+use crate::blocks::block_header::BlockHeader;
 use crate::config::Config;
-use crate::log_writer::{write_in_log, LogSender};
+use crate::logwriter::log_writer::{write_in_log, LogSender};
 use crate::messages::{
     block_message::BlockMessage, get_data_message::GetDataMessage,
     getheaders_message::GetHeadersMessage, headers_message::HeadersMessage, inventory::Inventory,
 };
-use crate::{block::Block, block_header::BlockHeader};
 use chrono::{TimeZone, Utc};
 use std::error::Error;
 use std::fs::read_to_string;
@@ -135,7 +136,7 @@ fn download_headers_from_node(
     .write_to(&mut node)
     .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
     // read first 2000 headers from headers message answered from node
-    let mut headers_read =
+    let mut headers_read: Vec<BlockHeader> =
         HeadersMessage::read_from(log_sender.clone(), &mut node).map_err(|_| {
             DownloadError::ReadNodeError("error al leer primeros 2000 headers".to_string())
         })?;
@@ -639,7 +640,8 @@ fn download_first_2000000_headers(
             .map(|value| value.trim().parse::<u8>().map_err(Box::<dyn Error>::from))
             .collect();
         let headers_to_add = headers_to_add?;
-        let unmarshalled_headers = HeadersMessage::unmarshalling(&headers_to_add)?;
+        let unmarshalled_headers: Vec<BlockHeader> =
+            HeadersMessage::unmarshalling(&headers_to_add)?;
 
         headers
             .write()

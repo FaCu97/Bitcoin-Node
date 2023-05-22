@@ -1,7 +1,7 @@
 use super::message_header::HeaderMessage;
-use crate::block_header::BlockHeader;
+use crate::blocks::block_header::BlockHeader;
 use crate::compact_size_uint::CompactSizeUint;
-use crate::log_writer::LogSender;
+use crate::logwriter::log_writer::LogSender;
 use std::io::Read;
 use std::net::TcpStream;
 const BLOCK_HEADER_SIZE: usize = 80;
@@ -54,7 +54,7 @@ impl HeadersMessage {
 #[cfg(test)]
 mod tests {
     use crate::{
-        block_header::BlockHeader, compact_size_uint::CompactSizeUint,
+        blocks::block_header::BlockHeader, compact_size_uint::CompactSizeUint,
         messages::headers_message::HeadersMessage,
     };
 

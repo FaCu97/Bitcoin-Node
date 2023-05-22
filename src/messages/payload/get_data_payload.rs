@@ -1,6 +1,4 @@
-use crate::compact_size_uint::CompactSizeUint;
-
-use super::inventory::Inventory;
+use crate::{compact_size_uint::CompactSizeUint, messages::inventory::Inventory};
 
 /// Representa el mensaje Inv del protocolo bitcoin.
 /// Transmite uno o varios inventories (hashes).

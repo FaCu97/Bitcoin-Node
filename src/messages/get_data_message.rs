@@ -2,7 +2,7 @@ use bitcoin_hashes::{sha256d, Hash};
 use std::io::Write;
 
 use super::{
-    get_data_payload::GetDataPayload, inventory::Inventory, message_header::HeaderMessage,
+    inventory::Inventory, message_header::HeaderMessage, payload::get_data_payload::GetDataPayload,
 };
 // todo: el write_to es código repetido, es igual que el de getheaders_message.rs. Habría que extraerlos.
 /// Implementa el mensaje getdata necesario para solicitar objetos a otro nodo.
