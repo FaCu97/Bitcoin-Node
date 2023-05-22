@@ -1,5 +1,5 @@
-pub mod blocks;
 pub mod block_broadcasting;
+pub mod blocks;
 pub mod compact_size_uint;
 pub mod config;
 pub mod handshake;

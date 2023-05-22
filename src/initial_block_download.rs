@@ -640,7 +640,8 @@ fn download_first_2000000_headers(
             .map(|value| value.trim().parse::<u8>().map_err(Box::<dyn Error>::from))
             .collect();
         let headers_to_add = headers_to_add?;
-        let unmarshalled_headers: Vec<BlockHeader> = HeadersMessage::unmarshalling(&headers_to_add)?;
+        let unmarshalled_headers: Vec<BlockHeader> =
+            HeadersMessage::unmarshalling(&headers_to_add)?;
 
         headers
             .write()

@@ -54,8 +54,8 @@ impl HeadersMessage {
 #[cfg(test)]
 mod tests {
     use crate::{
-        compact_size_uint::CompactSizeUint,
-        messages::headers_message::HeadersMessage, blocks::block_header::BlockHeader,
+        blocks::block_header::BlockHeader, compact_size_uint::CompactSizeUint,
+        messages::headers_message::HeadersMessage,
     };
 
     #[test]
