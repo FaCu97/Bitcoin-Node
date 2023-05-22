@@ -1,14 +1,14 @@
-use bitcoin_hashes::{sha256d, Hash};
+use bitcoin_hashes::{sha256d, Hash, sha256};
 
 use crate::{compact_size_uint::CompactSizeUint, tx_in::TxIn, tx_out::TxOut};
 #[derive(Debug, PartialEq, Clone)]
 pub struct Transaction {
-    version: i32,
-    txin_count: CompactSizeUint,
+    pub version: i32,
+    pub txin_count: CompactSizeUint,
     tx_in: Vec<TxIn>,
-    txout_count: CompactSizeUint,
+    pub txout_count: CompactSizeUint,
     tx_out: Vec<TxOut>,
-    lock_time: u32,
+    pub lock_time: u32,
 }
 
 impl Transaction {
@@ -67,6 +67,10 @@ impl Transaction {
     pub fn marshalling(&self, bytes: &mut Vec<u8>) {
         let version_bytes: [u8; 4] = self.version.to_le_bytes();
         bytes.extend_from_slice(&version_bytes);
+/*        if self.tx_in[0].is_coinbase(){
+            let hola = [0x00,0x01];
+            bytes.extend_from_slice(&hola);
+        }*/
         bytes.extend_from_slice(&self.txin_count.marshalling());
         for tx_in in &self.tx_in {
             tx_in.marshalling(bytes);
@@ -75,6 +79,12 @@ impl Transaction {
         for tx_out in &self.tx_out {
             tx_out.marshalling(bytes);
         }
+ /*       if self.tx_in[0].is_coinbase(){
+            let mut hola = [0;34];
+            hola[0] = 0x01;
+            hola[1] = 0x20;
+            bytes.extend_from_slice(&hola);
+        }*/
         let locktime_bytes: [u8; 4] = self.lock_time.to_le_bytes();
         bytes.extend_from_slice(&locktime_bytes);
     }

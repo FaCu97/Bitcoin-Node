@@ -36,6 +36,7 @@ impl TxIn {
         let previous_output: Outpoint = Outpoint::unmarshalling(bytes, offset)?;
         let script_bytes: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, offset)?;
         let mut height: Option<Vec<u8>> = None;
+        let mut bytes_for_height = 0;
         if previous_output.is_a_coinbase_outpoint() {
             if script_bytes.decoded_value() > 100 {
                 return Err(
@@ -45,11 +46,13 @@ impl TxIn {
             let mut height_bytes: Vec<u8> = Vec::new();
             height_bytes.extend_from_slice(&bytes[*offset..(*offset + 4)]);
             height = Some(height_bytes);
+            *offset += 4;
+            bytes_for_height = 4;
         }
         let mut signature_script: Vec<u8> = Vec::new();
         let amount_bytes_to_read: usize = script_bytes.decoded_value() as usize;
-        signature_script.extend_from_slice(&bytes[*offset..(*offset + amount_bytes_to_read)]);
-        *offset += amount_bytes_to_read;
+        signature_script.extend_from_slice(&bytes[*offset..(*offset + amount_bytes_to_read - bytes_for_height)]);
+        *offset += amount_bytes_to_read - bytes_for_height;
         let mut sequence_bytes: [u8; 4] = [0; 4];
         sequence_bytes.copy_from_slice(&bytes[*offset..*offset + 4]);
         *offset += 4;
