@@ -1,4 +1,4 @@
-/* 
+/*
 use crate::{
     block::Block,
     block_header::BlockHeader,
