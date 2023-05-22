@@ -110,7 +110,7 @@ impl HeaderMessage {
                     stream.peer_addr()?
                 )
                 .as_str(),
-            );    
+            );
         }
         Ok(header)
     }

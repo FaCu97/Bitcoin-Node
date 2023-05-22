@@ -47,5 +47,5 @@ impl Node {
         vector_hash: Vec<[u8; 32]>,
     ) -> bool {
         block.merkle_proof_of_inclusion(transaction.hash(), vector_hash)
-    }         
+    }
 }

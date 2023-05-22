@@ -595,7 +595,7 @@ pub fn initial_block_download(
         Arc::clone(&pointer_to_blocks),
     );
     let log_sender_clone = log_sender.clone();
-    let headers_thread = thread::spawn(move || 
+    let headers_thread = thread::spawn(move || {
         download_headers(
             config_cloned,
             log_sender_clone.clone(),
@@ -604,11 +604,11 @@ pub fn initial_block_download(
             pointer_to_blocks_clone,
             tx,
         )
-    );
+    });
     let pointer_to_headers_clone_for_blocks = Arc::clone(&pointer_to_headers);
     let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
     let log_sender_clone = log_sender.clone();
-    let blocks_thread = thread::spawn(move || 
+    let blocks_thread = thread::spawn(move || {
         download_blocks(
             config.clone(),
             log_sender_clone,
@@ -618,7 +618,7 @@ pub fn initial_block_download(
             rx,
             tx_cloned,
         )
-    );
+    });
     headers_thread
         .join()
         .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))??;

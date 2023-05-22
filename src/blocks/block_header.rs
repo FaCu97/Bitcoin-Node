@@ -137,7 +137,7 @@ mod tests {
         let blockheader = BlockHeader::unmarshalling(&message_header, &mut offset)?;
         Ok(blockheader)
     }
-   
+
     #[test]
     fn test_deserializacion_del_header_genera_version_esperada() -> Result<(), &'static str> {
         let blockheader: BlockHeader = generar_block_header()?;

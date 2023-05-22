@@ -127,7 +127,7 @@ impl Block {
         //let mut current_hash: [u8; 32] = transaction_to_find.hash();
         let mut current_hash = transaction_to_find;
         for hash in vector_hash {
-            current_hash = Self::concatenate_and_hash(current_hash,hash);
+            current_hash = Self::concatenate_and_hash(current_hash, hash);
         }
         current_hash == self.generate_merkle_root()
     }
@@ -135,7 +135,7 @@ impl Block {
 
 #[cfg(test)]
 mod test {
-    use std::{vec};
+    use std::vec;
 
     use hex::ToHex;
 

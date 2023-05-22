@@ -99,7 +99,7 @@ fn main() -> Result<(), GenericError> {
         println!("Error al leer la entrada por terminal. {}", err);
     }
 
-    // esta parte es para explicar el comportamiento en la demo !! 
+    // esta parte es para explicar el comportamiento en la demo !!
     mostrar_comportamiento_del_nodo(node);
     write_in_log(
         logsender.info_log_sender.clone(),
@@ -138,31 +138,48 @@ fn mostrar_comportamiento_del_nodo(node: Node) {
     header_1.reverse();
     let mut header_2 = node.headers[1].hash();
     header_2.reverse();
-    let header_1_hex=header_1.encode_hex::<String>();
-    let header_2_hex=header_2.encode_hex::<String>();
-    println!("header 1 : {}",header_1_hex);
-    println!("header 2 : {}",header_2_hex);
+    let header_1_hex = header_1.encode_hex::<String>();
+    let header_2_hex = header_2.encode_hex::<String>();
+    println!("header 1 : {}", header_1_hex);
+    println!("header 2 : {}", header_2_hex);
 
-    
     let mut bloque_1 = node.block_chain[0].block_header.hash();
     bloque_1.reverse();
     let bloque1_hex: String = bloque_1.encode_hex::<String>();
     let validate = node.block_chain[0].validate();
-    println!("validate devuelve: {}, {}",validate.0,validate.1);
-    println!("bloque : {}",bloque1_hex);
-    println!("cantidad de transacciones en el bloque : {}",node.block_chain[0].txn_count.decoded_value());
-    println!("version del bloque : {:x}",node.block_chain[0].block_header.version);
-    println!("nbits del bloque : {:x}",node.block_chain[0].block_header.n_bits);
-    println!("nonce del bloque : {:x}",node.block_chain[0].block_header.nonce);
+    println!("validate devuelve: {}, {}", validate.0, validate.1);
+    println!("bloque : {}", bloque1_hex);
+    println!(
+        "cantidad de transacciones en el bloque : {}",
+        node.block_chain[0].txn_count.decoded_value()
+    );
+    println!(
+        "version del bloque : {:x}",
+        node.block_chain[0].block_header.version
+    );
+    println!(
+        "nbits del bloque : {:x}",
+        node.block_chain[0].block_header.n_bits
+    );
+    println!(
+        "nonce del bloque : {:x}",
+        node.block_chain[0].block_header.nonce
+    );
     let transaccion = &node.block_chain[0].txn[0];
     let mut hash = transaccion.hash();
     hash.reverse();
     let hash_hex: String = hash.encode_hex::<String>();
-    println!("hash de la primera transaccion : {}",hash_hex);
-    println!("version de la transaccion : {}",transaccion.version);
-    println!("inputs de la transaccion : {}",transaccion.txin_count.decoded_value());
-    println!("outputs de la transaccion : {}",transaccion.txout_count.decoded_value());
-    println!("lock time de la transaccion : {}",transaccion.lock_time);
+    println!("hash de la primera transaccion : {}", hash_hex);
+    println!("version de la transaccion : {}", transaccion.version);
+    println!(
+        "inputs de la transaccion : {}",
+        transaccion.txin_count.decoded_value()
+    );
+    println!(
+        "outputs de la transaccion : {}",
+        transaccion.txout_count.decoded_value()
+    );
+    println!("lock time de la transaccion : {}", transaccion.lock_time);
 }
 
 #[cfg(test)]
