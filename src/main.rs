@@ -83,7 +83,7 @@ fn main() -> Result<(), GenericError> {
         logsender.info_log_sender.clone(),
         format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
     );
-    /* 
+    /*
     listen_for_incoming_blocks(
         logsender.clone(),
         pointer_to_nodes,
