@@ -72,6 +72,7 @@ impl BlockBroadcasting {
                 .pop()
                 .ok_or("Error no hay mas nodos para descargar los headers!\n")
                 .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
+            println!("Nodo -{:?}- Escuchando por nuevos bloques...\n", node.peer_addr());
             nodes_handle.push(listen_for_incoming_blocks_from_node(
                 log_sender.clone(),
                 node,
@@ -120,7 +121,6 @@ pub fn listen_for_incoming_blocks_from_node(
     let log_sender_clone = log_sender.clone();
     thread::spawn(move || -> BroadcastingResult {
         while !is_terminated(Some(finish.clone())) {
-            println!("Escuchando por nuevos bloques...\n");
             let new_headers = match HeadersMessage::read_from(
                 log_sender_clone.clone(),
                 &mut node,
