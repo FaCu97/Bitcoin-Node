@@ -312,7 +312,7 @@ fn download_headers(
 ///
 /// ### Devuelve:
 /// - Ok o un error si no se puede completar la descarga
-pub fn download_blocks(
+fn download_blocks(
     config: Arc<Config>,
     log_sender: LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
