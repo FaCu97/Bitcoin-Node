@@ -1,10 +1,4 @@
-<<<<<<< HEAD
 use bitcoin::block_broadcasting::{BlockBroadcasting, BroadcastingError};
-=======
-use bitcoin::blocks::block::Block;
-use bitcoin::blocks::block_header::BlockHeader;
-//use bitcoin::block_broadcasting::listen_for_incoming_blocks;
->>>>>>> main
 use bitcoin::config::Config;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
