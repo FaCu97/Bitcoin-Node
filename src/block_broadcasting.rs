@@ -52,13 +52,12 @@ impl BlockBroadcasting {
     
     pub fn listen_for_incoming_blocks(
         log_sender: LogSender,
-        mut nodes: Arc<RwLock<Vec<TcpStream>>>,
+        nodes: Arc<RwLock<Vec<TcpStream>>>,
         headers: Vec<BlockHeader>,
         blocks: Vec<Block>,
     ) -> Self {
         let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<BroadcastingResult>> = vec![];
-        println!("cantidad de nodos: {:?}", nodes.read().unwrap().len());
         let cant_nodos = nodes.read().unwrap().len();
         for _ in 0..cant_nodos {
             let node = nodes.try_write().unwrap().pop().unwrap();
@@ -80,7 +79,7 @@ impl BlockBroadcasting {
         *self.finish.write().unwrap() = true;
         let cant_nodos = self.nodes_handle.lock().unwrap().len();
         for _ in 0..cant_nodos  {
-            self.nodes_handle.lock().unwrap().pop().unwrap().join().unwrap();
+            self.nodes_handle.lock().unwrap().pop().unwrap().join().unwrap().unwrap();
          //   handle.join().unwrap();
         }
         Ok(())

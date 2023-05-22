@@ -196,7 +196,7 @@ fn download_headers_from_node(
             .map_err(|err| DownloadError::LockError(err.to_string()))?
             .extend_from_slice(&headers_read);
         println!(
-            "{:?} headers descargados\n",
+            "{:?} headers descargados",
             headers
                 .read()
                 .map_err(|err| DownloadError::LockError(err.to_string()))?
