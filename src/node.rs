@@ -1,7 +1,5 @@
 use crate::{
-    block::Block,
-    block_header::BlockHeader,
-    transactions::{transaction::Transaction, tx_out::TxOut},
+    transactions::{transaction::Transaction, tx_out::TxOut}, blocks::{block::Block, block_header::BlockHeader},
 };
 
 pub struct Node {

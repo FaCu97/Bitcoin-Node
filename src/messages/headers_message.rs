@@ -1,5 +1,5 @@
 use super::message_header::HeaderMessage;
-use crate::block_header::BlockHeader;
+use crate::blocks::block_header::BlockHeader;
 use crate::compact_size_uint::CompactSizeUint;
 use crate::logwriter::log_writer::LogSender;
 use std::io::Read;
@@ -54,8 +54,8 @@ impl HeadersMessage {
 #[cfg(test)]
 mod tests {
     use crate::{
-        block_header::BlockHeader, compact_size_uint::CompactSizeUint,
-        messages::headers_message::HeadersMessage,
+        compact_size_uint::CompactSizeUint,
+        messages::headers_message::HeadersMessage, blocks::block_header::BlockHeader,
     };
 
     #[test]

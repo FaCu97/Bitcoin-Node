@@ -125,8 +125,8 @@ unsafe impl Sync for BlockHeader {}
 
 #[cfg(test)]
 mod tests {
-    use crate::block_header::BlockHeader;
     use bitcoin_hashes::{sha256d, Hash};
+    use super::BlockHeader;
 
     fn generar_block_header() -> Result<BlockHeader, &'static str> {
         let mut message_header: Vec<u8> = Vec::new();
