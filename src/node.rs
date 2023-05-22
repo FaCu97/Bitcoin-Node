@@ -25,14 +25,18 @@ impl Node {
     }
     pub fn make_transaction(&mut self, _adress: [u8; 32], amount_to_spend: i64) -> bool {
         let mut position_utxo: usize = 0;
-        for utxo in &self.utxo_set {
-            if utxo.value() > amount_to_spend {
-                break;
+        let mut can_spend: bool = false;
+        while position_utxo < self.utxo_set.len() && !can_spend {
+            if self.utxo_set[position_utxo].value() > amount_to_spend {
+                can_spend = true
             }
             position_utxo += 1;
         }
-        let _utxo_to_spend: &TxOut = &self.utxo_set[position_utxo];
-        self.utxo_set.remove(position_utxo);
+        if can_spend {
+            let _utxo_to_spend: &TxOut = &self.utxo_set[position_utxo - 1];
+            self.utxo_set.remove(position_utxo - 1);
+            return true;
+        }
         false
     }
 
@@ -42,6 +46,6 @@ impl Node {
         block: Block,
         vector_hash: Vec<[u8; 32]>,
     ) -> bool {
-        block.merkle_proof_of_inclusion(&transaction, vector_hash)
-    }
+        block.merkle_proof_of_inclusion(transaction.hash(), vector_hash)
+    }         
 }

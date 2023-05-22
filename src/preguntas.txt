@@ -1,7 +1,0 @@
-
-1)
-si un bloque contiene una sola transaccion ,¿ el merkle root se genera aplicando el hash 
-al tx_id o se concatena el tx_id consigo mismo y luego se le aplica el hash ? 
-
-
-

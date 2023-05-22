@@ -69,10 +69,6 @@ impl Transaction {
     pub fn marshalling(&self, bytes: &mut Vec<u8>) {
         let version_bytes: [u8; 4] = self.version.to_le_bytes();
         bytes.extend_from_slice(&version_bytes);
-/*        if self.tx_in[0].is_coinbase(){
-            let hola = [0x00,0x01];
-            bytes.extend_from_slice(&hola);
-        }*/
         bytes.extend_from_slice(&self.txin_count.marshalling());
         for tx_in in &self.tx_in {
             tx_in.marshalling(bytes);
@@ -81,12 +77,6 @@ impl Transaction {
         for tx_out in &self.tx_out {
             tx_out.marshalling(bytes);
         }
- /*       if self.tx_in[0].is_coinbase(){
-            let mut hola = [0;34];
-            hola[0] = 0x01;
-            hola[1] = 0x20;
-            bytes.extend_from_slice(&hola);
-        }*/
         let locktime_bytes: [u8; 4] = self.lock_time.to_le_bytes();
         bytes.extend_from_slice(&locktime_bytes);
     }
@@ -240,7 +230,7 @@ mod test {
         let index_outpoint: u32 = 0xffffffff;
         let outpoint: Outpoint = Outpoint::new(tx_id, index_outpoint);
         let compact_txin: CompactSizeUint = CompactSizeUint::new(5);
-        let height = Some(vec![1,1,1,1]);
+        let height = Some(vec![1, 1, 1, 1]);
         let signature_script: Vec<u8> = vec![1];
         let sequence: u32 = 0xffffffff;
         let mut tx_in: Vec<TxIn> = Vec::new();
