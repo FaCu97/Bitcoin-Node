@@ -101,6 +101,16 @@ impl Transaction {
         }
         Ok(transactions_list)
     }
+
+    pub fn give_me_utxos(&self) -> Vec<&TxOut>{
+        let mut list_of_utxos = Vec::new();
+        for tx_out in &self.tx_out{
+            if tx_out.is_utxo(){
+                list_of_utxos.push(tx_out);
+            }
+        }
+        list_of_utxos
+    }
 }
 #[cfg(test)]
 

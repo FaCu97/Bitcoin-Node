@@ -70,6 +70,10 @@ impl TxOut {
     pub fn value(&self) -> i64 {
         self.value
     }
+
+    pub fn is_utxo(&self) -> bool{
+        self.utxo
+    }
 }
 
 #[cfg(test)]
