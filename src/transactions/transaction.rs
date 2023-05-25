@@ -2,7 +2,7 @@ use bitcoin_hashes::{sha256d, Hash};
 
 use crate::compact_size_uint::CompactSizeUint;
 
-use super::{tx_in::TxIn, tx_out::TxOut};
+use super::{tx_in::TxIn, tx_out::TxOut, outpoint::{self, Outpoint}};
 #[derive(Debug, PartialEq, Clone)]
 pub struct Transaction {
     pub version: i32,
@@ -110,6 +110,27 @@ impl Transaction {
             }
         }
         list_of_utxos
+    }
+
+    pub fn set_utxos(&mut self,outpoints: &mut Vec<Outpoint>){
+        if outpoints.is_empty(){
+            for txin in &self.tx_in{
+                outpoints.push(txin.outpoint());
+            }
+        }
+        else{
+            let hash = self.hash();
+
+            for txin in &self.tx_in{
+                outpoints.push(txin.outpoint());
+            }
+
+            for outpoint in outpoints{
+                if outpoint.same_hash(hash){
+                    self.tx_out[outpoint.index()].spent();
+                }
+            }
+        }
     }
 }
 #[cfg(test)]

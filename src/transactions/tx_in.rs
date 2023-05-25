@@ -101,6 +101,10 @@ impl TxIn {
     pub fn is_coinbase(&self) -> bool {
         self.height.is_some()
     }
+
+    pub fn outpoint(&self) -> Outpoint{
+        self.previous_output
+    }
 }
 #[cfg(test)]
 

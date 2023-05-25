@@ -14,10 +14,10 @@ impl Node {
     pub fn block_validation(block: Block) -> (bool, &'static str) {
         block.validate()
     }
-
-    fn generate_utxo_set(&self) -> Vec<&TxOut>{
+    ///Funcion que se encarga de generar la lista de utxos
+    fn generate_utxo_set(block_chain : &Vec<Block>) -> Vec<&TxOut>{
         let mut list_of_utxos = Vec::new();
-        for block in &self.block_chain{
+        for block in block_chain{
             list_of_utxos.extend_from_slice(&block.give_me_utxos());
         }
         list_of_utxos
