@@ -7,9 +7,9 @@ use super::{tx_in::TxIn, tx_out::TxOut, outpoint::{self, Outpoint}};
 pub struct Transaction {
     pub version: i32,
     pub txin_count: CompactSizeUint,
-    tx_in: Vec<TxIn>,
+    pub tx_in: Vec<TxIn>,
     pub txout_count: CompactSizeUint,
-    tx_out: Vec<TxOut>,
+    pub tx_out: Vec<TxOut>,
     pub lock_time: u32,
 }
 
