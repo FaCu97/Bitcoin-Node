@@ -170,3 +170,49 @@ fn test_seteo_de_utxos_dentro_de_un_bloque_con_3_transacciones_funciona_correcta
     assert!(block.txn[2].tx_out[2].is_utxo());
 
 }
+
+#[test]
+
+fn test_lista_de_utxos_de_un_bloque_con_2_transacciones_tiene_largo_esperado(){
+    // coinbase transaction
+    // seteo de tx_outs de la coinbase 
+    let coinbase_values_tx_outs : Vec<i64> = vec![1000,200,500];
+    let txout_count : CompactSizeUint = CompactSizeUint::new(3);
+    let tx_out: Vec<TxOut> = create_tx_outs(coinbase_values_tx_outs);
+    // seteo de tx_ins de la coinbase 
+    let mut tx_in : Vec<TxIn> = Vec::new();
+    let txin_count : CompactSizeUint = CompactSizeUint::new(1);
+    let coinbase_output : Outpoint = create_coinbase_output();
+    let coinbase_height : Option<Vec<u8>> = Some(vec![1,2]);
+    tx_in.push(create_txin(coinbase_output, coinbase_height));
+    // creacion de la coinbase transaction
+    let coinbase_transaction : Transaction = create_transaction(txin_count, tx_in, txout_count, tx_out);
+    // primer transaction despues de la coinbase
+    // seteo de tx_out de la transaccion
+    let coinbase_values_tx_outs : Vec<i64> = vec![1000,200,500];
+    let txout_count : CompactSizeUint = CompactSizeUint::new(3);
+    let tx_out: Vec<TxOut> = create_tx_outs(coinbase_values_tx_outs);
+    // seteo de tx_in de la transaccion
+    let mut  hashes : Vec<[u8;32]> = Vec::new();
+    let coinbase_hash : [u8;32] = coinbase_transaction.hash();
+    hashes.push(coinbase_hash);
+    hashes.push(coinbase_hash);
+    let indexs : Vec<u32> = vec![0,1];
+    let txin_count : CompactSizeUint = CompactSizeUint::new(2);
+    let mut tx_in : Vec<TxIn> = Vec::new();
+    create_txins(hashes,indexs,&mut tx_in);
+    // creacion de la transaccion 
+    let first_transaction : Transaction = create_transaction(txin_count, tx_in, txout_count, tx_out);
+    //creacion del bloque 
+    let mut txn : Vec<Transaction> = Vec::new();
+    let txn_count : CompactSizeUint = CompactSizeUint::new(2);
+    txn.push(coinbase_transaction);
+    txn.push(first_transaction);
+
+    let mut block : Block=Block { block_header: (create_block_header()), txn_count, txn};
+    block.set_utxos();
+    let utxos = block.give_me_utxos();
+    assert_eq!(utxos.len(),4);
+
+
+}
