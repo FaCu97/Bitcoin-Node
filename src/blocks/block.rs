@@ -1,6 +1,6 @@
 use bitcoin_hashes::{sha256d, Hash};
 
-use crate::{compact_size_uint::CompactSizeUint, transactions::transaction::Transaction};
+use crate::{compact_size_uint::CompactSizeUint, transactions::{transaction::Transaction, tx_out::TxOut, outpoint::Outpoint}};
 
 use super::block_header::BlockHeader;
 
@@ -44,8 +44,8 @@ impl Block {
         }
     }
 
-    // Esta funcion se encarga de validar el bloque , primero realiza la proof of work
-    // luego realiza la proof of inclusion sobre su lista de transacciones
+    /// Esta funcion se encarga de validar el bloque , primero realiza la proof of work
+    /// luego realiza la proof of inclusion sobre su lista de transacciones
     pub fn validate(&self) -> (bool, &'static str) {
         //proof of work
         if !self.block_header.validate() {
@@ -64,22 +64,23 @@ impl Block {
         }
         let mut weight = Vec::new();
         self.marshalling(&mut weight);
+        //se prueba que el bloque no exceda mas de 1 MB
         if weight.len() > 1048576 {
             return (false, "El bloque ocupa mas de un megabyte");
         }
         (true, "El bloque es valido")
     }
 
-    // Esta funcion se encarga de concatenar los hashes recibidos y luego hashearlos
+    /// Esta funcion se encarga de concatenar los hashes recibidos y luego hashearlos
     fn concatenate_and_hash(first_hash: [u8; 32], second_hash: [u8; 32]) -> [u8; 32] {
         let mut hashs_concatenated: [u8; 64] = [0; 64];
         hashs_concatenated[..32].copy_from_slice(&first_hash[..32]);
         hashs_concatenated[32..(32 + 32)].copy_from_slice(&second_hash[..32]);
         *sha256d::Hash::hash(&hashs_concatenated).as_byte_array()
     }
-    // funcion que se encarga de reducir los elementos del vector de tx_ids , agruparlos
-    // de a pares hasearlos y guardarlos nuevamente en un vector el cual sera procesado
-    // recursivamente hasta obtener el merkle root hash
+    /// funcion que se encarga de reducir los elementos del vector de tx_ids , agruparlos
+    /// de a pares hasearlos y guardarlos nuevamente en un vector el cual sera procesado
+    /// recursivamente hasta obtener el merkle root hash
     pub fn recursive_generation_merkle_root(vector: Vec<[u8; 32]>) -> [u8; 32] {
         let vec_length: usize = vector.len();
         if vec_length == 1 {
@@ -117,8 +118,8 @@ impl Block {
         }
         Self::recursive_generation_merkle_root(merkle_transactions)
     }
-    // Esta funcion realiza la SPV , asumimos que recibimos los restantes elementos para
-    // construir el merkle root en el siguiente orden : desde las hojas hacia la raiz
+    /// Esta funcion realiza la SPV , asumimos que recibimos los restantes elementos para
+    /// construir el merkle root en el siguiente orden : desde las hojas hacia la raiz
     pub fn merkle_proof_of_inclusion(
         &self,
         transaction_to_find: [u8; 32],
@@ -131,6 +132,30 @@ impl Block {
         }
         current_hash == self.generate_merkle_root()
     }
+
+    pub fn set_utxos(&mut self){
+        let mut non_utxos: Vec<Outpoint> = Vec::new();
+        let mut position :usize = self.txn_count.decoded_value() as usize;
+        while  position > 0 {
+            position-=1;
+            self.txn[position].set_utxos(&mut non_utxos);
+
+        }
+    }
+
+
+
+    pub fn give_me_utxos(&self) -> Vec<&TxOut>{
+        let mut utxo_container = Vec::new();
+        for tx in &self.txn{
+            let list_of_utxos = tx.give_me_utxos();
+            utxo_container.extend_from_slice(&list_of_utxos);
+        }
+        utxo_container
+    }
+
+
+
 }
 
 #[cfg(test)]

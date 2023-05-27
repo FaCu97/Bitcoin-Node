@@ -10,12 +10,20 @@ pub struct Node {
 }
 
 impl Node {
-    // funcion para validar un bloque
+    /// funcion para validar un bloque
     pub fn block_validation(block: Block) -> (bool, &'static str) {
         block.validate()
     }
+    ///Funcion que se encarga de generar la lista de utxos
+    fn generate_utxo_set(block_chain : &Vec<Block>) -> Vec<&TxOut>{
+        let mut list_of_utxos = Vec::new();
+        for block in block_chain{
+            list_of_utxos.extend_from_slice(&block.give_me_utxos());
+        }
+        list_of_utxos
+    }
 
-    // funcion que mostrara la cantidad de satoshis en nuestra cuenta
+    /// funcion que mostrara la cantidad de satoshis en nuestra cuenta
     pub fn account_balance(&self) -> i64 {
         let mut account_balance: i64 = 0;
         for utxo in &self.utxo_set {
@@ -40,7 +48,7 @@ impl Node {
         false
     }
 
-    // funcion que muestra si una transaccion se encuentra en un determinado bloque
+    /// funcion que muestra si una transaccion se encuentra en un determinado bloque
     pub fn merkle_proof_of_inclusion(
         transaction: Transaction,
         block: Block,
