@@ -193,7 +193,10 @@ pub fn listen_for_incoming_blocks_from_node(
                             Ok(block) => block,
                         };
                         if new_block.validate().0 {
-                            blocks.write().unwrap().push(new_block);
+                            blocks
+                                .write()
+                                .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+                                .push(new_block);
                             write_in_log(
                                 log_sender.info_log_sender.clone(),
                                 "NUEVO BLOQUE AGREGADO!",

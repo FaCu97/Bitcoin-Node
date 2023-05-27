@@ -12,6 +12,13 @@ impl Inventory {
         }
     }
 
+    pub fn new_tx(hash: [u8; 32]) -> Inventory {
+        Inventory {
+            type_identifier: 1, // 1: Transaction
+            hash,
+        }
+    }
+
     pub fn to_le_bytes(&self) -> Vec<u8> {
         let mut inventory_bytes: Vec<u8> = Vec::new();
         inventory_bytes.extend_from_slice(&self.type_identifier.to_le_bytes());
