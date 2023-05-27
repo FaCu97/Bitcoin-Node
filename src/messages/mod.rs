@@ -6,3 +6,4 @@ pub mod inventory;
 pub mod message_header;
 pub mod payload;
 pub mod version_message;
+pub mod inv_message;
