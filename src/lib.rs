@@ -1,3 +1,4 @@
+pub mod adress;
 pub mod block_broadcasting;
 pub mod blocks;
 pub mod compact_size_uint;
