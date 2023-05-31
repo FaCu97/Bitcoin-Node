@@ -1,6 +1,9 @@
 use bitcoin_hashes::{sha256d, Hash};
 
-use crate::{compact_size_uint::CompactSizeUint, transactions::{transaction::Transaction, tx_out::TxOut, outpoint::Outpoint}};
+use crate::{
+    compact_size_uint::CompactSizeUint,
+    transactions::{outpoint::Outpoint, transaction::Transaction, tx_out::TxOut},
+};
 
 use super::block_header::BlockHeader;
 
@@ -133,29 +136,23 @@ impl Block {
         current_hash == self.generate_merkle_root()
     }
 
-    pub fn set_utxos(&mut self){
+    pub fn set_utxos(&mut self) {
         let mut non_utxos: Vec<Outpoint> = Vec::new();
-        let mut position :usize = self.txn_count.decoded_value() as usize;
-        while  position > 0 {
-            position-=1;
+        let mut position: usize = self.txn_count.decoded_value() as usize;
+        while position > 0 {
+            position -= 1;
             self.txn[position].set_utxos(&mut non_utxos);
-
         }
     }
 
-
-
-    pub fn give_me_utxos(&self) -> Vec<&TxOut>{
+    pub fn give_me_utxos(&self) -> Vec<&TxOut> {
         let mut utxo_container = Vec::new();
-        for tx in &self.txn{
+        for tx in &self.txn {
             let list_of_utxos = tx.give_me_utxos();
             utxo_container.extend_from_slice(&list_of_utxos);
         }
         utxo_container
     }
-
-
-
 }
 
 #[cfg(test)]

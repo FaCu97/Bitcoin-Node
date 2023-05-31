@@ -102,7 +102,7 @@ impl TxIn {
         self.height.is_some()
     }
 
-    pub fn outpoint(&self) -> Outpoint{
+    pub fn outpoint(&self) -> Outpoint {
         self.previous_output
     }
 }

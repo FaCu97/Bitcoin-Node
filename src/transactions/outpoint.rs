@@ -1,4 +1,4 @@
-#[derive(PartialEq, Debug, Copy,Clone)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub struct Outpoint {
     tx_id: [u8; 32],
     index: u32,
@@ -43,11 +43,11 @@ impl Outpoint {
             bytes.push(item);
         }
     }
-    pub fn same_hash(&self,hash:[u8;32]) -> bool{
+    pub fn same_hash(&self, hash: [u8; 32]) -> bool {
         self.tx_id == hash
     }
 
-    pub fn index(&self) -> usize{
+    pub fn index(&self) -> usize {
         self.index as usize
     }
 }
