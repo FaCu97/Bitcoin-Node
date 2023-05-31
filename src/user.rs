@@ -3,12 +3,30 @@ use k256::sha2::Digest;
 use k256::sha2::Sha256;
 use secp256k1::SecretKey;
 
-pub struct Adress {
-    adress: Vec<u8>,
+pub struct User {
+    private_key: String,
+    adress: String,
 }
 
-impl Adress {
-    pub fn generate_adress(private_key: &[u8]) -> String {
+impl User {
+    pub fn login_user(private_key: String, adress: String) -> Result<User, &'static str> {
+        let raw_private_key = Self::decode_wif_private_key(private_key.as_str());
+        let priv_key: [u8; 32];
+        match raw_private_key {
+            Some(number) => priv_key = number,
+            None => return Err("fallo la decodificacion de la clave"),
+        }
+        let validate_adress = Self::generate_adress(&priv_key);
+        if validate_adress == adress {
+            return Ok(User {
+                private_key,
+                adress,
+            });
+        }
+        Err("los datos ingresados no corresponden a un usuario valido")
+    }
+
+    fn generate_adress(private_key: &[u8]) -> String {
         // se aplica el algoritmo de ECDSA a la clave privada , luego
         // a la clave publica
         let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
@@ -51,8 +69,9 @@ impl Adress {
 #[cfg(test)]
 
 mod test {
-    use super::Adress;
     use hex;
+
+    use crate::user::User;
 
     fn string_to_bytes(input: &str) -> Result<[u8; 32], hex::FromHexError> {
         let bytes = hex::decode(input)?;
@@ -62,13 +81,12 @@ mod test {
     }
 
     #[test]
-    fn test_se_genera_correctamente_el_adress() {
-        let adress_expected = "msknbbUREqQw9worGo17T8BwsHSEVScx5C";
-        let private_key =
-            Adress::decode_wif_private_key("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR")
-                .unwrap();
-        let adress_generated = Adress::generate_adress(&private_key);
-        assert_eq!(adress_generated, adress_expected);
+    fn test_se_genera_correctamente_el_usuario() {
+        let adress_expected: String = String::from("msknbbUREqQw9worGo17T8BwsHSEVScx5C");
+        let private_key: String =
+            String::from("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR");
+        let user: Result<User, &str> = User::login_user(private_key, adress_expected);
+        assert!(user.is_ok());
     }
 
     #[test]
@@ -80,7 +98,7 @@ mod test {
             string_to_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
                 .unwrap();
 
-        let pk = match Adress::decode_wif_private_key(wif) {
+        let pk = match User::decode_wif_private_key(wif) {
             Some(private_key) => private_key,
             None => [0; 32],
         };

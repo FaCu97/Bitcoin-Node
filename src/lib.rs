@@ -1,4 +1,3 @@
-pub mod adress;
 pub mod block_broadcasting;
 pub mod blocks;
 pub mod compact_size_uint;
@@ -10,3 +9,4 @@ pub mod messages;
 pub mod network;
 pub mod node;
 pub mod transactions;
+pub mod user;
