@@ -70,17 +70,9 @@ impl BlockBroadcasting {
         );
         let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<BroadcastingResult>> = vec![];
-        let cant_nodos = nodes
-            .read()
-            .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-            .len();
+        let cant_nodos = get_amount_of_nodes(nodes.clone())?;
         for _ in 0..cant_nodos {
-            let node = nodes
-                .try_write()
-                .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-                .pop()
-                .ok_or("Error no hay mas nodos para descargar los headers!\n")
-                .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
+            let node = get_last_node(nodes.clone())?;
             println!(
                 "Nodo -{:?}- Escuchando por nuevos bloques...\n",
                 node.peer_addr()
@@ -99,6 +91,7 @@ impl BlockBroadcasting {
             finish,
         })
     }
+
     pub fn finish(&self) -> BroadcastingResult {
         *self
             .finish
@@ -280,4 +273,22 @@ fn get_last_header(
         .ok_or("No se pudo obtener el último header")
         .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
     Ok(last_header)
+}
+
+fn get_last_node(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<TcpStream, BroadcastingError> {
+    let node = nodes
+        .try_write()
+        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+        .pop()
+        .ok_or("Error no hay mas nodos para descargar los headers!\n")
+        .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
+    Ok(node)
+}
+
+fn get_amount_of_nodes(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<usize, BroadcastingError> {
+    let amount_of_nodes = nodes
+        .read()
+        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+        .len();
+    Ok(amount_of_nodes)
 }
