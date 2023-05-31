@@ -181,7 +181,7 @@ pub fn ask_for_new_blocks(
                 let cloned_node = node
                     .try_clone()
                     .map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
-                if let Err(_) = ask_for_new_block(log_sender.clone(), cloned_node, header) {
+                if ask_for_new_block(log_sender.clone(), cloned_node, header).is_err() {
                     continue;
                 }
                 let cloned_node = node
@@ -221,10 +221,10 @@ fn recieve_new_block(
             .write()
             .map_err(|err| BroadcastingError::LockError(err.to_string()))?
             .push(new_block);
-        write_in_log(log_sender.info_log_sender.clone(), "NUEVO BLOQUE AGREGADO!");
+        write_in_log(log_sender.info_log_sender, "NUEVO BLOQUE AGREGADO!");
     } else {
         write_in_log(
-            log_sender.error_log_sender.clone(),
+            log_sender.error_log_sender,
             "NUEVO BLOQUE ES INVALIDO, NO LO AGREGO!",
         );
     }
@@ -264,7 +264,7 @@ fn recieve_new_header(
         .map_err(|err| BroadcastingError::LockError(err.to_string()))?
         .push(header);
     write_in_log(
-        log_sender.info_log_sender.clone(),
+        log_sender.info_log_sender,
         "Recibo un nuevo header, lo agrego a la cadena de headers!",
     );
     Ok(())
