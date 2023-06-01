@@ -46,7 +46,6 @@ impl Block {
             tx.marshalling(bytes);
         }
     }
-
     /// Esta funcion se encarga de validar el bloque , primero realiza la proof of work
     /// luego realiza la proof of inclusion sobre su lista de transacciones
     pub fn validate(&self) -> (bool, &'static str) {

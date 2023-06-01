@@ -6,7 +6,7 @@ pub struct TxIn {
     previous_output: Outpoint,
     script_bytes: CompactSizeUint,
     height: Option<Vec<u8>>,
-    signature_script: Vec<u8>,
+    pub signature_script: Vec<u8>,
     sequence: u32,
 }
 
