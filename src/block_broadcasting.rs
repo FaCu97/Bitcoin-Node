@@ -70,17 +70,9 @@ impl BlockBroadcasting {
         );
         let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<BroadcastingResult>> = vec![];
-        let cant_nodos = nodes
-            .read()
-            .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-            .len();
+        let cant_nodos = get_amount_of_nodes(nodes.clone())?;
         for _ in 0..cant_nodos {
-            let node = nodes
-                .try_write()
-                .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-                .pop()
-                .ok_or("Error no hay mas nodos para descargar los headers!\n")
-                .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
+            let node = get_last_node(nodes.clone())?;
             println!(
                 "Nodo -{:?}- Escuchando por nuevos bloques...\n",
                 node.peer_addr()
@@ -99,6 +91,7 @@ impl BlockBroadcasting {
             finish,
         })
     }
+
     pub fn finish(&self) -> BroadcastingResult {
         *self
             .finish
@@ -146,71 +139,156 @@ pub fn listen_for_incoming_blocks_from_node(
             if is_terminated(Some(finish.clone())) {
                 return Ok(());
             }
-            for header in new_headers {
-                if !header.validate() {
-                    write_in_log(
-                        log_sender.error_log_sender.clone(),
-                        "Error en validacion de la proof of work de nuevo header",
-                    );
-                } else {
-                    let last_header = *headers
-                        .read()
-                        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-                        .last()
-                        .ok_or("No se pudo obtener el último header")
-                        .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
-                    if last_header != header {
-                        println!("%%%%%%%    Recibo nuevo header!!!    %%%%%%%");
-                        headers
-                            .write()
-                            .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-                            .push(header);
-                        write_in_log(
-                            log_sender.info_log_sender.clone(),
-                            "Recibo un nuevo header, lo agrego a la cadena de headers!",
-                        );
-                        if let Err(err) =
-                            GetDataMessage::new(vec![Inventory::new_block(header.hash())])
-                                .write_to(&mut node)
-                        {
-                            write_in_log(
-                                log_sender.error_log_sender.clone(),
-                                format!(
-                                    "Error al pedir bloque -{:?}- a nodo -{:?}-. Error: {err}",
-                                    header.hash(),
-                                    node.peer_addr()
-                                )
-                                .as_str(),
-                            );
-                            continue;
-                        }
-                        let mut new_block = match BlockMessage::read_from(
-                            log_sender.clone(),
-                            &mut node,
-                        ) {
-                            Err(err) => {
-                                write_in_log(log_sender.error_log_sender.clone(), format!("Error al recibir bloque -{:?}- del nodo -{:?}-. Error: {err}", header.hash(), node.peer_addr()).as_str());
-                                continue;
-                            }
-                            Ok(block) => block,
-                        };
-                        if new_block.validate().0 {
-                            new_block.set_utxos();
-                            blocks.write().unwrap().push(new_block);
-                            write_in_log(
-                                log_sender.info_log_sender.clone(),
-                                "NUEVO BLOQUE AGREGADO!",
-                            );
-                        } else {
-                            write_in_log(
-                                log_sender.error_log_sender.clone(),
-                                "NUEVO BLOQUE ES INVALIDO, NO LO AGREGO!",
-                            );
-                        }
-                    }
-                }
-            }
+            let cloned_node = node
+                .try_clone()
+                .map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
+            ask_for_new_blocks(
+                log_sender.clone(),
+                new_headers,
+                cloned_node,
+                headers.clone(),
+                blocks.clone(),
+            )?;
         }
         Ok(())
     })
+}
+
+pub fn ask_for_new_blocks(
+    log_sender: LogSender,
+    new_headers: Vec<BlockHeader>,
+    node: TcpStream,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    blocks: Arc<RwLock<Vec<Block>>>,
+) -> BroadcastingResult {
+    for header in new_headers {
+        if !header.validate() {
+            write_in_log(
+                log_sender.error_log_sender.clone(),
+                "Error en validacion de la proof of work de nuevo header",
+            );
+        } else {
+            let last_header = get_last_header(headers.clone())?;
+            if last_header != header {
+                recieve_new_header(log_sender.clone(), header, headers.clone())?;
+                let cloned_node = node
+                    .try_clone()
+                    .map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
+                if ask_for_new_block(log_sender.clone(), cloned_node, header).is_err() {
+                    continue;
+                }
+                let cloned_node = node
+                    .try_clone()
+                    .map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
+                if let Err(BroadcastingError::CanNotRead(err)) =
+                    recieve_new_block(log_sender.clone(), cloned_node, blocks.clone())
+                {
+                    write_in_log(
+                        log_sender.error_log_sender.clone(),
+                        format!(
+                            "Error al recibir bloque -{:?}- del nodo -{:?}-. Error: {err}",
+                            header.hash(),
+                            node.peer_addr()
+                        )
+                        .as_str(),
+                    );
+                    continue;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+fn recieve_new_block(
+    log_sender: LogSender,
+    mut node: TcpStream,
+    blocks: Arc<RwLock<Vec<Block>>>,
+) -> BroadcastingResult {
+    let new_block: Block = match BlockMessage::read_from(log_sender.clone(), &mut node) {
+        Err(err) => return Err(BroadcastingError::CanNotRead(err.to_string())),
+        Ok(block) => block,
+    };
+    if new_block.validate().0 {
+        blocks
+            .write()
+            .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+            .push(new_block);
+        write_in_log(log_sender.info_log_sender, "NUEVO BLOQUE AGREGADO!");
+    } else {
+        write_in_log(
+            log_sender.error_log_sender,
+            "NUEVO BLOQUE ES INVALIDO, NO LO AGREGO!",
+        );
+    }
+    Ok(())
+}
+
+fn ask_for_new_block(
+    log_sender: LogSender,
+    mut node: TcpStream,
+    header: BlockHeader,
+) -> BroadcastingResult {
+    GetDataMessage::new(vec![Inventory::new_block(header.hash())])
+        .write_to(&mut node)
+        .map_err(|err| {
+            write_in_log(
+                log_sender.error_log_sender.clone(),
+                format!(
+                    "Error al pedir bloque -{:?}- a nodo -{:?}-. Error: {err}",
+                    header.hash(),
+                    node.peer_addr()
+                )
+                .as_str(),
+            );
+            BroadcastingError::WriteNodeError(err.to_string())
+        })?;
+    Ok(())
+}
+
+fn recieve_new_header(
+    log_sender: LogSender,
+    header: BlockHeader,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+) -> BroadcastingResult {
+    println!("%%%%%%%    Recibo nuevo header!!!    %%%%%%%");
+    headers
+        .write()
+        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+        .push(header);
+    write_in_log(
+        log_sender.info_log_sender,
+        "Recibo un nuevo header, lo agrego a la cadena de headers!",
+    );
+    Ok(())
+}
+
+fn get_last_header(
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+) -> Result<BlockHeader, BroadcastingError> {
+    let last_header = *headers
+        .read()
+        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+        .last()
+        .ok_or("No se pudo obtener el último header")
+        .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
+    Ok(last_header)
+}
+
+fn get_last_node(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<TcpStream, BroadcastingError> {
+    let node = nodes
+        .try_write()
+        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+        .pop()
+        .ok_or("Error no hay mas nodos para descargar los headers!\n")
+        .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
+    Ok(node)
+}
+
+fn get_amount_of_nodes(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<usize, BroadcastingError> {
+    let amount_of_nodes = nodes
+        .read()
+        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+        .len();
+    Ok(amount_of_nodes)
 }
