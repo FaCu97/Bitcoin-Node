@@ -6,7 +6,7 @@ use crate::{
         get_data_message::GetDataMessage,
         headers_message::{is_terminated, HeadersMessage},
         inventory::Inventory,
-    },
+    }, listener::listen_for_incoming_messages,
 };
 use std::{
     error::Error,
@@ -133,6 +133,8 @@ pub fn listen_for_incoming_blocks_from_node(
     let log_sender_clone = log_sender.clone();
     thread::spawn(move || -> BroadcastingResult {
         while !is_terminated(Some(finish.clone())) {
+            //listen_for_incoming_messages(log_sender.clone(), &mut node, Some(finish.clone())).map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
+             
             let new_headers = match HeadersMessage::read_from(
                 log_sender_clone.clone(),
                 &mut node,
@@ -148,6 +150,7 @@ pub fn listen_for_incoming_blocks_from_node(
             }
             let cloned_node = node.try_clone().map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
             ask_for_new_blocks(log_sender.clone(), new_headers, cloned_node, headers.clone(), blocks.clone())?;
+            
         }
         Ok(())
     })

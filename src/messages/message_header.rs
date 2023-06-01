@@ -97,6 +97,13 @@ impl HeaderMessage {
             let payload_size = header.payload_size as usize;
             let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
             stream.read_exact(&mut payload_buffer_num)?;
+            if header.command_name == "ping\0\0\0\0\0\0\0\0" {
+                write_pong_message(stream, &payload_buffer_num)?;
+                //write_in_log(log_sender.info_log_sender.clone(), "Respondo con pong a mensaje ping correctamente");
+            }
+            if header.command_name == "inv\0\0\0\0\0\0\0\0\0" {
+                
+            }
             buffer_num = [0; 24];
             stream.read_exact(&mut buffer_num)?;
             header = HeaderMessage::from_le_bytes(buffer_num)?;
