@@ -184,8 +184,10 @@ pub fn listen_for_incoming_blocks_from_node(
                             );
                             continue;
                         }
-                        let new_block = match BlockMessage::read_from(log_sender.clone(), &mut node)
-                        {
+                        let mut new_block = match BlockMessage::read_from(
+                            log_sender.clone(),
+                            &mut node,
+                        ) {
                             Err(err) => {
                                 write_in_log(log_sender.error_log_sender.clone(), format!("Error al recibir bloque -{:?}- del nodo -{:?}-. Error: {err}", header.hash(), node.peer_addr()).as_str());
                                 continue;
@@ -193,6 +195,7 @@ pub fn listen_for_incoming_blocks_from_node(
                             Ok(block) => block,
                         };
                         if new_block.validate().0 {
+                            new_block.set_utxos();
                             blocks.write().unwrap().push(new_block);
                             write_in_log(
                                 log_sender.info_log_sender.clone(),
