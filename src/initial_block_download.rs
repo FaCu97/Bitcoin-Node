@@ -568,7 +568,7 @@ pub fn initial_block_download(
     let config_cloned = config.clone();
     let headers = vec![];
     let pointer_to_headers = Arc::new(RwLock::new(headers));
-    download_first_2000000_headers(
+    read_first_2000000_headers_from_disk(
         config.clone(),
         log_sender.clone(),
         pointer_to_headers.clone(),
@@ -643,7 +643,7 @@ pub fn initial_block_download(
     Ok((headers.clone(), blocks.clone()))
 }
 
-fn download_first_2000000_headers(
+fn read_first_2000000_headers_from_disk(
     config: Arc<Config>,
     log_sender: LogSender,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
