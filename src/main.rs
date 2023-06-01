@@ -87,7 +87,6 @@ fn main() -> Result<(), GenericError> {
 
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
-    
     let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
         logsender.clone(),
         pointer_to_nodes,
