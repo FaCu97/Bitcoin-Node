@@ -71,11 +71,11 @@ impl TxOut {
         self.value
     }
 
-    pub fn is_utxo(&self) -> bool{
+    pub fn is_utxo(&self) -> bool {
         self.utxo
     }
 
-    pub fn spent(&mut self){
+    pub fn spent(&mut self) {
         self.utxo = false
     }
 }
