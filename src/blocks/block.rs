@@ -143,8 +143,7 @@ impl Block {
             self.txn[position].set_utxos(&mut non_utxos);
         }
     }
-
-    pub fn give_me_utxos(&self) -> Vec<&TxOut> {
+    pub fn give_me_utxos<'a>(&'a self) -> Vec<&'a TxOut> {
         let mut utxo_container = Vec::new();
         for tx in &self.txn {
             let list_of_utxos = tx.give_me_utxos();

@@ -78,7 +78,8 @@ fn main() -> Result<(), GenericError> {
                 GenericError::DownloadError(err)
             },
         )?;
-    let (headers, blocks) = headers_and_blocks;
+    let (headers, mut blocks) = headers_and_blocks;
+
     let node = Node {
         headers: headers.clone(),
         block_chain: blocks.clone(),
