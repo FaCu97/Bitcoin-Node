@@ -1,5 +1,5 @@
 use bitcoin_hashes::{sha256d, Hash};
-use std::io::{Read, Write, self};
+use std::io::{self, Read, Write};
 use std::net::TcpStream;
 use std::str::Utf8Error;
 use std::sync::{Arc, RwLock};
@@ -85,7 +85,7 @@ impl HeaderMessage {
         let mut header = HeaderMessage::from_le_bytes(buffer_num)?;
         // si no se leyo el header que se queria, sigo leyendo hasta encontrarlo
         while header.command_name != header_command_name && !is_terminated(finish.clone()) {
-            if header.command_name.contains("ping"){
+            if header.command_name.contains("ping") {
                 write_in_log(
                     log_sender.messege_log_sender.clone(),
                     format!(
@@ -96,8 +96,7 @@ impl HeaderMessage {
                 );
                 let payload_bytes = read_payload(&mut stream, &header)?;
                 write_pong_message(&mut stream, &payload_bytes)?;
-            }
-            else {
+            } else {
                 write_in_log(
                     log_sender.messege_log_sender.clone(),
                     format!(
@@ -135,7 +134,7 @@ pub fn is_terminated(finish: Option<Arc<RwLock<bool>>>) -> bool {
     }
 }
 
-fn read_payload(stream: & mut dyn Read, header: &HeaderMessage) -> io::Result<Vec<u8>> {
+fn read_payload(stream: &mut dyn Read, header: &HeaderMessage) -> io::Result<Vec<u8>> {
     let payload_size = header.payload_size as usize;
     let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
     stream.read_exact(&mut payload_buffer_num)?;
@@ -155,10 +154,13 @@ pub fn write_verack_message(stream: &mut dyn Write) -> Result<(), Box<dyn std::e
     Ok(())
 }
 
-/// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y el nonce del mensaje ping 
+/// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y el nonce del mensaje ping
 /// al que le tiene que responder y escribe el mensaje pong segun
 /// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error
-pub fn write_pong_message(stream: &mut dyn Write, payload: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+pub fn write_pong_message(
+    stream: &mut dyn Write,
+    payload: &[u8],
+) -> Result<(), Box<dyn std::error::Error>> {
     let checksum = get_checksum(payload);
     let header = HeaderMessage {
         start_string: [0x0b, 0x11, 0x09, 0x07],
@@ -174,7 +176,6 @@ pub fn write_pong_message(stream: &mut dyn Write, payload: &[u8]) -> Result<(), 
     stream.flush()?;
     Ok(())
 }
-
 
 /// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje sendheaders segun
 /// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error
