@@ -135,6 +135,28 @@ pub fn write_verack_message(stream: &mut dyn Write) -> Result<(), Box<dyn std::e
     header.write_to(stream)?;
     Ok(())
 }
+
+/// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y el nonce del mensaje ping 
+/// al que le tiene que responder y escribe el mensaje pong segun
+/// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error
+pub fn write_pong_message(stream: &mut dyn Write, payload: &[u8]) -> Result<(), Box<dyn std::error::Error>> {
+    let checksum = get_checksum(payload);
+    let header = HeaderMessage {
+        start_string: [0x0b, 0x11, 0x09, 0x07],
+        command_name: "pong".to_string(),
+        payload_size: payload.len() as u32,
+        checksum,
+    };
+    let header_bytes = HeaderMessage::to_le_bytes(&header);
+    let mut message: Vec<u8> = Vec::new();
+    message.extend_from_slice(&header_bytes);
+    message.extend(payload);
+    stream.write_all(&message)?;
+    stream.flush()?;
+    Ok(())
+}
+
+
 /// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje sendheaders segun
 /// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error
 pub fn write_sendheaders_message(stream: &mut dyn Write) -> Result<(), Box<dyn std::error::Error>> {
