@@ -5,7 +5,12 @@ use std::str::Utf8Error;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
+use crate::compact_size_uint::CompactSizeUint;
+use crate::listener::handle_ping_message;
 use crate::logwriter::log_writer::{write_in_log, LogSender};
+use crate::messages::{inventory, payload};
+
+use super::inventory::Inventory;
 // todo: implementar test de read_from usando mocking
 // todo: implementar test de write_to usando mocking
 // todo: implementar test de write_verack_message, read_verack_message, write_sendheaders_message usando mocking
@@ -96,6 +101,18 @@ impl HeaderMessage {
                 );
                 let payload_bytes = read_payload(&mut stream, &header)?;
                 write_pong_message(&mut stream, &payload_bytes)?;
+            } 
+            if header.command_name.contains("inv") {
+                write_in_log(
+                    log_sender.messege_log_sender.clone(),
+                    format!(
+                        "Recibo Correctamente: inv -- Nodo: {:?}",
+                        stream.peer_addr()?
+                    )
+                    .as_str(),
+                );
+                let payload_bytes = read_payload(&mut stream, &header)?;
+                handle_inv_message(payload_bytes);
             } else {
                 write_in_log(
                     log_sender.messege_log_sender.clone(),
@@ -139,6 +156,19 @@ fn read_payload(stream: &mut dyn Read, header: &HeaderMessage) -> io::Result<Vec
     let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
     stream.read_exact(&mut payload_buffer_num)?;
     Ok(payload_buffer_num)
+}
+
+fn handle_inv_message(payload_bytes: Vec<u8>) {
+    let mut offset: usize = 0;
+    let count = CompactSizeUint::unmarshalling(&payload_bytes, &mut offset).unwrap();
+    for _ in 0..count.decoded_value() as usize {
+        //checksum[..4].copy_from_slice(&bytes[counter..(4 + counter)]);
+
+        //let bytes = payload_bytes.copy_from_slice(&payload_bytes[offset..(16)]);
+        //let inv = Inventory::from_le_bytes(inventory_bytes);
+        //println!("{:?}", inv);
+    }
+
 }
 
 /// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje verack segun
