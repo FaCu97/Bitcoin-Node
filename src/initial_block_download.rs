@@ -10,6 +10,7 @@ use chrono::{TimeZone, Utc};
 use std::error::Error;
 use std::fs::read_to_string;
 use std::net::TcpStream;
+use std::path::Path;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, RwLock};
 use std::{fmt, thread, vec};
@@ -568,21 +569,12 @@ pub fn initial_block_download(
     let config_cloned = config.clone();
     let headers = vec![];
     let pointer_to_headers = Arc::new(RwLock::new(headers));
-    read_first_2000000_headers_from_disk(
+    get_initial_headers(
         config.clone(),
         log_sender.clone(),
         pointer_to_headers.clone(),
-    )
-    .map_err(|err| {
-        write_in_log(
-            log_sender.error_log_sender.clone(),
-            format!("Error al descargar primeros 2 millones de headers de disco. {err}").as_str(),
-        );
-        DownloadError::CanNotRead(format!(
-            "Error al leer primeros 2 millones de headers. {}",
-            err
-        ))
-    })?;
+        nodes.clone(),
+    );
 
     let blocks: Vec<Block> = vec![];
     let pointer_to_blocks = Arc::new(RwLock::new(blocks));
@@ -641,6 +633,51 @@ pub fn initial_block_download(
     );
 
     Ok((headers.clone(), blocks.clone()))
+}
+
+fn get_initial_headers(
+    config: Arc<Config>,
+    log_sender: LogSender,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    nodes: Arc<RwLock<Vec<TcpStream>>>
+) -> Result<(), Box<dyn Error>> {
+    if Path::new(&config.archivo_headers).exists() {
+        read_first_2000000_headers_from_disk(
+            config.clone(),
+            log_sender.clone(),
+            headers.clone(),
+        )
+        .map_err(|err| {
+            write_in_log(
+                log_sender.error_log_sender.clone(),
+                format!("Error al descargar primeros 2 millones de headers de disco. {err}").as_str(),
+            );
+            DownloadError::CanNotRead(format!(
+                "Error al leer primeros 2 millones de headers. {}",
+                err
+            ))
+        })?;
+    }
+    else{
+        download_first_2000000_headers(
+            config.clone(),
+            log_sender.clone(),
+            headers.clone(),
+        );
+    }
+    Ok(())
+
+}
+
+fn download_first_2000000_headers(
+    config: Arc<Config>,
+    log_sender: LogSender,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+) -> Result<(), Box<dyn Error>> {
+    write_in_log(
+        log_sender.info_log_sender.clone(),
+        "Empiezo descarga de los primeros 2000000 de headers de disco",
+    );
 }
 
 fn read_first_2000000_headers_from_disk(
