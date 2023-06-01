@@ -146,8 +146,75 @@ pub fn listen_for_incoming_blocks_from_node(
             if is_terminated(Some(finish.clone())) {
                 return Ok(());
             }
+<<<<<<< HEAD
             let cloned_node = node.try_clone().map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
             ask_for_new_blocks(log_sender.clone(), new_headers, cloned_node, headers.clone(), blocks.clone())?;
+=======
+            for header in new_headers {
+                if !header.validate() {
+                    write_in_log(
+                        log_sender.error_log_sender.clone(),
+                        "Error en validacion de la proof of work de nuevo header",
+                    );
+                } else {
+                    let last_header = *headers
+                        .read()
+                        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+                        .last()
+                        .ok_or("No se pudo obtener el último header")
+                        .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
+                    if last_header != header {
+                        println!("%%%%%%%    Recibo nuevo header!!!    %%%%%%%");
+                        headers
+                            .write()
+                            .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+                            .push(header);
+                        write_in_log(
+                            log_sender.info_log_sender.clone(),
+                            "Recibo un nuevo header, lo agrego a la cadena de headers!",
+                        );
+                        if let Err(err) =
+                            GetDataMessage::new(vec![Inventory::new_block(header.hash())])
+                                .write_to(&mut node)
+                        {
+                            write_in_log(
+                                log_sender.error_log_sender.clone(),
+                                format!(
+                                    "Error al pedir bloque -{:?}- a nodo -{:?}-. Error: {err}",
+                                    header.hash(),
+                                    node.peer_addr()
+                                )
+                                .as_str(),
+                            );
+                            continue;
+                        }
+                        let mut new_block = match BlockMessage::read_from(
+                            log_sender.clone(),
+                            &mut node,
+                        ) {
+                            Err(err) => {
+                                write_in_log(log_sender.error_log_sender.clone(), format!("Error al recibir bloque -{:?}- del nodo -{:?}-. Error: {err}", header.hash(), node.peer_addr()).as_str());
+                                continue;
+                            }
+                            Ok(block) => block,
+                        };
+                        if new_block.validate().0 {
+                            new_block.set_utxos();
+                            blocks.write().unwrap().push(new_block);
+                            write_in_log(
+                                log_sender.info_log_sender.clone(),
+                                "NUEVO BLOQUE AGREGADO!",
+                            );
+                        } else {
+                            write_in_log(
+                                log_sender.error_log_sender.clone(),
+                                "NUEVO BLOQUE ES INVALIDO, NO LO AGREGO!",
+                            );
+                        }
+                    }
+                }
+            }
+>>>>>>> main
         }
         Ok(())
     })

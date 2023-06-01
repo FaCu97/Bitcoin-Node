@@ -2,14 +2,14 @@ use bitcoin_hashes::{sha256d, Hash};
 
 use crate::compact_size_uint::CompactSizeUint;
 
-use super::{tx_in::TxIn, tx_out::TxOut};
+use super::{tx_in::TxIn, tx_out::TxOut, outpoint::{self, Outpoint}};
 #[derive(Debug, PartialEq, Clone)]
 pub struct Transaction {
     pub version: i32,
     pub txin_count: CompactSizeUint,
-    tx_in: Vec<TxIn>,
+    pub tx_in: Vec<TxIn>,
     pub txout_count: CompactSizeUint,
-    tx_out: Vec<TxOut>,
+    pub tx_out: Vec<TxOut>,
     pub lock_time: u32,
 }
 
@@ -100,6 +100,37 @@ impl Transaction {
             i += 1;
         }
         Ok(transactions_list)
+    }
+
+    pub fn give_me_utxos(&self) -> Vec<&TxOut>{
+        let mut list_of_utxos = Vec::new();
+        for tx_out in &self.tx_out{
+            if tx_out.is_utxo(){
+                list_of_utxos.push(tx_out);
+            }
+        }
+        list_of_utxos
+    }
+
+    pub fn set_utxos(&mut self,outpoints: &mut Vec<Outpoint>){
+        if outpoints.is_empty(){
+            for txin in &self.tx_in{
+                outpoints.push(txin.outpoint());
+            }
+        }
+        else{
+            let hash = self.hash();
+
+            for txin in &self.tx_in{
+                outpoints.push(txin.outpoint());
+            }
+
+            for outpoint in outpoints{
+                if outpoint.same_hash(hash){
+                    self.tx_out[outpoint.index()].spent();
+                }
+            }
+        }
     }
 }
 #[cfg(test)]
