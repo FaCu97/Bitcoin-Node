@@ -805,11 +805,10 @@ fn read_first_2000000_headers_from_disk(
         "Empiezo lectura de los primeros 2000000 de headers de disco",
     );
     let mut data: Vec<u8> = Vec::new();
-    let mut f = File::open(&config.archivo_headers)
+    let mut file = File::open(&config.archivo_headers)
         .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
-    f.read_to_end(&mut data)
+    file.read_to_end(&mut data)
         .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
-    println!("LARGO: {:?}", data.len());
     let mut cant = 0;
     let mut i = 0;
     while i < data.len() {
