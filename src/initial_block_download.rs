@@ -122,46 +122,40 @@ fn download_headers_from_node(
     );
 
     let mut first_block_found = false;
-    // write first getheaders message with genesis block
-    let last_header_hash_downloaded_from_disc = headers
-        .read()
-        .map_err(|err| DownloadError::LockError(err.to_string()))?
-        .last()
-        .ok_or("No se pudo obtener el último elemento del vector de 2000 headers")
-        .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
-        .hash();
-    GetHeadersMessage::build_getheaders_message(
-        config.clone(),
-        vec![last_header_hash_downloaded_from_disc],
-    )
-    .write_to(&mut node)
-    .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
-    // read first 2000 headers from headers message answered from node
-    let mut headers_read =
-        HeadersMessage::read_from(log_sender.clone(), &mut node, None).map_err(|_| {
-            DownloadError::ReadNodeError("error al leer primeros 2000 headers".to_string())
-        })?;
+
+    node = request_headers_from_node(config.clone(), log_sender.clone(), node, headers.clone())?;
+    let mut headers_read: Vec<BlockHeader> = Vec::new();
+
+    (node, headers_read) = receive_headers_from_node(log_sender.clone(), node)?;
+
     // store headers in `global` vec `headers_guard`
     headers
         .write()
         .map_err(|err| DownloadError::LockError(err.to_string()))?
         .extend_from_slice(&headers_read);
+
     while headers_read.len() == 2000 {
+        node =
+            request_headers_from_node(config.clone(), log_sender.clone(), node, headers.clone())?;
+
         // get the last header hash from the latest headers you have
-        let last_header_hash = headers_read
-            .last()
-            .ok_or("No se pudo obtener el último elemento del vector de 2000 headers")
-            .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
-            .hash();
-        // write getheaders message with last header you have, asking for next 2000 (or less if they are the last ones)
+        /*     let last_header_hash = headers_read
+                .last()
+                .ok_or("No se pudo obtener el último elemento del vector de 2000 headers")
+                .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
+                .hash();
+            // write getheaders message with last header you have, asking for next 2000 (or less if they are the last ones)
         GetHeadersMessage::build_getheaders_message(config.clone(), vec![last_header_hash])
             .write_to(&mut node)
             .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
-        // read next 2000 headers (or less if they are the last ones)
-        headers_read =
-            HeadersMessage::read_from(log_sender.clone(), &mut node, None).map_err(|_| {
-                DownloadError::ReadNodeError("error al leer headers message".to_string())
-            })?;
+        */// read next 2000 headers (or less if they are the last ones)
+
+        (node, headers_read) = receive_headers_from_node(log_sender.clone(), node)?;
+        /*     headers_read =
+              HeadersMessage::read_from(log_sender.clone(), &mut node, None).map_err(|_| {
+                  DownloadError::ReadNodeError("error al leer headers message".to_string())
+              })?;
+        */
         validate_headers(log_sender.clone(), headers_read.clone())?;
         if headers
             .read()
@@ -206,6 +200,43 @@ fn download_headers_from_node(
         );
     }
     Ok(node)
+}
+
+/// Checks the last header available on the local chain and requests the followings from the received node.
+/// Returns error if it fails, otherwise return the node.
+fn request_headers_from_node(
+    config: Arc<Config>,
+    log_sender: LogSender,
+    mut node: TcpStream,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+) -> Result<TcpStream, DownloadError> {
+    // write first getheaders message with genesis block
+    let last_header_hash_downloaded_from_disc = headers
+        .read()
+        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .last()
+        .ok_or("No se pudo obtener el último elemento del vector de 2000 headers")
+        .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
+        .hash();
+    GetHeadersMessage::build_getheaders_message(
+        config.clone(),
+        vec![last_header_hash_downloaded_from_disc],
+    )
+    .write_to(&mut node)
+    .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
+    Ok(node)
+}
+
+fn receive_headers_from_node(
+    log_sender: LogSender,
+    mut node: TcpStream,
+) -> Result<(TcpStream, Vec<BlockHeader>), DownloadError> {
+    // read first 2000 headers from headers message answered from node
+    let headers: Vec<BlockHeader> = HeadersMessage::read_from(log_sender, &mut node, None)
+        .map_err(|_| {
+            DownloadError::ReadNodeError("error al leer primeros 2000 headers".to_string())
+        })?;
+    Ok((node, headers))
 }
 
 /// Download the headers from a node of the list.
@@ -639,34 +670,25 @@ fn get_initial_headers(
     config: Arc<Config>,
     log_sender: LogSender,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
-    nodes: Arc<RwLock<Vec<TcpStream>>>
+    nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<(), Box<dyn Error>> {
     if Path::new(&config.archivo_headers).exists() {
-        read_first_2000000_headers_from_disk(
-            config.clone(),
-            log_sender.clone(),
-            headers.clone(),
-        )
-        .map_err(|err| {
+        read_first_2000000_headers_from_disk(config.clone(), log_sender.clone(), headers.clone())
+            .map_err(|err| {
             write_in_log(
                 log_sender.error_log_sender.clone(),
-                format!("Error al descargar primeros 2 millones de headers de disco. {err}").as_str(),
+                format!("Error al descargar primeros 2 millones de headers de disco. {err}")
+                    .as_str(),
             );
             DownloadError::CanNotRead(format!(
                 "Error al leer primeros 2 millones de headers. {}",
                 err
             ))
         })?;
-    }
-    else{
-        download_first_2000000_headers(
-            config.clone(),
-            log_sender.clone(),
-            headers.clone(),
-        );
+    } else {
+        download_first_2000000_headers(config.clone(), log_sender.clone(), headers.clone());
     }
     Ok(())
-
 }
 
 fn download_first_2000000_headers(
@@ -678,6 +700,7 @@ fn download_first_2000000_headers(
         log_sender.info_log_sender.clone(),
         "Empiezo descarga de los primeros 2000000 de headers de disco",
     );
+    Ok(())
 }
 
 fn read_first_2000000_headers_from_disk(
