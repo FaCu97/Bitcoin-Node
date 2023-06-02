@@ -1,4 +1,5 @@
 use bitcoin_hashes::{sha256d, Hash};
+use std::any::Any;
 use std::io::{self, Read, Write};
 use std::net::TcpStream;
 use std::str::Utf8Error;
@@ -162,11 +163,11 @@ fn handle_inv_message(payload_bytes: Vec<u8>) {
     let mut offset: usize = 0;
     let count = CompactSizeUint::unmarshalling(&payload_bytes, &mut offset).unwrap();
     for _ in 0..count.decoded_value() as usize {
-        //checksum[..4].copy_from_slice(&bytes[counter..(4 + counter)]);
-
-        //let bytes = payload_bytes.copy_from_slice(&payload_bytes[offset..(16)]);
-        //let inv = Inventory::from_le_bytes(inventory_bytes);
-        //println!("{:?}", inv);
+        let mut inventory_bytes = vec![0; 36];
+        inventory_bytes.copy_from_slice(&payload_bytes[offset..(offset + 36)]);
+        let inv = Inventory::from_le_bytes(&inventory_bytes);
+        println!("{:?}", inv);
+        offset += 36;
     }
 
 }
