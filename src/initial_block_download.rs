@@ -92,6 +92,8 @@ fn search_first_header_block_to_download(
     Ok(first_headers_from_blocks_to_download)
 }
 
+/// Validates all the BlockHeaders received.
+/// Returns an error if the validation fails.
 fn validate_headers(log_sender: LogSender, headers: Vec<BlockHeader>) -> Result<(), DownloadError> {
     for header in headers {
         if !header.validate() {
@@ -213,6 +215,8 @@ fn request_headers_from_node(
     Ok(node)
 }
 
+/// Receives the header_message from the node.
+/// Returns an array of BlockHeader or error if something fails.
 fn receive_headers_from_node(
     log_sender: LogSender,
     mut node: TcpStream,
@@ -637,6 +641,9 @@ pub fn initial_block_download(
     Ok((headers.clone(), blocks.clone()))
 }
 
+/// Gets the first 2 million headers.
+/// It reads them from disk. If the file doesn't exist, it is also downloaded.
+/// Returns error if something fails.
 fn get_initial_headers(
     config: Arc<Config>,
     log_sender: LogSender,
@@ -663,6 +670,8 @@ fn get_initial_headers(
     Ok(())
 }
 
+/// Downloads the headers, stores them into the headers array and create the file and save them on disk.
+/// If a node fails, the download is continud from another nodes.
 fn download_first_2000000_headers(
     config: Arc<Config>,
     log_sender: LogSender,
@@ -733,6 +742,8 @@ fn download_first_2000000_headers(
     Ok(())
 }
 
+/// Downloads the first 2 million headers from the node.
+/// Returns an error if something fails
 fn download_initial_headers_from_node(
     config: Arc<Config>,
     log_sender: LogSender,
@@ -781,6 +792,7 @@ fn download_initial_headers_from_node(
     Ok(node)
 }
 
+/// Receives from the node and write to a file the headers
 fn receive_initial_headers_from_node(
     log_sender: LogSender,
     mut node: TcpStream,
@@ -795,6 +807,7 @@ fn receive_initial_headers_from_node(
     Ok((node, headers))
 }
 
+/// Loads the headers from disk
 fn read_first_2000000_headers_from_disk(
     config: Arc<Config>,
     log_sender: LogSender,
