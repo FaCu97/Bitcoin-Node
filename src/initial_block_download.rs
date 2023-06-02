@@ -122,10 +122,8 @@ fn download_headers_from_node(
     );
 
     let mut first_block_found = false;
-
     node = request_headers_from_node(config.clone(), log_sender.clone(), node, headers.clone())?;
     let mut headers_read: Vec<BlockHeader> = Vec::new();
-
     (node, headers_read) = receive_headers_from_node(log_sender.clone(), node)?;
 
     // store headers in `global` vec `headers_guard`
@@ -133,7 +131,7 @@ fn download_headers_from_node(
         .write()
         .map_err(|err| DownloadError::LockError(err.to_string()))?
         .extend_from_slice(&headers_read);
-
+    let mut first_headers_had_just_been_sent = false;
     while headers_read.len() == 2000 {
         node =
             request_headers_from_node(config.clone(), log_sender.clone(), node, headers.clone())?;
@@ -159,17 +157,13 @@ fn download_headers_from_node(
             );
             tx.send(first_block_headers_to_download)
                 .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
+            first_headers_had_just_been_sent = true;
         }
-        if first_block_found
-            && headers
-                .read()
-                .map_err(|err| DownloadError::LockError(err.to_string()))?
-                .len()
-                >= ALTURA_BLOQUES_A_DESCARGAR
-        {
+        if first_block_found && !first_headers_had_just_been_sent {
             tx.send(headers_read.clone())
                 .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
         }
+        first_headers_had_just_been_sent = false;
         // store headers in `global` vec `headers_guard`
         headers
             .write()
