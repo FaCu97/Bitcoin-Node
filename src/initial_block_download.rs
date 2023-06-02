@@ -238,9 +238,9 @@ fn download_headers(
     let headers_clone = headers.clone();
     let tx_clone = tx.clone();
     // first try to dowload headers from node
-    let mut download =
+    let mut download_result =
         download_headers_from_node(config.clone(), log_sender.clone(), node, headers, tx);
-    while let Err(err) = download {
+    while let Err(err) = download_result {
         write_in_log(
             log_sender.error_log_sender.clone(),
             format!(
@@ -259,7 +259,7 @@ fn download_headers(
             .ok_or("Error no hay mas nodos para descargar los headers! Todos fallaron \n")
             .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
         // try to download headers from that node
-        download = download_headers_from_node(
+        download_result = download_headers_from_node(
             config.clone(),
             log_sender.clone(),
             node,
@@ -268,7 +268,7 @@ fn download_headers(
         );
     }
     // get the node which download the headers correctly
-    node = download.map_err(|_| {
+    node = download_result.map_err(|_| {
         DownloadError::ReadNodeError(
             "Descarga fallida con todos los nodos conectados! \n".to_string(),
         )
