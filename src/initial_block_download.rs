@@ -252,17 +252,6 @@ fn download_headers(
         if let DownloadError::ThreadChannelError(_) = err {
             return Err(DownloadError::ThreadChannelError("Error se cerro el channel que comunica la descarga de headers y bloques en paralelo".to_string()));
         }
-        // clear list of blocks in case they where already been downloaded
-        blocks
-            .write()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
-            .clear();
-        // clear the list of headers
-        headers_clone
-            .write()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
-            .clear();
-        // get another node if possible and discard the one that fails download
         node = nodes
             .write()
             .map_err(|err| DownloadError::LockError(err.to_string()))?
