@@ -77,7 +77,7 @@ fn search_first_header_block_to_download(
 
     let mut first_headers_from_blocks_to_download = vec![];
     for header in headers {
-        if !(*found) && header.time == timestamp {
+        if !(*found) && header.time > timestamp {
             *found = true;
         }
         if *found {
@@ -137,25 +137,8 @@ fn download_headers_from_node(
     while headers_read.len() == 2000 {
         node =
             request_headers_from_node(config.clone(), log_sender.clone(), node, headers.clone())?;
-
-        // get the last header hash from the latest headers you have
-        /*     let last_header_hash = headers_read
-                .last()
-                .ok_or("No se pudo obtener el último elemento del vector de 2000 headers")
-                .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
-                .hash();
-            // write getheaders message with last header you have, asking for next 2000 (or less if they are the last ones)
-        GetHeadersMessage::build_getheaders_message(config.clone(), vec![last_header_hash])
-            .write_to(&mut node)
-            .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
-        */// read next 2000 headers (or less if they are the last ones)
-
         (node, headers_read) = receive_headers_from_node(log_sender.clone(), node)?;
-        /*     headers_read =
-              HeadersMessage::read_from(log_sender.clone(), &mut node, None).map_err(|_| {
-                  DownloadError::ReadNodeError("error al leer headers message".to_string())
-              })?;
-        */
+
         validate_headers(log_sender.clone(), headers_read.clone())?;
         if headers
             .read()
@@ -163,6 +146,7 @@ fn download_headers_from_node(
             .len()
             == ALTURA_PRIMER_BLOQUE_A_DESCARGAR
         {
+            // Si no lo encuentra devuelve un error vacío, creo que esto está mal.
             let first_block_headers_to_download = search_first_header_block_to_download(
                 config.clone(),
                 headers_read.clone(),
