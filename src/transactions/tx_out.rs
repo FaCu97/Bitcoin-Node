@@ -1,10 +1,12 @@
 use crate::compact_size_uint::CompactSizeUint;
+
+use super::pubkey::Pubkey;
 #[derive(Debug, PartialEq, Clone)]
 pub struct TxOut {
     value: i64,                       // Number of satoshis to spend
     pk_script_bytes: CompactSizeUint, // de 1 a 10.000 bytes
-    pk_script: Vec<u8>, // Defines the conditions which must be satisfied to spend this output.
-    utxo: bool,         // An output can bu utxo or not
+    pk_script: Pubkey, // Defines the conditions which must be satisfied to spend this output.
+    utxo: bool,        // An output can bu utxo or not
 }
 
 impl TxOut {
@@ -17,7 +19,7 @@ impl TxOut {
         TxOut {
             value,
             pk_script_bytes,
-            pk_script,
+            pk_script: Pubkey::new(pk_script),
             utxo,
         }
     }
@@ -41,7 +43,7 @@ impl TxOut {
         Ok(TxOut {
             value,
             pk_script_bytes,
-            pk_script,
+            pk_script: Pubkey::new(pk_script),
             utxo: true,
         })
     }
@@ -64,7 +66,7 @@ impl TxOut {
         bytes.extend_from_slice(&value_bytes[0..8]);
         let pk_script_bytes: Vec<u8> = self.pk_script_bytes.marshalling();
         bytes.extend_from_slice(&pk_script_bytes[0..pk_script_bytes.len()]);
-        bytes.extend_from_slice(&self.pk_script[0..self.pk_script.len()]);
+        bytes.extend_from_slice(&self.pk_script.bytes());
     }
 
     pub fn value(&self) -> i64 {
@@ -77,6 +79,12 @@ impl TxOut {
 
     pub fn spent(&mut self) {
         self.utxo = false
+    }
+    pub fn get_adress(&self) -> String {
+        self.pk_script.generate_adress()
+    }
+    pub fn get_pub_key(&self) -> &Vec<u8> {
+        self.pk_script.bytes()
     }
 }
 
@@ -131,7 +139,7 @@ mod tests {
             tx_out.pk_script_bytes.decoded_value(),
             pk_script_compact_size.decoded_value()
         );
-        assert_eq!(tx_out.pk_script[0], pk_script[0]);
+        assert_eq!(tx_out.pk_script.bytes()[0], pk_script[0]);
         Ok(())
     }
 
@@ -183,7 +191,7 @@ mod tests {
         let mut offset: usize = 0;
         let tx_out_expected: TxOut = TxOut::unmarshalling(&bytes, &mut offset)?;
         let pk_script_expected: Vec<u8> = vec![1, 1, 1, 1];
-        assert_eq!(tx_out_expected.pk_script, pk_script_expected);
+        assert_eq!(*tx_out_expected.pk_script.bytes(), pk_script_expected);
         Ok(())
     }
 }

@@ -5,18 +5,18 @@ use crate::{
     transactions::{transaction::Transaction, tx_out::TxOut},
 };
 
-pub struct Node<'a> {
+pub struct Node {
     pub headers: Arc<RwLock<Vec<BlockHeader>>>,
     pub block_chain: Arc<RwLock<Vec<Block>>>,
-    pub utxo_set: Vec<&'a TxOut>,
+    pub utxo_set: Vec<TxOut>,
 }
 
-impl<'a> Node<'a> {
+impl Node {
     pub fn new(
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         block_chain: Arc<RwLock<Vec<Block>>>,
     ) -> Self {
-        let utxo_set = generate_utxo_set(block_chain.clone());
+        let utxo_set = generate_utxo_set(&block_chain);
         Node {
             headers,
             block_chain,
@@ -64,18 +64,17 @@ impl<'a> Node<'a> {
 }
 
 ///Funcion que se encarga de generar la lista de utxos
-fn generate_utxo_set<'a>(block_chain: Arc<RwLock<Vec<Block>>>) -> Vec<&'a TxOut> {
+fn generate_utxo_set(block_chain: &Arc<RwLock<Vec<Block>>>) -> Vec<TxOut> {
     let mut list_of_utxos = Vec::new();
-    let block_chain_size = block_chain.read().unwrap().len();
 
-    for i in 0..block_chain_size {
-        //let block = block_chain.read().unwrap().get(i).unwrap();
-        let utxos = block_chain.read().unwrap()[i].give_me_utxos();
-        list_of_utxos.extend_from_slice(&utxos);
+    {
+        let block_chain_lock = block_chain.read().unwrap();
+
+        for block in block_chain_lock.iter() {
+            let utxos = block.give_me_utxos();
+            list_of_utxos.extend_from_slice(&utxos);
+        }
     }
 
-    //  for block in block_chain.read().unwrap().iter() {
-    //      list_of_utxos.extend_from_slice(&block.give_me_utxos())
-    //  }
     list_of_utxos
 }

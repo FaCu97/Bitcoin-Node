@@ -78,14 +78,9 @@ fn main() -> Result<(), GenericError> {
                 GenericError::DownloadError(err)
             },
         )?;
-    let (headers, mut blocks) = headers_and_blocks;
+    let (headers, blocks) = headers_and_blocks;
 
-    let node = Node {
-        headers: headers.clone(),
-        block_chain: blocks.clone(),
-        utxo_set: vec![],
-    };
-
+    let node = Node::new(headers, blocks);
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
     /*
@@ -102,32 +97,28 @@ fn main() -> Result<(), GenericError> {
     }*/
 
     // esta parte es para explicar el comportamiento en la demo !!
-    // mostrar_comportamiento_del_nodo(node);
-    let mut block_1 = node.block_chain[0].block_header.hash();
-    let mut block_2 = node.block_chain[1].block_header.hash();
-    let mut block_3 = node.block_chain[2].block_header.hash();
-    block_1.reverse();
-    let block1_hex: String = block_1.encode_hex::<String>();
-    println!("bloque 1 :{}", block1_hex);
-    block_2.reverse();
-    let block2_hex: String = block_2.encode_hex::<String>();
-    println!("bloque 2 :{}", block2_hex);
-    block_3.reverse();
-    let block3_hex: String = block_3.encode_hex::<String>();
-    println!("bloque 3 :{}", block3_hex);
+    // mostrar_comportamiento_del_nodo(node);/*
 
-    let mut script_1 = node.block_chain[0].txn[0].tx_in[0].signature_script.clone();
-    let mut script_2 = node.block_chain[0].txn[1].tx_in[0].signature_script.clone();
-    let mut script_3 = node.block_chain[0].txn[2].tx_in[0].signature_script.clone();
-    script_1.reverse();
-    let script1_hex: String = script_1.encode_hex::<String>();
+    let block_1 = node.block_chain.read().unwrap()[0].clone();
+    let mut hash_block_1 = block_1.block_header.hash();
+    hash_block_1.reverse();
+    let block1_hex: String = hash_block_1.encode_hex::<String>();
+    println!("bloque 1 :{}", block1_hex);
+
+    let pub_script_1 = block_1.txn[1].tx_out[0].get_pub_key();
+    let pub_script_2 = block_1.txn[1].tx_out[1].get_pub_key();
+    let script1_hex: String = pub_script_1.encode_hex::<String>();
     println!("script 1 :{}", script1_hex);
-    script_2.reverse();
-    let script2_hex: String = script_2.encode_hex::<String>();
+    let script2_hex: String = pub_script_2.encode_hex::<String>();
     println!("script 2 :{}", script2_hex);
-    script_3.reverse();
-    let script3_hex: String = script_3.encode_hex::<String>();
-    println!("script 3 :{}", script3_hex);
+
+    let string_comun = String::from("DcRrKez");
+    for utxo in node.utxo_set {
+        let adress = utxo.get_adress();
+        if adress != string_comun {
+            println!("{}", adress);
+        }
+    }
     write_in_log(
         logsender.info_log_sender.clone(),
         "TERMINA CORRECTAMENTE EL PROGRAMA!",
@@ -159,7 +150,7 @@ fn handle_input(block_listener: BlockBroadcasting) -> Result<(), GenericError> {
 
     Ok(())
 }
-
+/*
 fn mostrar_comportamiento_del_nodo(node: Node) {
     let mut header_1 = node.headers[0].hash();
     header_1.reverse();
@@ -207,7 +198,7 @@ fn mostrar_comportamiento_del_nodo(node: Node) {
         transaccion.txout_count.decoded_value()
     );
     println!("lock time de la transaccion : {}", transaccion.lock_time);
-}
+}*/
 
 #[cfg(test)]
 mod tests {
