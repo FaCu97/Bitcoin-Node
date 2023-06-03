@@ -3,6 +3,8 @@ use k256::sha2::Digest;
 use k256::sha2::Sha256;
 use secp256k1::SecretKey;
 
+use crate::node::Node;
+
 pub struct User {
     private_key: String,
     adress: String,
@@ -63,6 +65,10 @@ impl User {
         let mut private_key_bytes = [0u8; 32];
         private_key_bytes.copy_from_slice(&vector);
         Some(private_key_bytes)
+    }
+
+    pub fn get_account_balance(&self, node: &Node) -> i64 {
+        node.account_balance(self.adress.clone())
     }
 }
 

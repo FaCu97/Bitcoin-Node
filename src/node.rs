@@ -29,10 +29,12 @@ impl Node {
     }
 
     /// funcion que mostrara la cantidad de satoshis en nuestra cuenta
-    pub fn account_balance(&self) -> i64 {
+    pub fn account_balance(&self, adress: String) -> i64 {
         let mut account_balance: i64 = 0;
         for utxo in &self.utxo_set {
-            account_balance += utxo.value()
+            if utxo.get_adress() == adress {
+                account_balance += utxo.value();
+            }
         }
         account_balance
     }
