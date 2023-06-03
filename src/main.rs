@@ -83,7 +83,7 @@ fn main() -> Result<(), GenericError> {
     let node = Node::new(headers, blocks);
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
-    /*
+
     let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
         logsender.clone(),
         pointer_to_nodes,
@@ -94,7 +94,7 @@ fn main() -> Result<(), GenericError> {
 
     if let Err(err) = handle_input(block_listener) {
         println!("Error al leer la entrada por terminal. {}", err);
-    }*/
+    }
 
     // esta parte es para explicar el comportamiento en la demo !!
     // mostrar_comportamiento_del_nodo(node);/*
