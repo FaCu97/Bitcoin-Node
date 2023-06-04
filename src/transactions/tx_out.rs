@@ -66,7 +66,7 @@ impl TxOut {
         bytes.extend_from_slice(&value_bytes[0..8]);
         let pk_script_bytes: Vec<u8> = self.pk_script_bytes.marshalling();
         bytes.extend_from_slice(&pk_script_bytes[0..pk_script_bytes.len()]);
-        bytes.extend_from_slice(&self.pk_script.bytes());
+        bytes.extend_from_slice(self.pk_script.bytes());
     }
 
     pub fn value(&self) -> i64 {
@@ -80,8 +80,8 @@ impl TxOut {
     pub fn spent(&mut self) {
         self.utxo = false
     }
-    pub fn get_adress(&self) -> String {
-        self.pk_script.generate_adress()
+    pub fn get_adress(&self) -> Result<String, &'static str> {
+        Ok(self.pk_script.generate_adress()?)
     }
     pub fn get_pub_key(&self) -> &Vec<u8> {
         self.pk_script.bytes()

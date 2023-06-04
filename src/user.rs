@@ -13,11 +13,10 @@ pub struct User {
 impl User {
     pub fn login_user(private_key: String, adress: String) -> Result<User, &'static str> {
         let raw_private_key = Self::decode_wif_private_key(private_key.as_str());
-        let priv_key: [u8; 32];
-        match raw_private_key {
-            Some(number) => priv_key = number,
+        let priv_key: [u8; 32] = match raw_private_key {
+            Some(number) => number,
             None => return Err("fallo la decodificacion de la clave"),
-        }
+        };
         let validate_adress = Self::generate_adress(&priv_key);
         if validate_adress == adress {
             return Ok(User {
@@ -38,7 +37,7 @@ impl User {
         let public_key_hexa = public_key.serialize_uncompressed();
         // let pk_hex: String = public_key_hexa.encode_hex::<String>();
 
-        let sha256_hash = Sha256::digest(&public_key_hexa);
+        let sha256_hash = Sha256::digest(public_key_hexa);
         let ripemd160_hash = *ripemd160::Hash::hash(&sha256_hash).as_byte_array();
 
         // Añadir el byte de versión (0x00) al comienzo del hash RIPEMD-160
@@ -46,7 +45,7 @@ impl User {
         extended_hash.extend_from_slice(&ripemd160_hash);
 
         // Calcular el checksum (doble hash SHA-256) del hash extendido
-        let checksum = Sha256::digest(&Sha256::digest(&extended_hash));
+        let checksum = Sha256::digest(Sha256::digest(&extended_hash));
 
         // Añadir los primeros 4 bytes del checksum al final del hash extendido
         extended_hash.extend_from_slice(&checksum[..4]);

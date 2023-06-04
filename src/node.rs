@@ -32,8 +32,15 @@ impl Node {
     pub fn account_balance(&self, adress: String) -> i64 {
         let mut account_balance: i64 = 0;
         for utxo in &self.utxo_set {
-            if utxo.get_adress() == adress {
-                account_balance += utxo.value();
+            match utxo.get_adress() {
+                Ok(value) => {
+                    if value == adress {
+                        account_balance += utxo.value()
+                    }
+                }
+                Err(_) => {
+                    continue;
+                }
             }
         }
         account_balance

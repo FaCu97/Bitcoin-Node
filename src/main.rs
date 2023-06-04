@@ -100,25 +100,23 @@ fn main() -> Result<(), GenericError> {
     // mostrar_comportamiento_del_nodo(node);/*
 
     let block_1 = node.block_chain.read().unwrap()[0].clone();
+    let block_2 = node.block_chain.read().unwrap()[1].clone();
     let mut hash_block_1 = block_1.block_header.hash();
     hash_block_1.reverse();
     let block1_hex: String = hash_block_1.encode_hex::<String>();
     println!("bloque 1 :{}", block1_hex);
+    let mut hash_block_2 = block_2.block_header.hash();
+    hash_block_2.reverse();
+    let block2_hex: String = hash_block_2.encode_hex::<String>();
+    println!("bloque 2 :{}", block2_hex);
 
-    let pub_script_1 = block_1.txn[1].tx_out[0].get_pub_key();
-    let pub_script_2 = block_1.txn[1].tx_out[1].get_pub_key();
-    let script1_hex: String = pub_script_1.encode_hex::<String>();
-    println!("script 1 :{}", script1_hex);
-    let script2_hex: String = pub_script_2.encode_hex::<String>();
-    println!("script 2 :{}", script2_hex);
+    let height_block = block_1.txn[0].tx_in[0].height.clone().unwrap();
+    let height_hex: String = height_block.encode_hex::<String>();
+    println!("height :{}", height_hex);
+    let height_block = block_2.txn[0].tx_in[0].height.clone().unwrap();
+    let height_hex: String = height_block.encode_hex::<String>();
+    println!("height :{}", height_hex);
 
-    let string_comun = String::from("DcRrKez");
-    for utxo in node.utxo_set {
-        let adress = utxo.get_adress();
-        if adress != string_comun {
-            println!("{}", adress);
-        }
-    }
     write_in_log(
         logsender.info_log_sender.clone(),
         "TERMINA CORRECTAMENTE EL PROGRAMA!",
