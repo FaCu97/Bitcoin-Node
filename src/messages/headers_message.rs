@@ -1,8 +1,9 @@
 use super::message_header::HeaderMessage;
 use crate::blocks::block_header::BlockHeader;
 use crate::compact_size_uint::CompactSizeUint;
-use crate::logwriter::log_writer::LogSender;
-use std::io::Read;
+use crate::logwriter::log_writer::{LogSender, LoggingError};
+use std::fs::File;
+use std::io::{Read, Write};
 use std::net::TcpStream;
 use std::sync::{Arc, RwLock};
 const BLOCK_HEADER_SIZE: usize = 80;
@@ -54,6 +55,37 @@ impl HeadersMessage {
         let mut vec: Vec<u8> = vec![];
         vec.extend_from_slice(&buffer_num);
         let headers = Self::unmarshalling(&vec)?;
+        Ok(headers)
+    }
+
+    pub fn read_from_node_and_write_to_file(
+        log_sender: LogSender,
+        stream: &mut TcpStream,
+        finish: Option<Arc<RwLock<bool>>>,
+        file: &mut File,
+    ) -> Result<Vec<BlockHeader>, Box<dyn std::error::Error>> {
+        let header =
+            HeaderMessage::read_from(log_sender, stream, "headers".to_string(), finish.clone())?;
+        if is_terminated(finish) {
+            let headers: Vec<BlockHeader> = Vec::new();
+            return Ok(headers);
+        }
+        let payload_size = header.payload_size as usize;
+        let mut buffer_num = vec![0; payload_size];
+        stream.read_exact(&mut buffer_num)?;
+        let mut vec: Vec<u8> = vec![];
+        vec.extend_from_slice(&buffer_num);
+        let headers = Self::unmarshalling(&vec)?;
+
+        // imprimo en el archivo
+        //   println!("TAMAÑO: {:?}", vec.len());
+        if let Err(err) = file.write_all(&vec) {
+            println!(
+                "Error al escribir en el archivo de headers, {}",
+                LoggingError::WritingInFileError(err.to_string())
+            );
+        }
+
         Ok(headers)
     }
 }
