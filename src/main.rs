@@ -79,12 +79,8 @@ fn main() -> Result<(), GenericError> {
             },
         )?;
     let (headers, blocks) = headers_and_blocks;
-    let node = Node {
-        headers: headers.clone(),
-        block_chain: blocks.clone(),
-        utxo_set: vec![],
-    };
 
+    let node = Node::new(headers, blocks);
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
     /*
@@ -102,14 +98,6 @@ fn main() -> Result<(), GenericError> {
     */
     // esta parte es para explicar el comportamiento en la demo !!
     // mostrar_comportamiento_del_nodo(node);
-    let block_1 = node.block_chain[0].clone();
-    let mut hash_block_1 = block_1.block_header.hash();
-    hash_block_1.reverse();
-    let block1_hex: String = hash_block_1.encode_hex::<String>();
-    println!("bloque 1 :{}", block1_hex);
-
-    let height = block_1.txn[0].tx_in[0].get_height();
-    println!("{}", height);
 
     write_in_log(
         logsender.info_log_sender.clone(),
@@ -142,7 +130,7 @@ fn handle_input(block_listener: BlockBroadcasting) -> Result<(), GenericError> {
 
     Ok(())
 }
-
+/*
 fn mostrar_comportamiento_del_nodo(node: Node) {
     let mut header_1 = node.headers[0].hash();
     header_1.reverse();
@@ -190,7 +178,7 @@ fn mostrar_comportamiento_del_nodo(node: Node) {
         transaccion.txout_count.decoded_value()
     );
     println!("lock time de la transaccion : {}", transaccion.lock_time);
-}
+}*/
 
 #[cfg(test)]
 mod tests {

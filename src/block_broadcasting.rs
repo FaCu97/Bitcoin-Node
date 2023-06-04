@@ -205,11 +205,12 @@ fn recieve_new_block(
     mut node: TcpStream,
     blocks: Arc<RwLock<Vec<Block>>>,
 ) -> BroadcastingResult {
-    let new_block: Block = match BlockMessage::read_from(log_sender.clone(), &mut node) {
+    let mut new_block: Block = match BlockMessage::read_from(log_sender.clone(), &mut node) {
         Err(err) => return Err(BroadcastingError::CanNotRead(err.to_string())),
         Ok(block) => block,
     };
     if new_block.validate().0 {
+        new_block.set_utxos(); // seteo utxos de las transacciones del bloque
         blocks
             .write()
             .map_err(|err| BroadcastingError::LockError(err.to_string()))?

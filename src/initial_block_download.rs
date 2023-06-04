@@ -534,7 +534,7 @@ fn receive_requested_blocks_from_node(
     // Acá tengo que recibir los 16 bloques (o menos) de la llamada
     let mut current_blocks: Vec<Block> = Vec::new();
     for _ in 0..chunk_llamada.len() {
-        let bloque = match BlockMessage::read_from(log_sender.clone(), &mut node) {
+        let mut bloque = match BlockMessage::read_from(log_sender.clone(), &mut node) {
             Ok(bloque) => bloque,
             Err(err) => {
                 write_in_log(log_sender.error_log_sender,format!("No puedo descargar {:?} de bloques del nodo: {:?}. Se los voy a pedir a otro nodo y descarto este. Error: {err}", chunk_llamada.len(), node.peer_addr()).as_str());
@@ -558,6 +558,7 @@ fn receive_requested_blocks_from_node(
                 validation_result.1
             )));
         }
+        bloque.set_utxos(); // seteo utxos de las transacciones del bloque
         current_blocks.push(bloque);
     }
     Ok((node, current_blocks))
@@ -570,7 +571,7 @@ pub fn initial_block_download(
     config: Arc<Config>,
     log_sender: LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-) -> Result<(Vec<BlockHeader>, Vec<Block>), DownloadError> {
+) -> Result<(Arc<RwLock<Vec<BlockHeader>>>, Arc<RwLock<Vec<Block>>>), DownloadError> {
     write_in_log(
         log_sender.info_log_sender.clone(),
         "EMPIEZA DESCARGA INICIAL DE BLOQUES",
@@ -638,7 +639,7 @@ pub fn initial_block_download(
         format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
     );
 
-    Ok((headers.clone(), blocks.clone()))
+    Ok((pointer_to_headers.clone(), pointer_to_blocks.clone()))
 }
 
 /// Gets the first 2 million headers.
