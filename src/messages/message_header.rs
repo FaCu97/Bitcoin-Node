@@ -103,6 +103,7 @@ impl HeaderMessage {
                 let payload_bytes = read_payload(&mut stream, &header)?;
                 write_pong_message(&mut stream, &payload_bytes)?;
             } 
+            /* 
             if header.command_name.contains("inv") {
                 write_in_log(
                     log_sender.messege_log_sender.clone(),
@@ -114,7 +115,8 @@ impl HeaderMessage {
                 );
                 let payload_bytes = read_payload(&mut stream, &header)?;
                 handle_inv_message(payload_bytes);
-            } else {
+            */
+            /* } */ else {
                 write_in_log(
                     log_sender.messege_log_sender.clone(),
                     format!(
