@@ -87,46 +87,30 @@ fn main() -> Result<(), GenericError> {
 
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
+    /*
+        let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
+            logsender.clone(),
+            pointer_to_nodes,
+            Arc::new(RwLock::new(headers)),
+            Arc::new(RwLock::new(blocks)),
+        )
+        .map_err(GenericError::BroadcastingError)?;
 
-    let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
-        logsender.clone(),
-        pointer_to_nodes,
-        Arc::new(RwLock::new(headers)),
-        Arc::new(RwLock::new(blocks)),
-    )
-    .map_err(GenericError::BroadcastingError)?;
-
-    if let Err(err) = handle_input(block_listener) {
-        println!("Error al leer la entrada por terminal. {}", err);
-    }
-
+        if let Err(err) = handle_input(block_listener) {
+            println!("Error al leer la entrada por terminal. {}", err);
+        }
+    */
     // esta parte es para explicar el comportamiento en la demo !!
     // mostrar_comportamiento_del_nodo(node);
-    let mut block_1 = node.block_chain[0].block_header.hash();
-    let mut block_2 = node.block_chain[1].block_header.hash();
-    let mut block_3 = node.block_chain[2].block_header.hash();
-    block_1.reverse();
-    let block1_hex: String = block_1.encode_hex::<String>();
+    let block_1 = node.block_chain[0].clone();
+    let mut hash_block_1 = block_1.block_header.hash();
+    hash_block_1.reverse();
+    let block1_hex: String = hash_block_1.encode_hex::<String>();
     println!("bloque 1 :{}", block1_hex);
-    block_2.reverse();
-    let block2_hex: String = block_2.encode_hex::<String>();
-    println!("bloque 2 :{}", block2_hex);
-    block_3.reverse();
-    let block3_hex: String = block_3.encode_hex::<String>();
-    println!("bloque 3 :{}", block3_hex);
 
-    let mut script_1 = node.block_chain[0].txn[0].tx_in[0].signature_script.clone();
-    let mut script_2 = node.block_chain[0].txn[1].tx_in[0].signature_script.clone();
-    let mut script_3 = node.block_chain[0].txn[2].tx_in[0].signature_script.clone();
-    script_1.reverse();
-    let script1_hex: String = script_1.encode_hex::<String>();
-    println!("script 1 :{}", script1_hex);
-    script_2.reverse();
-    let script2_hex: String = script_2.encode_hex::<String>();
-    println!("script 2 :{}", script2_hex);
-    script_3.reverse();
-    let script3_hex: String = script_3.encode_hex::<String>();
-    println!("script 3 :{}", script3_hex);
+    let height = block_1.txn[0].tx_in[0].get_height();
+    println!("{}", height);
+
     write_in_log(
         logsender.info_log_sender.clone(),
         "TERMINA CORRECTAMENTE EL PROGRAMA!",
