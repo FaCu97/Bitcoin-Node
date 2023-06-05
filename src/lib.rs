@@ -11,3 +11,4 @@ pub mod network;
 pub mod node;
 pub mod transactions;
 pub mod user;
+pub mod gtk;

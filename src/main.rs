@@ -11,6 +11,7 @@ use hex::ToHex;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
+use bitcoin::gtk::gtk::Gtk;
 
 #[derive(Debug)]
 pub enum GenericError {
@@ -40,7 +41,8 @@ impl fmt::Display for GenericError {
 impl Error for GenericError {}
 
 fn main() -> Result<(), GenericError> {
-    let args: Vec<String> = env::args().collect();
+    Gtk::run();
+    /*let args: Vec<String> = env::args().collect();
     let config: Arc<Config> = Config::from(&args).map_err(GenericError::ConfigError)?;
     let (
         error_log_sender,
@@ -80,7 +82,7 @@ fn main() -> Result<(), GenericError> {
         )?;
     let (headers, blocks) = headers_and_blocks;
 
-    let node = Node::new(headers, blocks);
+    let node = Node::new(headers, blocks);*/
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
     /*
@@ -99,7 +101,7 @@ fn main() -> Result<(), GenericError> {
     // esta parte es para explicar el comportamiento en la demo !!
     // mostrar_comportamiento_del_nodo(node);/*
 
-    let block_1 = node.block_chain.read().unwrap()[0].clone();
+    /*let block_1 = node.block_chain.read().unwrap()[0].clone();
     let block_2 = node.block_chain.read().unwrap()[1].clone();
     let mut hash_block_1 = block_1.block_header.hash();
     hash_block_1.reverse();
@@ -122,7 +124,8 @@ fn main() -> Result<(), GenericError> {
         "TERMINA CORRECTAMENTE EL PROGRAMA!",
     );
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
-        .map_err(GenericError::LoggingError)?;
+        .map_err(GenericError::LoggingError)?;*/
+
     Ok(())
 }
 
