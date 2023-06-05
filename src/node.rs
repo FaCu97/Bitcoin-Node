@@ -45,20 +45,7 @@ impl Node {
         }
         account_balance
     }
-    pub fn make_transaction(&mut self, _adress: [u8; 32], amount_to_spend: i64) -> bool {
-        let mut position_utxo: usize = 0;
-        let mut can_spend: bool = false;
-        while position_utxo < self.utxo_set.len() && !can_spend {
-            if self.utxo_set[position_utxo].value() > amount_to_spend {
-                can_spend = true
-            }
-            position_utxo += 1;
-        }
-        if can_spend {
-            let _utxo_to_spend: &TxOut = &self.utxo_set[position_utxo - 1];
-            self.utxo_set.remove(position_utxo - 1);
-            return true;
-        }
+    pub fn make_transaction(&mut self, adress: &str, amount_to_spend: i64) -> bool {
         false
     }
 
