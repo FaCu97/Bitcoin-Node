@@ -1,7 +1,7 @@
 #[derive(Debug, Clone)]
 pub struct Inventory {
-    type_identifier: u32,
-    hash: [u8; 32],
+    pub type_identifier: u32,
+    pub hash: [u8; 32],
 }
 
 impl Inventory {

@@ -6,7 +6,7 @@ pub fn listen_for_incoming_messages(
     log_sender: LogSender,
     stream: &mut TcpStream,
     finish: Option<Arc<RwLock<bool>>>,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result<Vec<BlockHeader>, Box<dyn std::error::Error>> {
     let mut buffer_num = [0; 24];
     stream.read_exact(&mut buffer_num)?;
     let mut header = HeaderMessage::from_le_bytes(buffer_num)?;
@@ -16,8 +16,8 @@ pub fn listen_for_incoming_messages(
         let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
         stream.read_exact(&mut payload_buffer_num)?;
         match header.command_name.as_str() {
-            "headers\0\0\0\0\0" => println!("Recibo headers!\n"),
-            "ping\0\0\0\0\0\0\0\0" => println!("Recibo Ping!\n"),
+            "headers\0\0\0\0\0" => handle_headers_message(log_sender.clone(), payload_buffer_num.clone()),
+            "ping\0\0\0\0\0\0\0\0" => handle_ping_message(log_sender, node, payload),
             "inv\0\0\0\0\0\0\0\0\0" => println!("Recibo inv!\n"),
             _ => {
                 write_in_log(
@@ -40,7 +40,7 @@ pub fn listen_for_incoming_messages(
 
 
 
-pub fn handle_headers_message(payload: Vec<u8>) -> Result<Vec<BlockHeader>, &'static str> {
+pub fn handle_headers_message(log_sender: LogSender, payload: Vec<u8>) -> Result<Vec<BlockHeader>, &'static str> {
     HeadersMessage::unmarshalling(&payload)
 }
 
