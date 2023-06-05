@@ -8,7 +8,7 @@ impl Gtk{
     pub fn run() {
         gtk::init().expect("fail");
 
-    let glade_src = include_str!("hola.glade");
+    let glade_src = include_str!("bitcoin.glade");
     let builder = Builder::from_string(glade_src);
 
     let window: Window = builder.object("window").unwrap();
