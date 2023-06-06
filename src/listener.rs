@@ -1,4 +1,4 @@
-use std::{net::TcpStream, sync::{RwLock, Arc}, io::Read};
+use std::{net::TcpStream, sync::{RwLock, Arc}, io::Read, error::{Error}};
 
 use crate::{logwriter::log_writer::{LogSender, write_in_log}, messages::{message_header::{HeaderMessage, write_pong_message}, headers_message::{is_terminated, HeadersMessage}, inventory::Inventory, get_data_message::GetDataMessage}, blocks::{block_header::BlockHeader}, compact_size_uint::CompactSizeUint};
 
@@ -35,7 +35,9 @@ pub fn listen_for_incoming_messages(
                 .as_str(),
             );
             let node = stream.try_clone()?;
-            handle_inv_message(node, payload_buffer_num);
+            if let Err(err) = handle_inv_message(node, payload_buffer_num){
+                write_in_log(log_sender.error_log_sender.clone(), format!("Error {} al recibir transaccion del nodo", err).as_str());
+            };
         } else if header.command_name.contains("tx") {
             write_in_log(
                 log_sender.messege_log_sender.clone(),
@@ -65,9 +67,9 @@ pub fn listen_for_incoming_messages(
 }
 
 
-fn handle_inv_message(stream: TcpStream, payload_bytes: Vec<u8>) {
+fn handle_inv_message(stream: TcpStream, payload_bytes: Vec<u8>) ->  Result<(), Box<dyn Error>> {
     let mut offset: usize = 0;
-    let count = CompactSizeUint::unmarshalling(&payload_bytes, &mut offset).unwrap();
+    let count = CompactSizeUint::unmarshalling(&payload_bytes, &mut offset)?;
     let mut inventories = vec![];
     for _ in 0..count.decoded_value() as usize {
         let mut inventory_bytes = vec![0; 36];
@@ -78,10 +80,14 @@ fn handle_inv_message(stream: TcpStream, payload_bytes: Vec<u8>) {
         }
         offset += 36;
     }
-    ask_for_incoming_tx(stream, inventories);
+    ask_for_incoming_tx(stream, inventories).map_err(|error| {
+        Box::new(error)
+    })?;
+    Ok(())
 }
 
-fn ask_for_incoming_tx(mut stream: TcpStream, inventories: Vec<Inventory>) {
+fn ask_for_incoming_tx(mut stream: TcpStream, inventories: Vec<Inventory>) -> Result<(), std::io::Error> {
     let get_data_message = GetDataMessage::new(inventories);
-    get_data_message.write_to(&mut stream).unwrap();
+    get_data_message.write_to(&mut stream)?;
+    Ok(())
 }
