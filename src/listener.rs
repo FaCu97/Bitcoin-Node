@@ -99,7 +99,7 @@ pub fn listen_for_incoming_messages(
 /// txs the node sent via inv. Returns error in case of failure or Ok(())
 fn handle_inv_message(log_sender: LogSender, stream: TcpStream, payload_bytes: Vec<u8>) -> Result<(), Box<dyn Error>> {
     write_in_log(
-        log_sender.messege_log_sender.clone(),
+        log_sender.messege_log_sender,
         format!(
             "Recibo Correctamente: inv -- Nodo: {:?}",
             stream.peer_addr()?
@@ -118,7 +118,7 @@ fn handle_inv_message(log_sender: LogSender, stream: TcpStream, payload_bytes: V
         }
         offset += 36;
     }
-    ask_for_incoming_tx(stream, inventories).map_err(|error| Box::new(error))?;
+    ask_for_incoming_tx(stream, inventories).map_err(Box::new)?;
     Ok(())
 }
 
