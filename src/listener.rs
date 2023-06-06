@@ -34,48 +34,52 @@ pub fn listen_for_incoming_messages(
         let payload_size = header.payload_size as usize;
         let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
         stream.read_exact(&mut payload_buffer_num)?;
-
-        /* 
-        if header.command_name.contains("ping") {
-            write_in_log(
-                log_sender.messege_log_sender.clone(),
-                format!(
-                    "Recibo Correctamente: ping -- Nodo: {:?}",
-                    stream.peer_addr()?
-                )
-                .as_str(),
-            );
-            let mut node = stream.try_clone()?;
-            write_pong_message(&mut node, &payload_buffer_num)?;
-        } else if header.command_name == *"inv\0\0\0\0\0\0\0\0\0" {
-            write_in_log(
-                log_sender.messege_log_sender.clone(),
-                format!(
-                    "Recibo Correctamente: inv -- Nodo: {:?}",
-                    stream.peer_addr()?
-                )
-                .as_str(),
-            );
-            let node = stream.try_clone()?;
-            if let Err(err) = handle_inv_message(node, payload_buffer_num) {
+        match &header.command_name {
+            header_name if header_name.contains("inv") => {
+                let node = stream.try_clone()?;
+                if let Err(err) = handle_inv_message(log_sender.clone(),node, payload_buffer_num) {
+                    write_in_log(
+                        log_sender.error_log_sender.clone(),
+                        format!("Error {} al recibir transaccion del nodo {:?}", err, stream.peer_addr()?).as_str(),
+                    );
+                };
+            }
+            header_name if header_name.contains("ping") => {
                 write_in_log(
-                    log_sender.error_log_sender.clone(),
-                    format!("Error {} al recibir transaccion del nodo", err).as_str(),
+                    log_sender.messege_log_sender.clone(),
+                    format!(
+                        "Recibo Correctamente: ping -- Nodo: {:?}",
+                        stream.peer_addr()?
+                    )
+                    .as_str(),
                 );
-            };
-        } else if header.command_name.contains("tx") {
-            write_in_log(
-                log_sender.messege_log_sender.clone(),
-                format!(
-                    "Recibo Correctamente: tx -- Nodo: {:?}",
-                    stream.peer_addr()?
-                )
-                .as_str(),
-            );
-            //println!("{:?}\n", Transaction::unmarshalling(&payload_buffer_num, &mut 0));
-            //check_if_tx_involves_user();
+                let mut node = stream.try_clone()?;
+                write_pong_message(&mut node, &payload_buffer_num)?;
+            }
+            header_name if header_name.contains("tx") => {
+                write_in_log(
+                    log_sender.messege_log_sender.clone(),
+                    format!(
+                        "Recibo Correctamente: tx -- Nodo: {:?}",
+                        stream.peer_addr()?
+                    )
+                    .as_str(),
+                );
+                //println!("{:?}\n", Transaction::unmarshalling(&payload_buffer_num, &mut 0));
+                //check_if_tx_involves_user();
+            }
+            _ => {
+                write_in_log(
+                    log_sender.messege_log_sender.clone(),
+                    format!(
+                        "IGNORADO -- Recibo: {} -- Nodo: {:?}",
+                        header.command_name,
+                        stream.peer_addr()?
+                    )
+                    .as_str(),
+                );
+            },
         }
-        */
         buffer_num = [0; 24];
         stream.read_exact(&mut buffer_num)?;
         header = HeaderMessage::from_le_bytes(buffer_num)?;
@@ -93,7 +97,15 @@ pub fn listen_for_incoming_messages(
 
 /// recieves a Node and the payload of the inv message and creates the invetories to ask for the incoming
 /// txs the node sent via inv. Returns error in case of failure or Ok(())
-fn handle_inv_message(stream: TcpStream, payload_bytes: Vec<u8>) -> Result<(), Box<dyn Error>> {
+fn handle_inv_message(log_sender: LogSender, stream: TcpStream, payload_bytes: Vec<u8>) -> Result<(), Box<dyn Error>> {
+    write_in_log(
+        log_sender.messege_log_sender.clone(),
+        format!(
+            "Recibo Correctamente: inv -- Nodo: {:?}",
+            stream.peer_addr()?
+        )
+        .as_str(),
+    );
     let mut offset: usize = 0;
     let count = CompactSizeUint::unmarshalling(&payload_bytes, &mut offset)?;
     let mut inventories = vec![];
