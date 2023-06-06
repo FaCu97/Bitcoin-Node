@@ -23,7 +23,7 @@ pub fn listen_for_incoming_messages(
                 )
                 .as_str(),
             );
-            let mut node = stream.try_clone().unwrap();
+            let mut node = stream.try_clone()?;
             write_pong_message(&mut node, &payload_buffer_num)?;
         } else if header.command_name == *"inv\0\0\0\0\0\0\0\0\0" {
             write_in_log(
@@ -34,7 +34,7 @@ pub fn listen_for_incoming_messages(
                 )
                 .as_str(),
             );
-            let node = stream.try_clone().unwrap();
+            let node = stream.try_clone()?;
             handle_inv_message(node, payload_buffer_num);
         } else if header.command_name.contains("tx") {
             write_in_log(
