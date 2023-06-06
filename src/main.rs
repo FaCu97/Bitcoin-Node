@@ -11,6 +11,7 @@ use hex::ToHex;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
+use bitcoin::gtk::gtk::Gtk;
 
 #[derive(Debug)]
 pub enum GenericError {
@@ -40,7 +41,8 @@ impl fmt::Display for GenericError {
 impl Error for GenericError {}
 
 fn main() -> Result<(), GenericError> {
-    let args: Vec<String> = env::args().collect();
+    Gtk::run();
+    /*let args: Vec<String> = env::args().collect();
     let config: Arc<Config> = Config::from(&args).map_err(GenericError::ConfigError)?;
     let (
         error_log_sender,
@@ -79,59 +81,51 @@ fn main() -> Result<(), GenericError> {
             },
         )?;
     let (headers, blocks) = headers_and_blocks;
-    let node = Node {
-        headers: headers.clone(),
-        block_chain: blocks.clone(),
-        utxo_set: vec![],
-    };
 
+    let node = Node::new(headers, blocks);*/
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
-    let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
-        logsender.clone(),
-        pointer_to_nodes,
-        Arc::new(RwLock::new(headers)),
-        Arc::new(RwLock::new(blocks)),
-    )
-    .map_err(GenericError::BroadcastingError)?;
+    /*
+        let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
+            logsender.clone(),
+            pointer_to_nodes,
+            Arc::new(RwLock::new(headers)),
+            Arc::new(RwLock::new(blocks)),
+        )
+        .map_err(GenericError::BroadcastingError)?;
 
-    if let Err(err) = handle_input(block_listener) {
-        println!("Error al leer la entrada por terminal. {}", err);
-    }
-
+        if let Err(err) = handle_input(block_listener) {
+            println!("Error al leer la entrada por terminal. {}", err);
+        }
+    */
     // esta parte es para explicar el comportamiento en la demo !!
-    // mostrar_comportamiento_del_nodo(node);
-    let mut block_1 = node.block_chain[0].block_header.hash();
-    let mut block_2 = node.block_chain[1].block_header.hash();
-    let mut block_3 = node.block_chain[2].block_header.hash();
-    block_1.reverse();
-    let block1_hex: String = block_1.encode_hex::<String>();
-    println!("bloque 1 :{}", block1_hex);
-    block_2.reverse();
-    let block2_hex: String = block_2.encode_hex::<String>();
-    println!("bloque 2 :{}", block2_hex);
-    block_3.reverse();
-    let block3_hex: String = block_3.encode_hex::<String>();
-    println!("bloque 3 :{}", block3_hex);
+    // mostrar_comportamiento_del_nodo(node);/*
 
-    let mut script_1 = node.block_chain[0].txn[0].tx_in[0].signature_script.clone();
-    let mut script_2 = node.block_chain[0].txn[1].tx_in[0].signature_script.clone();
-    let mut script_3 = node.block_chain[0].txn[2].tx_in[0].signature_script.clone();
-    script_1.reverse();
-    let script1_hex: String = script_1.encode_hex::<String>();
-    println!("script 1 :{}", script1_hex);
-    script_2.reverse();
-    let script2_hex: String = script_2.encode_hex::<String>();
-    println!("script 2 :{}", script2_hex);
-    script_3.reverse();
-    let script3_hex: String = script_3.encode_hex::<String>();
-    println!("script 3 :{}", script3_hex);
+    /*let block_1 = node.block_chain.read().unwrap()[0].clone();
+    let block_2 = node.block_chain.read().unwrap()[1].clone();
+    let mut hash_block_1 = block_1.block_header.hash();
+    hash_block_1.reverse();
+    let block1_hex: String = hash_block_1.encode_hex::<String>();
+    println!("bloque 1 :{}", block1_hex);
+    let mut hash_block_2 = block_2.block_header.hash();
+    hash_block_2.reverse();
+    let block2_hex: String = hash_block_2.encode_hex::<String>();
+    println!("bloque 2 :{}", block2_hex);
+
+    let height_block = block_1.txn[0].tx_in[0].height.clone().unwrap();
+    let height_hex: String = height_block.encode_hex::<String>();
+    println!("height :{}", height_hex);
+    let height_block = block_2.txn[0].tx_in[0].height.clone().unwrap();
+    let height_hex: String = height_block.encode_hex::<String>();
+    println!("height :{}", height_hex);
+
     write_in_log(
         logsender.info_log_sender.clone(),
         "TERMINA CORRECTAMENTE EL PROGRAMA!",
     );
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
-        .map_err(GenericError::LoggingError)?;
+        .map_err(GenericError::LoggingError)?;*/
+
     Ok(())
 }
 
@@ -157,7 +151,7 @@ fn handle_input(block_listener: BlockBroadcasting) -> Result<(), GenericError> {
 
     Ok(())
 }
-
+/*
 fn mostrar_comportamiento_del_nodo(node: Node) {
     let mut header_1 = node.headers[0].hash();
     header_1.reverse();
@@ -205,7 +199,7 @@ fn mostrar_comportamiento_del_nodo(node: Node) {
         transaccion.txout_count.decoded_value()
     );
     println!("lock time de la transaccion : {}", transaccion.lock_time);
-}
+}*/
 
 #[cfg(test)]
 mod tests {
