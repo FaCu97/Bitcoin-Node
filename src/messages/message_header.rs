@@ -1,6 +1,4 @@
 use bitcoin_hashes::{sha256d, Hash};
-use k256::pkcs8::der::Header;
-use std::any::Any;
 use std::io::{self, Read, Write};
 use std::net::TcpStream;
 use std::str::Utf8Error;
@@ -8,13 +6,7 @@ use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use std::vec;
 
-use crate::compact_size_uint::CompactSizeUint;
 use crate::logwriter::log_writer::{write_in_log, LogSender};
-use crate::messages::{inventory, payload};
-use crate::transactions::transaction::Transaction;
-
-use super::get_data_message::{self, GetDataMessage};
-use super::inventory::Inventory;
 // todo: implementar test de read_from usando mocking
 // todo: implementar test de write_to usando mocking
 // todo: implementar test de write_verack_message, read_verack_message, write_sendheaders_message usando mocking

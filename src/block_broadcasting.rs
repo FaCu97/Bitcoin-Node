@@ -4,7 +4,7 @@ use crate::{
     messages::{
         block_message::BlockMessage,
         get_data_message::GetDataMessage,
-        headers_message::{is_terminated, HeadersMessage},
+        headers_message::{is_terminated},
         inventory::Inventory,
     }, listener::listen_for_incoming_messages,
 };

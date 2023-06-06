@@ -1,6 +1,6 @@
 use std::{net::TcpStream, sync::{RwLock, Arc}, io::Read};
 
-use crate::{logwriter::log_writer::{LogSender, write_in_log}, messages::{message_header::{HeaderMessage, write_pong_message}, headers_message::{is_terminated, HeadersMessage}, inventory::Inventory, get_data_message::GetDataMessage}, blocks::{block_header::BlockHeader, block::Block}, compact_size_uint::CompactSizeUint, transactions::transaction::Transaction};
+use crate::{logwriter::log_writer::{LogSender, write_in_log}, messages::{message_header::{HeaderMessage, write_pong_message}, headers_message::{is_terminated, HeadersMessage}, inventory::Inventory, get_data_message::GetDataMessage}, blocks::{block_header::BlockHeader}, compact_size_uint::CompactSizeUint};
 
 pub fn listen_for_incoming_messages(
     log_sender: LogSender,
@@ -25,7 +25,7 @@ pub fn listen_for_incoming_messages(
             );
             let mut node = stream.try_clone().unwrap();
             write_pong_message(&mut node, &payload_buffer_num)?;
-        } else if header.command_name == "inv\0\0\0\0\0\0\0\0\0".to_string() {
+        } else if header.command_name == *"inv\0\0\0\0\0\0\0\0\0" {
             write_in_log(
                 log_sender.messege_log_sender.clone(),
                 format!(
