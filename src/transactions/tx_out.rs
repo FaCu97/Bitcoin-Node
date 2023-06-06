@@ -6,21 +6,14 @@ pub struct TxOut {
     value: i64,                       // Number of satoshis to spend
     pk_script_bytes: CompactSizeUint, // de 1 a 10.000 bytes
     pk_script: Pubkey, // Defines the conditions which must be satisfied to spend this output.
-    utxo: bool,        // An output can bu utxo or not
 }
 
 impl TxOut {
-    pub fn new(
-        value: i64,
-        pk_script_bytes: CompactSizeUint,
-        pk_script: Vec<u8>,
-        utxo: bool,
-    ) -> Self {
+    pub fn new(value: i64, pk_script_bytes: CompactSizeUint, pk_script: Vec<u8>) -> Self {
         TxOut {
             value,
             pk_script_bytes,
             pk_script: Pubkey::new(pk_script),
-            utxo,
         }
     }
     /// Recibe una cadena de bytes correspondiente a un TxOut
@@ -44,7 +37,6 @@ impl TxOut {
             value,
             pk_script_bytes,
             pk_script: Pubkey::new(pk_script),
-            utxo: true,
         })
     }
     pub fn unmarshalling_txouts(
@@ -73,13 +65,6 @@ impl TxOut {
         self.value
     }
 
-    pub fn is_utxo(&self) -> bool {
-        self.utxo
-    }
-
-    pub fn spent(&mut self) {
-        self.utxo = false
-    }
     pub fn get_adress(&self) -> Result<String, &'static str> {
         Ok(self.pk_script.generate_adress()?)
     }
@@ -101,7 +86,7 @@ mod tests {
         for _x in 0..compact_size_value {
             pk_script.push(1);
         }
-        let tx_out: TxOut = TxOut::new(value, compact_size, pk_script, true);
+        let tx_out: TxOut = TxOut::new(value, compact_size, pk_script);
         tx_out.marshalling(&mut bytes);
         bytes
     }

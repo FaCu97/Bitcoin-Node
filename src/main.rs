@@ -1,5 +1,6 @@
 use bitcoin::block_broadcasting::{BlockBroadcasting, BroadcastingError};
 use bitcoin::config::Config;
+use bitcoin::gtk::gtk::Gtk;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
 use bitcoin::logwriter::log_writer::{
@@ -11,7 +12,6 @@ use hex::ToHex;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
-use bitcoin::gtk::gtk::Gtk;
 
 #[derive(Debug)]
 pub enum GenericError {
@@ -41,8 +41,8 @@ impl fmt::Display for GenericError {
 impl Error for GenericError {}
 
 fn main() -> Result<(), GenericError> {
-    Gtk::run();
-    /*let args: Vec<String> = env::args().collect();
+    //Gtk::run();
+    let args: Vec<String> = env::args().collect();
     let config: Arc<Config> = Config::from(&args).map_err(GenericError::ConfigError)?;
     let (
         error_log_sender,
@@ -82,9 +82,10 @@ fn main() -> Result<(), GenericError> {
         )?;
     let (headers, blocks) = headers_and_blocks;
 
-    let node = Node::new(headers, blocks);*/
+    let node = Node::new(headers, blocks);
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
+    println!("el largo del utxo set es {}", node.utxo_set.len());
     /*
         let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
             logsender.clone(),
@@ -101,30 +102,12 @@ fn main() -> Result<(), GenericError> {
     // esta parte es para explicar el comportamiento en la demo !!
     // mostrar_comportamiento_del_nodo(node);/*
 
-    /*let block_1 = node.block_chain.read().unwrap()[0].clone();
-    let block_2 = node.block_chain.read().unwrap()[1].clone();
-    let mut hash_block_1 = block_1.block_header.hash();
-    hash_block_1.reverse();
-    let block1_hex: String = hash_block_1.encode_hex::<String>();
-    println!("bloque 1 :{}", block1_hex);
-    let mut hash_block_2 = block_2.block_header.hash();
-    hash_block_2.reverse();
-    let block2_hex: String = hash_block_2.encode_hex::<String>();
-    println!("bloque 2 :{}", block2_hex);
-
-    let height_block = block_1.txn[0].tx_in[0].height.clone().unwrap();
-    let height_hex: String = height_block.encode_hex::<String>();
-    println!("height :{}", height_hex);
-    let height_block = block_2.txn[0].tx_in[0].height.clone().unwrap();
-    let height_hex: String = height_block.encode_hex::<String>();
-    println!("height :{}", height_hex);
-
     write_in_log(
         logsender.info_log_sender.clone(),
         "TERMINA CORRECTAMENTE EL PROGRAMA!",
     );
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
-        .map_err(GenericError::LoggingError)?;*/
+        .map_err(GenericError::LoggingError)?;
 
     Ok(())
 }

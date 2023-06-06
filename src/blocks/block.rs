@@ -135,21 +135,33 @@ impl Block {
         current_hash == self.generate_merkle_root()
     }
 
-    pub fn set_utxos(&mut self) {
-        let mut non_utxos: Vec<Outpoint> = Vec::new();
-        let mut position: usize = self.txn_count.decoded_value() as usize;
-        while position > 0 {
-            position -= 1;
-            self.txn[position].set_utxos(&mut non_utxos);
-        }
-    }
     pub fn give_me_utxos(&self) -> Vec<TxOut> {
-        let mut utxo_container = Vec::new();
+        // este vector contiene el hash de una transaccion y todas las utxos correspondientes
+        // y sus respectivas posiciones en la tx
+        let mut utxo_container: Vec<([u8; 32], Vec<(TxOut, usize)>)> = Vec::new();
         for tx in &self.txn {
-            let list_of_utxos = tx.give_me_utxos();
-            utxo_container.extend_from_slice(&list_of_utxos);
+            if tx.is_coinbase_transaction() {
+                // como se trata de una coinbase al ser la primera tx solo se cargaran
+                // las utxos de esta transaccion
+                tx.load_utxos(&mut utxo_container);
+            } else {
+                //primero removemos las utxos que usa esta tx
+                tx.remove_utxos(&mut utxo_container);
+                //luego cargamos las utxos de esta tx para que en la siguiente iteracion
+                //se remuevan aquellas con son usadas
+                tx.load_utxos(&mut utxo_container);
+            }
         }
-        utxo_container
+        // vector con todas las utxos de la red
+        let mut utxos = Vec::new();
+        // en este punto en el container solo quedaran las utxos
+        // por lo tanto las agrego al vector
+        for utxo_set in utxo_container {
+            for utxo in utxo_set.1 {
+                utxos.push(utxo.0);
+            }
+        }
+        utxos
     }
 }
 
@@ -200,7 +212,7 @@ mod test {
             let value: i64 = 43;
             let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(0);
             let pk_script: Vec<u8> = Vec::new();
-            tx_out.push(TxOut::new(value, pk_script_bytes, pk_script, true));
+            tx_out.push(TxOut::new(value, pk_script_bytes, pk_script));
         }
         tx_out
     }

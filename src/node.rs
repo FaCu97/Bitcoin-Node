@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
-    transactions::{transaction::Transaction, tx_out::TxOut},
+    transactions::{pubkey, transaction::Transaction, tx_out::TxOut},
 };
 
 pub struct Node {
@@ -45,8 +45,12 @@ impl Node {
         }
         account_balance
     }
-    pub fn make_transaction(&mut self, adress: &str, amount_to_spend: i64) -> bool {
-        false
+    pub fn make_transaction(
+        &mut self,
+        adress_receiver: &str,
+        amount_to_spend: i64,
+    ) -> Result<(), &'static str> {
+        Ok(())
     }
 
     /// funcion que muestra si una transaccion se encuentra en un determinado bloque

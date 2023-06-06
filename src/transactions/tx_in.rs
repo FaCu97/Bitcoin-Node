@@ -105,6 +105,12 @@ impl TxIn {
     pub fn outpoint(&self) -> Outpoint {
         self.previous_output
     }
+    pub fn previous_index(&self) -> usize {
+        self.previous_output.index()
+    }
+    pub fn is_same_hash(&self, hash: &[u8; 32]) -> bool {
+        self.previous_output.same_hash(*hash)
+    }
 }
 #[cfg(test)]
 

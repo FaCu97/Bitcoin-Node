@@ -210,7 +210,7 @@ fn recieve_new_block(
         Ok(block) => block,
     };
     if new_block.validate().0 {
-        new_block.set_utxos(); // seteo utxos de las transacciones del bloque
+        //new_block.set_utxos(); // seteo utxos de las transacciones del bloque
         blocks
             .write()
             .map_err(|err| BroadcastingError::LockError(err.to_string()))?
