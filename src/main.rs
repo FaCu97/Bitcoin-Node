@@ -1,5 +1,6 @@
 use bitcoin::block_broadcasting::{BlockBroadcasting, BroadcastingError};
 use bitcoin::config::Config;
+use bitcoin::gtk::gtk::Gtk;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
 use bitcoin::logwriter::log_writer::{
@@ -11,7 +12,6 @@ use hex::ToHex;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
-use bitcoin::gtk::gtk::Gtk;
 
 #[derive(Debug)]
 pub enum GenericError {
