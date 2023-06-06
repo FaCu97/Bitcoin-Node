@@ -1,6 +1,6 @@
-use std::{net::TcpStream, io::Read};
-use crate::compact_size_uint::CompactSizeUint;
 use super::message_header::HeaderMessage;
+use crate::compact_size_uint::CompactSizeUint;
+use std::{io::Read, net::TcpStream};
 
 #[derive(Debug, Clone)]
 pub struct InvMessage {
@@ -15,11 +15,6 @@ impl InvMessage {
         stream.read_exact(&mut payload).unwrap();
         let mut offset: usize = 0;
         let count = CompactSizeUint::unmarshalling(&payload, &mut offset).unwrap();
-        for _ in 0..count.decoded_value() as usize {
-
-        }
-
+        for _ in 0..count.decoded_value() as usize {}
     }
 }
-
-

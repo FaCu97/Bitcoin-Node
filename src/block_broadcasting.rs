@@ -1,12 +1,11 @@
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
+    listener::listen_for_incoming_messages,
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
-        block_message::BlockMessage,
-        get_data_message::GetDataMessage,
-        headers_message::{is_terminated},
-        inventory::Inventory,
-    }, listener::listen_for_incoming_messages,
+        block_message::BlockMessage, get_data_message::GetDataMessage,
+        headers_message::is_terminated, inventory::Inventory,
+    },
 };
 use std::{
     error::Error,
@@ -127,7 +126,7 @@ pub fn listen_for_incoming_blocks_from_node(
     thread::spawn(move || -> BroadcastingResult {
         while !is_terminated(Some(finish.clone())) {
             //listen_for_incoming_messages(log_sender.clone(), &mut node, Some(finish.clone())).map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
-             
+
             let new_headers = match listen_for_incoming_messages(
                 log_sender_clone.clone(),
                 &mut node,
@@ -294,4 +293,3 @@ fn get_amount_of_nodes(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<usize, Broa
         .len();
     Ok(amount_of_nodes)
 }
-

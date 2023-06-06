@@ -107,7 +107,7 @@ impl HeaderMessage {
                 )
                 .as_str(),
             );
-            
+
             buffer_num = [0; 24];
             stream.read_exact(&mut buffer_num)?;
             header = HeaderMessage::from_le_bytes(buffer_num)?;
@@ -140,9 +140,6 @@ fn read_payload(stream: &mut dyn Read, header: &HeaderMessage) -> io::Result<Vec
     stream.read_exact(&mut payload_buffer_num)?;
     Ok(payload_buffer_num)
 }
-
-
-
 
 /// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje verack segun
 /// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error

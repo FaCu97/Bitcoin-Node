@@ -1,6 +1,21 @@
-use std::{net::TcpStream, sync::{RwLock, Arc}, io::Read, error::{Error}};
+use std::{
+    error::Error,
+    io::Read,
+    net::TcpStream,
+    sync::{Arc, RwLock},
+};
 
-use crate::{logwriter::log_writer::{LogSender, write_in_log}, messages::{message_header::{HeaderMessage, write_pong_message}, headers_message::{is_terminated, HeadersMessage}, inventory::Inventory, get_data_message::GetDataMessage}, blocks::{block_header::BlockHeader}, compact_size_uint::CompactSizeUint};
+use crate::{
+    blocks::block_header::BlockHeader,
+    compact_size_uint::CompactSizeUint,
+    logwriter::log_writer::{write_in_log, LogSender},
+    messages::{
+        get_data_message::GetDataMessage,
+        headers_message::{is_terminated, HeadersMessage},
+        inventory::Inventory,
+        message_header::{write_pong_message, HeaderMessage},
+    },
+};
 
 pub fn listen_for_incoming_messages(
     log_sender: LogSender,
@@ -35,8 +50,11 @@ pub fn listen_for_incoming_messages(
                 .as_str(),
             );
             let node = stream.try_clone()?;
-            if let Err(err) = handle_inv_message(node, payload_buffer_num){
-                write_in_log(log_sender.error_log_sender.clone(), format!("Error {} al recibir transaccion del nodo", err).as_str());
+            if let Err(err) = handle_inv_message(node, payload_buffer_num) {
+                write_in_log(
+                    log_sender.error_log_sender.clone(),
+                    format!("Error {} al recibir transaccion del nodo", err).as_str(),
+                );
             };
         } else if header.command_name.contains("tx") {
             write_in_log(
@@ -63,11 +81,9 @@ pub fn listen_for_incoming_messages(
     } else {
         Err("no llegaron nuevos headers!".into())
     }
-
 }
 
-
-fn handle_inv_message(stream: TcpStream, payload_bytes: Vec<u8>) ->  Result<(), Box<dyn Error>> {
+fn handle_inv_message(stream: TcpStream, payload_bytes: Vec<u8>) -> Result<(), Box<dyn Error>> {
     let mut offset: usize = 0;
     let count = CompactSizeUint::unmarshalling(&payload_bytes, &mut offset)?;
     let mut inventories = vec![];
@@ -80,13 +96,14 @@ fn handle_inv_message(stream: TcpStream, payload_bytes: Vec<u8>) ->  Result<(), 
         }
         offset += 36;
     }
-    ask_for_incoming_tx(stream, inventories).map_err(|error| {
-        Box::new(error)
-    })?;
+    ask_for_incoming_tx(stream, inventories).map_err(|error| Box::new(error))?;
     Ok(())
 }
 
-fn ask_for_incoming_tx(mut stream: TcpStream, inventories: Vec<Inventory>) -> Result<(), std::io::Error> {
+fn ask_for_incoming_tx(
+    mut stream: TcpStream,
+    inventories: Vec<Inventory>,
+) -> Result<(), std::io::Error> {
     let get_data_message = GetDataMessage::new(inventories);
     get_data_message.write_to(&mut stream)?;
     Ok(())
