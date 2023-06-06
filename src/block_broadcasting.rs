@@ -128,7 +128,7 @@ pub fn listen_for_incoming_blocks_from_node(
         while !is_terminated(Some(finish.clone())) {
             //listen_for_incoming_messages(log_sender.clone(), &mut node, Some(finish.clone())).map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
              
-            let new_headers = match HeadersMessage::read_from(
+            let new_headers = match listen_for_incoming_messages(
                 log_sender_clone.clone(),
                 &mut node,
                 Some(finish.clone()),

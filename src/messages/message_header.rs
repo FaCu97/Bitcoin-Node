@@ -9,7 +9,6 @@ use std::time::Duration;
 use std::vec;
 
 use crate::compact_size_uint::CompactSizeUint;
-use crate::listener::handle_ping_message;
 use crate::logwriter::log_writer::{write_in_log, LogSender};
 use crate::messages::{inventory, payload};
 use crate::transactions::transaction::Transaction;
@@ -95,8 +94,7 @@ impl HeaderMessage {
         let mut header = HeaderMessage::from_le_bytes(buffer_num)?;
         // si no se leyo el header que se queria, sigo leyendo hasta encontrarlo
         while header.command_name != header_command_name && !is_terminated(finish.clone()) {
-            let payload_bytes = read_payload(&mut stream, &header)?;
-
+            let payload = read_payload(&mut stream, &header)?;
             if header.command_name.contains("ping") {
                 write_in_log(
                     log_sender.messege_log_sender.clone(),
@@ -106,39 +104,18 @@ impl HeaderMessage {
                     )
                     .as_str(),
                 );
-                write_pong_message(&mut stream, &payload_bytes)?;
-            } else if header.command_name == "inv\0\0\0\0\0\0\0\0\0".to_string() {
-                write_in_log(
-                    log_sender.messege_log_sender.clone(),
-                    format!(
-                        "Recibo Correctamente: inv -- Nodo: {:?}",
-                        stream.peer_addr()?
-                    )
-                    .as_str(),
-                );
-                let node = stream.try_clone().unwrap();
-                handle_inv_message(log_sender.clone(), node, payload_bytes);
-            
-            } else if  header.command_name.contains("tx") {
-                write_in_log(
-                    log_sender.messege_log_sender.clone(),
-                    format!(
-                        "Recibo Correctamente: inv -- Nodo: {:?}",
-                        stream.peer_addr()?
-                    )
-                    .as_str(),
-                );
-            } else {
-                write_in_log(
-                    log_sender.messege_log_sender.clone(),
-                    format!(
-                        "IGNORADO -- Recibo: {} -- Nodo: {:?}",
-                        header.command_name,
-                        stream.peer_addr()?
-                    )
-                    .as_str(),
-                );
+                write_pong_message(&mut stream, &payload)?;
             }
+            write_in_log(
+                log_sender.messege_log_sender.clone(),
+                format!(
+                    "IGNORADO -- Recibo: {} -- Nodo: {:?}",
+                    header.command_name,
+                    stream.peer_addr()?
+                )
+                .as_str(),
+            );
+            
             buffer_num = [0; 24];
             stream.read_exact(&mut buffer_num)?;
             header = HeaderMessage::from_le_bytes(buffer_num)?;
@@ -172,27 +149,7 @@ fn read_payload(stream: &mut dyn Read, header: &HeaderMessage) -> io::Result<Vec
     Ok(payload_buffer_num)
 }
 
-fn handle_inv_message(log_sender: LogSender, stream: TcpStream, payload_bytes: Vec<u8>) {
-    let mut offset: usize = 0;
-    let count = CompactSizeUint::unmarshalling(&payload_bytes, &mut offset).unwrap();
-    let mut inventories = vec![];
-    for _ in 0..count.decoded_value() as usize {
-        let mut inventory_bytes = vec![0; 36];
-        inventory_bytes.copy_from_slice(&payload_bytes[offset..(offset + 36)]);
-        let inv = Inventory::from_le_bytes(&inventory_bytes);
-        if inv.type_identifier == 1 {
-            inventories.push(inv);
-        }
-        offset += 36;
-    }
-    ask_for_incoming_tx(log_sender.clone(), stream, inventories);
-}
 
-fn ask_for_incoming_tx(log_sender: LogSender, mut stream: TcpStream, inventories: Vec<Inventory>) {
-    let get_data_message = GetDataMessage::new(inventories);
-    get_data_message.write_to(&mut stream).unwrap();
-    HeaderMessage::read_from(log_sender, &mut stream, "tx".to_string(), None).unwrap();
-}
 
 
 /// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje verack segun

@@ -1,6 +1,6 @@
 use std::{net::TcpStream, sync::{RwLock, Arc}, io::Read};
 
-use crate::{logwriter::log_writer::{LogSender, write_in_log}, messages::{message_header::{HeaderMessage, write_pong_message}, headers_message::{is_terminated, HeadersMessage}}, blocks::{block_header::BlockHeader, block::Block}};
+use crate::{logwriter::log_writer::{LogSender, write_in_log}, messages::{message_header::{HeaderMessage, write_pong_message}, headers_message::{is_terminated, HeadersMessage}, inventory::Inventory, get_data_message::GetDataMessage}, blocks::{block_header::BlockHeader, block::Block}, compact_size_uint::CompactSizeUint, transactions::transaction::Transaction};
 
 pub fn listen_for_incoming_messages(
     log_sender: LogSender,
@@ -10,48 +10,78 @@ pub fn listen_for_incoming_messages(
     let mut buffer_num = [0; 24];
     stream.read_exact(&mut buffer_num)?;
     let mut header = HeaderMessage::from_le_bytes(buffer_num)?;
-    while !is_terminated(finish.clone()) {
-        //let node = stream.try_clone().unwrap();
+    while !header.command_name.contains("headers") && !is_terminated(finish.clone()) {
         let payload_size = header.payload_size as usize;
         let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
         stream.read_exact(&mut payload_buffer_num)?;
-        match header.command_name.as_str() {
-            "headers\0\0\0\0\0" => handle_headers_message(log_sender.clone(), payload_buffer_num.clone()),
-            "ping\0\0\0\0\0\0\0\0" => handle_ping_message(log_sender, node, payload),
-            "inv\0\0\0\0\0\0\0\0\0" => println!("Recibo inv!\n"),
-            _ => {
-                write_in_log(
-                    log_sender.messege_log_sender.clone(),
-                    format!(
-                        "IGNORADO -- Recibo: {} -- Nodo: {:?}",
-                        header.command_name,
-                        stream.peer_addr()?
-                    )
-                    .as_str(),
-                );
-            }
+        if header.command_name.contains("ping") {
+            write_in_log(
+                log_sender.messege_log_sender.clone(),
+                format!(
+                    "Recibo Correctamente: ping -- Nodo: {:?}",
+                    stream.peer_addr()?
+                )
+                .as_str(),
+            );
+            let mut node = stream.try_clone().unwrap();
+            write_pong_message(&mut node, &payload_buffer_num)?;
+        } else if header.command_name == "inv\0\0\0\0\0\0\0\0\0".to_string() {
+            write_in_log(
+                log_sender.messege_log_sender.clone(),
+                format!(
+                    "Recibo Correctamente: inv -- Nodo: {:?}",
+                    stream.peer_addr()?
+                )
+                .as_str(),
+            );
+            let node = stream.try_clone().unwrap();
+            handle_inv_message(node, payload_buffer_num);
+        } else if header.command_name.contains("tx") {
+            write_in_log(
+                log_sender.messege_log_sender.clone(),
+                format!(
+                    "Recibo Correctamente: tx -- Nodo: {:?}",
+                    stream.peer_addr()?
+                )
+                .as_str(),
+            );
+            //println!("{:?}\n", Transaction::unmarshalling(&payload_buffer_num, &mut 0));
+            //check_if_tx_involves_user();
         }
         buffer_num = [0; 24];
         stream.read_exact(&mut buffer_num)?;
         header = HeaderMessage::from_le_bytes(buffer_num)?;
     }
-    Ok(())
-}
-
-
-
-pub fn handle_headers_message(log_sender: LogSender, payload: Vec<u8>) -> Result<Vec<BlockHeader>, &'static str> {
-    HeadersMessage::unmarshalling(&payload)
-}
-
-
-pub fn handle_ping_message(log_sender: LogSender, mut node: TcpStream, payload: Vec<u8>) {
-    match write_pong_message(&mut node, &payload) {
-        Err(err) => {write_in_log(log_sender.error_log_sender, "Error al escribir pong en respuesta a ping");}
-        Ok(_) => (),
+    if !is_terminated(finish) {
+        let payload_size = header.payload_size as usize;
+        let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
+        stream.read_exact(&mut payload_buffer_num)?;
+        let new_headers = HeadersMessage::unmarshalling(&payload_buffer_num)?;
+        Ok(new_headers)
+    } else {
+        Err("no llegaron nuevos headers!".into())
     }
+
 }
-/* 
-pub fn handle_inv_message(payload: Vec<u8>) {
-    
-}*/
+
+
+fn handle_inv_message(stream: TcpStream, payload_bytes: Vec<u8>) {
+    let mut offset: usize = 0;
+    let count = CompactSizeUint::unmarshalling(&payload_bytes, &mut offset).unwrap();
+    let mut inventories = vec![];
+    for _ in 0..count.decoded_value() as usize {
+        let mut inventory_bytes = vec![0; 36];
+        inventory_bytes.copy_from_slice(&payload_bytes[offset..(offset + 36)]);
+        let inv = Inventory::from_le_bytes(&inventory_bytes);
+        if inv.type_identifier == 1 {
+            inventories.push(inv);
+        }
+        offset += 36;
+    }
+    ask_for_incoming_tx(stream, inventories);
+}
+
+fn ask_for_incoming_tx(mut stream: TcpStream, inventories: Vec<Inventory>) {
+    let get_data_message = GetDataMessage::new(inventories);
+    get_data_message.write_to(&mut stream).unwrap();
+}
