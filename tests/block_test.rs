@@ -8,7 +8,7 @@ fn create_txout(value: i64) -> TxOut {
     let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(1);
     let pk_script: Vec<u8> = vec![1];
     let utxo: bool = true;
-    TxOut::new(value, pk_script_bytes, pk_script, utxo)
+    TxOut::new(value, pk_script_bytes, pk_script)
 }
 
 fn create_tx_outs(values: Vec<i64>) -> Vec<TxOut> {
@@ -71,7 +71,7 @@ fn create_block_header() -> BlockHeader {
         nonce: (0x20),
     }
 }
-
+/*
 #[test]
 fn test_seteo_de_utxos_dentro_de_un_bloque_con_2_transacciones_funciona_correctamente() {
     // coinbase transaction
@@ -115,7 +115,6 @@ fn test_seteo_de_utxos_dentro_de_un_bloque_con_2_transacciones_funciona_correcta
         txn_count,
         txn,
     };
-    block.set_utxos();
     // me fijo que los txout de la coinbase se setean correctamente
     assert!(!(block.txn[0].tx_out[0].is_utxo()));
     assert!(!(block.txn[0].tx_out[1].is_utxo()));
@@ -186,7 +185,6 @@ fn test_seteo_de_utxos_dentro_de_un_bloque_con_3_transacciones_funciona_correcta
         txn_count,
         txn,
     };
-    block.set_utxos();
     // me fijo que los txout de la coinbase se setean correctamente
     assert!(!(block.txn[0].tx_out[0].is_utxo()));
     assert!(!(block.txn[0].tx_out[1].is_utxo()));
@@ -200,9 +198,8 @@ fn test_seteo_de_utxos_dentro_de_un_bloque_con_3_transacciones_funciona_correcta
     assert!(block.txn[2].tx_out[1].is_utxo());
     assert!(block.txn[2].tx_out[2].is_utxo());
 }
-
+*/
 #[test]
-
 fn test_lista_de_utxos_de_un_bloque_con_2_transacciones_tiene_largo_esperado() {
     // coinbase transaction
     // seteo de tx_outs de la coinbase
@@ -240,12 +237,11 @@ fn test_lista_de_utxos_de_un_bloque_con_2_transacciones_tiene_largo_esperado() {
     txn.push(coinbase_transaction);
     txn.push(first_transaction);
 
-    let mut block: Block = Block {
+    let block: Block = Block {
         block_header: (create_block_header()),
         txn_count,
         txn,
     };
-    block.set_utxos();
     let utxos = block.give_me_utxos();
     assert_eq!(utxos.len(), 4);
 }

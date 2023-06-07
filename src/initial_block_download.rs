@@ -559,7 +559,7 @@ fn receive_requested_blocks_from_node(
                 validation_result.1
             )));
         }
-        bloque.set_utxos(); // seteo utxos de las transacciones del bloque
+        //bloque.set_utxos(); // seteo utxos de las transacciones del bloque
         current_blocks.push(bloque);
     }
     Ok((node, current_blocks))

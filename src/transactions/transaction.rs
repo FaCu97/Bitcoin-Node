@@ -101,37 +101,42 @@ impl Transaction {
         }
         Ok(transactions_list)
     }
-
-    pub fn give_me_utxos(&self) -> Vec<TxOut> {
-        let mut list_of_utxos: Vec<TxOut> = Vec::new();
-        for tx_out in &self.tx_out {
-            if tx_out.is_utxo() {
-                list_of_utxos.push(tx_out.clone());
-            }
-        }
-        list_of_utxos
+    pub fn is_coinbase_transaction(&self) -> bool {
+        self.tx_in[0].is_coinbase()
     }
-
-    pub fn set_utxos(&mut self, outpoints: &mut Vec<Outpoint>) {
-        if outpoints.is_empty() {
-            for txin in &self.tx_in {
-                outpoints.push(txin.outpoint());
-            }
-        } else {
-            let hash = self.hash();
-
-            for txin in &self.tx_in {
-                outpoints.push(txin.outpoint());
-            }
-
-            for outpoint in outpoints {
-                if outpoint.same_hash(hash) {
-                    self.tx_out[outpoint.index()].spent();
+    pub fn get_txout(&self) -> Vec<TxOut> {
+        self.tx_out.clone()
+    }
+    /// funcion que se encarga de remover las utxos usadas por esta tx
+    pub fn remove_utxos(&self, container: &mut Vec<([u8; 32], Vec<(TxOut, usize)>)>) {
+        for list_utxos in container {
+            for tx_in in &self.tx_in {
+                // aca nos fijamos si alguna de nuestra inputs usa outputs anteriores
+                // si la usa debemos remover dicho elemento de la lista
+                if tx_in.is_same_hash(&list_utxos.0) {
+                    let mut position: usize = 0;
+                    while position < list_utxos.1.len() {
+                        if list_utxos.1[position].1 == tx_in.previous_index() {
+                            list_utxos.1.remove(position);
+                        }
+                        position += 1;
+                    }
                 }
             }
         }
     }
+    pub fn load_utxos(&self, container: &mut Vec<([u8; 32], Vec<(TxOut, usize)>)>) {
+        let hash = self.hash();
+        let mut utxos_and_index = Vec::new();
+        let position: usize = 0;
+        for utxo in &self.tx_out {
+            let utxo_and_index = (utxo.clone(), position);
+            utxos_and_index.push(utxo_and_index);
+        }
+        container.push((hash, utxos_and_index));
+    }
 }
+
 #[cfg(test)]
 
 mod test {
@@ -168,7 +173,7 @@ mod test {
             let value: i64 = 43;
             let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(0);
             let pk_script: Vec<u8> = Vec::new();
-            tx_out.push(TxOut::new(value, pk_script_bytes, pk_script, true));
+            tx_out.push(TxOut::new(value, pk_script_bytes, pk_script));
         }
         tx_out
     }
@@ -213,12 +218,7 @@ mod test {
         ));
         let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(0);
         let mut tx_out: Vec<TxOut> = Vec::new();
-        tx_out.push(TxOut::new(
-            0x1111111111111111,
-            pk_script_bytes,
-            Vec::new(),
-            true,
-        ));
+        tx_out.push(TxOut::new(0x1111111111111111, pk_script_bytes, Vec::new()));
         let txin_count: CompactSizeUint = CompactSizeUint::new(1);
         let txout_count: CompactSizeUint = CompactSizeUint::new(1);
         let transaction: Transaction = Transaction::new(
