@@ -44,7 +44,7 @@ fn main() -> Result<(), GenericError> {
     let mut args: Vec<String> = env::args().collect();
     if args.len() == 3 && args[2] == *"-i" {
         Gtk::run();
-        // lo saco para que lea config correctamentex
+        // lo saco para que lea config correctamente
         args.pop();
     }
     let config: Arc<Config> = Config::from(&args).map_err(GenericError::ConfigError)?;
