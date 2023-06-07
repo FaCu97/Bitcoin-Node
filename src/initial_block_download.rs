@@ -65,6 +65,7 @@ impl Error for DownloadError {}
 
 const ALTURA_PRIMER_BLOQUE_A_DESCARGAR: usize = 2428000;
 const ALTURA_PRIMER_BLOQUE: usize = 2428246;
+type HeadersBlocksTuple = (Arc<RwLock<Vec<BlockHeader>>>, Arc<RwLock<Vec<Block>>>);
 
 /// Searches for the block headers that matches the defined timestamp defined by config.
 /// If it is found, returns them and set the boolean to true.
@@ -571,7 +572,7 @@ pub fn initial_block_download(
     config: Arc<Config>,
     log_sender: LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-) -> Result<(Arc<RwLock<Vec<BlockHeader>>>, Arc<RwLock<Vec<Block>>>), DownloadError> {
+) -> Result<HeadersBlocksTuple, DownloadError> {
     write_in_log(
         log_sender.info_log_sender.clone(),
         "EMPIEZA DESCARGA INICIAL DE BLOQUES",

@@ -4,6 +4,7 @@ use std::net::TcpStream;
 use std::str::Utf8Error;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
+use std::vec;
 
 use crate::logwriter::log_writer::{write_in_log, LogSender};
 // todo: implementar test de read_from usando mocking
@@ -85,6 +86,7 @@ impl HeaderMessage {
         let mut header = HeaderMessage::from_le_bytes(buffer_num)?;
         // si no se leyo el header que se queria, sigo leyendo hasta encontrarlo
         while header.command_name != header_command_name && !is_terminated(finish.clone()) {
+            let payload = read_payload(&mut stream, &header)?;
             if header.command_name.contains("ping") {
                 write_in_log(
                     log_sender.messege_log_sender.clone(),
@@ -94,20 +96,18 @@ impl HeaderMessage {
                     )
                     .as_str(),
                 );
-                let payload_bytes = read_payload(&mut stream, &header)?;
-                write_pong_message(&mut stream, &payload_bytes)?;
-            } else {
-                write_in_log(
-                    log_sender.messege_log_sender.clone(),
-                    format!(
-                        "IGNORADO -- Recibo: {} -- Nodo: {:?}",
-                        header.command_name,
-                        stream.peer_addr()?
-                    )
-                    .as_str(),
-                );
-                read_payload(&mut stream, &header)?;
+                write_pong_message(&mut stream, &payload)?;
             }
+            write_in_log(
+                log_sender.messege_log_sender.clone(),
+                format!(
+                    "IGNORADO -- Recibo: {} -- Nodo: {:?}",
+                    header.command_name,
+                    stream.peer_addr()?
+                )
+                .as_str(),
+            );
+
             buffer_num = [0; 24];
             stream.read_exact(&mut buffer_num)?;
             header = HeaderMessage::from_le_bytes(buffer_num)?;

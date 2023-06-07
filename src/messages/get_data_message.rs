@@ -58,8 +58,6 @@ impl GetDataMessage {
     }
 }
 
-/// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje verack segun
-/// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error
 fn get_data_header_message(payload: &GetDataPayload) -> HeaderMessage {
     let payload_bytes = payload.to_le_bytes();
     let binding = sha256d::Hash::hash(payload_bytes);
