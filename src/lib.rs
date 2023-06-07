@@ -5,6 +5,7 @@ pub mod config;
 pub mod gtk;
 pub mod handshake;
 pub mod initial_block_download;
+pub mod listener;
 pub mod logwriter;
 pub mod messages;
 pub mod network;
