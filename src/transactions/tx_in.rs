@@ -1,4 +1,5 @@
 use crate::compact_size_uint::CompactSizeUint;
+use hex::ToHex;
 
 use super::outpoint::Outpoint;
 #[derive(Debug, PartialEq, Clone)]
@@ -105,11 +106,20 @@ impl TxIn {
     pub fn outpoint(&self) -> Outpoint {
         self.previous_output
     }
-    pub fn previous_index(&self) -> usize {
-        self.previous_output.index()
-    }
-    pub fn is_same_hash(&self, hash: &[u8; 32]) -> bool {
-        self.previous_output.same_hash(*hash)
+
+    pub fn get_height(&self) -> u32 {
+        let mut bytes: Vec<u8> = vec![0];
+        let height = &self.height;
+        let mut bytes_from_height: Vec<u8>;
+        match height {
+            Some(value) => bytes_from_height = value.clone(),
+            None => return 0,
+        }
+        bytes_from_height.reverse();
+        bytes.extend_from_slice(&bytes_from_height[..bytes_from_height.len() - 1]);
+        let mut aux_bytes: [u8; 4] = [0; 4];
+        aux_bytes.copy_from_slice(&bytes);
+        u32::from_be_bytes(aux_bytes)
     }
 }
 #[cfg(test)]
