@@ -43,13 +43,6 @@ impl VersionMessage {
     ) -> Result<VersionMessage, std::io::Error> {
         let header = HeaderMessage::read_from(log_sender, stream, "version".to_string(), None)
             .map_err(|err| std::io::Error::new(std::io::ErrorKind::InvalidData, err.to_string()))?;
-        /*
-        let mut buffer_num = [0; 24];
-        stream.read_exact(&mut buffer_num)?;
-        let header = HeaderMessage::from_le_bytes(buffer_num).map_err(|err: Utf8Error| {
-            std::io::Error::new(std::io::ErrorKind::InvalidData, err.to_string())
-        })?;
-        */
         let payload_large = header.payload_size;
         let mut buffer_num = vec![0; payload_large as usize];
         stream.read_exact(&mut buffer_num)?;

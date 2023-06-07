@@ -1,13 +1,20 @@
 #[derive(Debug, Clone)]
 pub struct Inventory {
-    type_identifier: u32,
-    hash: [u8; 32],
+    pub type_identifier: u32,
+    pub hash: [u8; 32],
 }
 
 impl Inventory {
     pub fn new_block(hash: [u8; 32]) -> Inventory {
         Inventory {
             type_identifier: 2, // 2: Block
+            hash,
+        }
+    }
+
+    pub fn new_tx(hash: [u8; 32]) -> Inventory {
+        Inventory {
+            type_identifier: 1, // 1: Transaction
             hash,
         }
     }

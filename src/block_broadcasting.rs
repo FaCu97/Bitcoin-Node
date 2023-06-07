@@ -1,11 +1,10 @@
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
+    listener::listen_for_incoming_messages,
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
-        block_message::BlockMessage,
-        get_data_message::GetDataMessage,
-        headers_message::{is_terminated, HeadersMessage},
-        inventory::Inventory,
+        block_message::BlockMessage, get_data_message::GetDataMessage,
+        headers_message::is_terminated, inventory::Inventory,
     },
 };
 use std::{
@@ -126,7 +125,9 @@ pub fn listen_for_incoming_blocks_from_node(
     let log_sender_clone = log_sender.clone();
     thread::spawn(move || -> BroadcastingResult {
         while !is_terminated(Some(finish.clone())) {
-            let new_headers = match HeadersMessage::read_from(
+            //listen_for_incoming_messages(log_sender.clone(), &mut node, Some(finish.clone())).map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
+
+            let new_headers = match listen_for_incoming_messages(
                 log_sender_clone.clone(),
                 &mut node,
                 Some(finish.clone()),
@@ -154,7 +155,7 @@ pub fn listen_for_incoming_blocks_from_node(
     })
 }
 
-pub fn ask_for_new_blocks(
+fn ask_for_new_blocks(
     log_sender: LogSender,
     new_headers: Vec<BlockHeader>,
     node: TcpStream,
