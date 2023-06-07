@@ -103,6 +103,7 @@ fn main() -> Result<(), GenericError> {
     }
 
     // esta parte es para explicar el comportamiento en la demo !!
+
     // mostrar_comportamiento_del_nodo(node);/*
 
     /*let block_1 = node.block_chain.read().unwrap()[0].clone();
@@ -123,6 +124,7 @@ fn main() -> Result<(), GenericError> {
     let height_hex: String = height_block.encode_hex::<String>();
     println!("height :{}", height_hex);
     */
+
     write_in_log(
         logsender.info_log_sender.clone(),
         "TERMINA CORRECTAMENTE EL PROGRAMA!",
