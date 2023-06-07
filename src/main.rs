@@ -41,8 +41,12 @@ impl fmt::Display for GenericError {
 impl Error for GenericError {}
 
 fn main() -> Result<(), GenericError> {
-    Gtk::run();
-    /*let args: Vec<String> = env::args().collect();
+    let mut args: Vec<String> = env::args().collect();
+    if args.len() == 3 && args[2] == *"-i" {
+        Gtk::run();
+        // lo saco para que lea config correctamente
+        args.pop();
+    }
     let config: Arc<Config> = Config::from(&args).map_err(GenericError::ConfigError)?;
     let (
         error_log_sender,
@@ -82,22 +86,22 @@ fn main() -> Result<(), GenericError> {
         )?;
     let (headers, blocks) = headers_and_blocks;
 
-    let node = Node::new(headers, blocks);*/
+    let node = Node::new(headers.clone(), blocks.clone());
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
-    /*
-        let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
-            logsender.clone(),
-            pointer_to_nodes,
-            Arc::new(RwLock::new(headers)),
-            Arc::new(RwLock::new(blocks)),
-        )
-        .map_err(GenericError::BroadcastingError)?;
 
-        if let Err(err) = handle_input(block_listener) {
-            println!("Error al leer la entrada por terminal. {}", err);
-        }
-    */
+    let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
+        logsender.clone(),
+        pointer_to_nodes,
+        headers,
+        blocks,
+    )
+    .map_err(GenericError::BroadcastingError)?;
+
+    if let Err(err) = handle_input(block_listener) {
+        println!("Error al leer la entrada por terminal. {}", err);
+    }
+
     // esta parte es para explicar el comportamiento en la demo !!
     // mostrar_comportamiento_del_nodo(node);/*
 
@@ -118,13 +122,13 @@ fn main() -> Result<(), GenericError> {
     let height_block = block_2.txn[0].tx_in[0].height.clone().unwrap();
     let height_hex: String = height_block.encode_hex::<String>();
     println!("height :{}", height_hex);
-
+    */
     write_in_log(
         logsender.info_log_sender.clone(),
         "TERMINA CORRECTAMENTE EL PROGRAMA!",
     );
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
-        .map_err(GenericError::LoggingError)?;*/
+        .map_err(GenericError::LoggingError)?;
 
     Ok(())
 }
