@@ -1,5 +1,6 @@
 use bitcoin::block_broadcasting::{BlockBroadcasting, BroadcastingError};
 use bitcoin::config::Config;
+use bitcoin::gtk::gtk::Gtk;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
 use bitcoin::logwriter::log_writer::{
@@ -11,7 +12,6 @@ use hex::ToHex;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
-use bitcoin::gtk::gtk::Gtk;
 
 #[derive(Debug)]
 pub enum GenericError {
@@ -89,7 +89,7 @@ fn main() -> Result<(), GenericError> {
     let node = Node::new(headers.clone(), blocks.clone());
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
-    
+
     let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
         logsender.clone(),
         pointer_to_nodes,
@@ -101,7 +101,7 @@ fn main() -> Result<(), GenericError> {
     if let Err(err) = handle_input(block_listener) {
         println!("Error al leer la entrada por terminal. {}", err);
     }
-    
+
     // esta parte es para explicar el comportamiento en la demo !!
     // mostrar_comportamiento_del_nodo(node);/*
 
