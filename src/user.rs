@@ -59,7 +59,13 @@ impl User {
         // Decodificar la clave privada en formato WIF
         let decoded = bs58::decode(wif_private_key).into_vec().ok()?;
         let mut vector = vec![];
-        vector.extend_from_slice(&decoded[1..&decoded.len() - 5]);
+        let uncompressed_wif_len = 51;
+        if wif_private_key.len() == uncompressed_wif_len {
+            vector.extend_from_slice(&decoded[1..&decoded.len() - 4]);
+        } else {
+            vector.extend_from_slice(&decoded[1..&decoded.len() - 5]);
+        }
+
         // Obtener la clave privada de 32 bytes
         let mut private_key_bytes = [0u8; 32];
         private_key_bytes.copy_from_slice(&vector);
@@ -95,10 +101,26 @@ mod test {
     }
 
     #[test]
-    fn test_decoding_wif_genera_correctamente_el_adress() {
-        // WIF COMPRIMIDA
+    fn test_decoding_wif_compressed_genera_correctamente_el_private_key() {
+        // WIF COMPRESSED
         let wif = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
-        // PUBLIC KEY SIN
+        // PRIVATE KEY FROM HEX FORMAT
+        let expected_private_key_bytes =
+            string_to_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
+                .unwrap();
+
+        let pk = match User::decode_wif_private_key(wif) {
+            Some(private_key) => private_key,
+            None => [0; 32],
+        };
+        assert_eq!(pk.to_vec(), expected_private_key_bytes);
+    }
+
+    #[test]
+    fn test_decoding_wif_uncompressed_genera_correctamente_el_private_key() {
+        // WIF UNCOMPRESSED
+        let wif = "91dkDNCCaMp2f91sVQRGgdZRw1QY4aptaeZ4vxEvuG5PvZ9hftJ";
+        // PRIVATE KEY FROM HEX FORMAT
         let expected_pk =
             string_to_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
                 .unwrap();
