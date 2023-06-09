@@ -87,7 +87,6 @@ fn main() -> Result<(), GenericError> {
         )?;
     let (headers, blocks) = headers_and_blocks;
 
-
     let node = Node::new(headers.clone(), blocks.clone());
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();

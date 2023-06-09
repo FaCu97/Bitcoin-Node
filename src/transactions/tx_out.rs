@@ -60,7 +60,6 @@ impl TxOut {
         bytes.extend_from_slice(&pk_script_bytes[0..pk_script_bytes.len()]);
         bytes.extend_from_slice(self.pk_script.bytes());
     }
-    
 
     pub fn value(&self) -> i64 {
         self.value
