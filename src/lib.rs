@@ -1,4 +1,4 @@
-pub mod adress_decoder;
+pub mod address_decoder;
 pub mod block_broadcasting;
 pub mod blocks;
 pub mod compact_size_uint;
