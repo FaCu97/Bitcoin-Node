@@ -36,7 +36,7 @@ pub fn listen_for_incoming_messages(
         match &header.command_name {
             header_name if header_name.contains("inv") => {
                 let node = stream.try_clone()?;
-                if let Err(err) = handle_inv_message(log_sender.clone(), node, payload_buffer_num) {
+                if let Err(err) = handle_inv_message( node, payload_buffer_num) {
                     write_in_log(
                         log_sender.error_log_sender.clone(),
                         format!(
@@ -102,18 +102,9 @@ pub fn listen_for_incoming_messages(
 /// recieves a Node and the payload of the inv message and creates the invetories to ask for the incoming
 /// txs the node sent via inv. Returns error in case of failure or Ok(())
 fn handle_inv_message(
-    log_sender: LogSender,
     stream: TcpStream,
     payload_bytes: Vec<u8>,
 ) -> Result<(), Box<dyn Error>> {
-    write_in_log(
-        log_sender.messege_log_sender,
-        format!(
-            "Recibo Correctamente: inv -- Nodo: {:?}",
-            stream.peer_addr()?
-        )
-        .as_str(),
-    );
     let mut offset: usize = 0;
     let count = CompactSizeUint::unmarshalling(&payload_bytes, &mut offset)?;
     let mut inventories = vec![];
