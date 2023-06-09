@@ -1,15 +1,15 @@
+use std::error::Error;
+use std::io;
+
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
 
 /// Recibe la address sin comprimir
 /// Devuelve el PubkeyHash
-pub fn decode_address(address_uncompressed: &str) -> Result<[u8; 20], &'static str> {
+pub fn decode_address(address_uncompressed: &str) -> Result<[u8; 20], Box<dyn Error>> {
     //se decodifican de &str a bytes , desde el formate base58  a bytes
-    let decoded_bytes = bs58::decode(address_uncompressed).into_vec();
-    let bytes = match decoded_bytes {
-        Ok(value) => value,
-        Err(_) => return Err("fallo la decodificacion en base58"),
-    };
+    let bytes = bs58::decode(address_uncompressed).into_vec()?;
+
     //generacion del checksum
     let lenght_bytes = bytes.len();
     let mut pubkey_hash = vec![0x6f];
@@ -22,7 +22,10 @@ pub fn decode_address(address_uncompressed: &str) -> Result<[u8; 20], &'static s
     let mut checksum_received = Vec::new();
     checksum_received.extend_from_slice(&bytes[(lenght_bytes - 4)..lenght_bytes]);
     if checksum_received != checksum_expected {
-        return Err("el checksum recibido no es el esperado");
+        return Err(Box::new(std::io::Error::new(
+            io::ErrorKind::Other,
+            "El checksum recibido no es el esperado.",
+        )));
     }
     // pubkey-hash
     let mut pubkey_hash_to_return = [0; 20];
@@ -130,7 +133,7 @@ mod test {
     }
 
     #[test]
-    fn test_pub_key_hash_se_genera_con_el_largo_correcto() -> Result<(), &'static str> {
+    fn test_pub_key_hash_se_genera_con_el_largo_correcto() -> Result<(), Box<dyn Error>> {
         let pub_key = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
         let pub_key_hash = decode_address(pub_key)?;
 
@@ -139,7 +142,7 @@ mod test {
     }
 
     #[test]
-    fn test_pub_key_hash_se_genera_correctamente() -> Result<(), &'static str> {
+    fn test_pub_key_hash_se_genera_correctamente() -> Result<(), Box<dyn Error>> {
         let pub_key = "02b4632d08485ff1df2db55b9dafd23347d1c47a457072a1e87be26896549a8737";
         let pub_key_hash = decode_address(pub_key)?;
         let pub_key_hash_expected = "93ce48570b55c42c2af816aeaba06cfee1224fae";
