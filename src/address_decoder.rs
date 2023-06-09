@@ -74,7 +74,7 @@ mod test {
     use k256::sha2::Sha256;
     use secp256k1::SecretKey;
 
-    use crate::adress_decoder::generate_p2pkh_pk_script;
+    use crate::address_decoder::generate_p2pkh_pk_script;
     use crate::user::User;
 
     use super::decode_address;
