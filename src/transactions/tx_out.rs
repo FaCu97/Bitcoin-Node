@@ -66,7 +66,7 @@ impl TxOut {
     }
 
     pub fn get_adress(&self) -> Result<String, &'static str> {
-        Ok(self.pk_script.generate_adress()?)
+        self.pk_script.generate_adress()
     }
     pub fn get_pub_key(&self) -> &Vec<u8> {
         self.pk_script.bytes()

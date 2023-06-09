@@ -2,11 +2,11 @@ use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{
     compact_size_uint::CompactSizeUint,
-    transactions::{outpoint::Outpoint, transaction::Transaction, tx_out::TxOut},
+    transactions::{transaction::Transaction, tx_out::TxOut},
 };
 
 use super::block_header::BlockHeader;
-
+type UtxoTuple = ([u8; 32], Vec<(TxOut, usize)>);
 #[derive(Debug, Clone)]
 pub struct Block {
     pub block_header: BlockHeader,
@@ -138,7 +138,7 @@ impl Block {
     pub fn give_me_utxos(&self) -> Vec<TxOut> {
         // este vector contiene el hash de una transaccion y todas las utxos correspondientes
         // y sus respectivas posiciones en la tx
-        let mut utxo_container: Vec<([u8; 32], Vec<(TxOut, usize)>)> = Vec::new();
+        let mut utxo_container: Vec<UtxoTuple> = Vec::new();
         for tx in &self.txn {
             if tx.is_coinbase_transaction() {
                 // como se trata de una coinbase al ser la primera tx solo se cargaran

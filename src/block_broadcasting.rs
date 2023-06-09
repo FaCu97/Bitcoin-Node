@@ -206,7 +206,7 @@ fn recieve_new_block(
     mut node: TcpStream,
     blocks: Arc<RwLock<Vec<Block>>>,
 ) -> BroadcastingResult {
-    let mut new_block: Block = match BlockMessage::read_from(log_sender.clone(), &mut node) {
+    let new_block: Block = match BlockMessage::read_from(log_sender.clone(), &mut node) {
         Err(err) => return Err(BroadcastingError::CanNotRead(err.to_string())),
         Ok(block) => block,
     };
