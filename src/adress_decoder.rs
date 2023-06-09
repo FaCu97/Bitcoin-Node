@@ -126,4 +126,23 @@ mod test {
         assert_eq!(pk_script[23..24], [0x88]);
         assert_eq!(pk_script[24..25], [0xAC]);
     }
+
+    #[test]
+    fn test_pub_key_hash_se_genera_con_el_largo_correcto() -> Result<(), &'static str> {
+        let pub_key = "02b4632d08485ff1df2db55b9dafd23347d1c47a457072a1e87be26896549a8737";
+        let pub_key_hash = decode_address(pub_key)?;
+
+        assert_eq!(pub_key_hash.len(), 20);
+        Ok(())
+    }
+
+    #[test]
+    fn test_pub_key_hash_se_genera_correctamente() -> Result<(), &'static str> {
+        let pub_key = "02b4632d08485ff1df2db55b9dafd23347d1c47a457072a1e87be26896549a8737";
+        let pub_key_hash = decode_address(pub_key)?;
+        let pub_key_hash_expected = "93ce48570b55c42c2af816aeaba06cfee1224fae";
+
+        //   assert_eq!(pub_key_hash, [0x76]);
+        Ok(())
+    }
 }
