@@ -112,7 +112,7 @@ mod test {
     fn test_decodificacion_de_adress_genera_pubkey_esperado() -> Result<(), Box<dyn Error>> {
         let address: &str = "mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV";
         let private_key: &str = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
-        let private_key_bytes = User::decode_wif_private_key(private_key)?.0;
+        let private_key_bytes = User::decode_wif_private_key(private_key)?;
         let pubkey_hash_expected = generate_pubkey_hash(&private_key_bytes);
         let pubkey_hash_generated = get_pubkey_hash_from_address(address)?;
         assert_eq!(pubkey_hash_expected, pubkey_hash_generated);

@@ -10,7 +10,6 @@ use crate::node::Node;
 
 pub struct User {
     private_key: String,
-    public_key_compressed: [u8; 33],
     address: String,
 }
 
@@ -18,13 +17,11 @@ impl User {
     /// Recibe La address en formato comprimido
     /// Y la WIF private key, ya sea en formato comprimido o no comprimido
     pub fn login_user(wif_private_key: String, address: String) -> Result<User, Box<dyn Error>> {
-        let (raw_private_key, public_key_compressed) =
-            Self::decode_wif_private_key(wif_private_key.as_str())?;
+        let raw_private_key = Self::decode_wif_private_key(wif_private_key.as_str())?;
 
         Self::validate_address_private_key(&raw_private_key, &address)?;
         Ok(User {
             private_key: wif_private_key,
-            public_key_compressed,
             address,
         })
     }
@@ -72,9 +69,7 @@ impl User {
 
     /// Recibe la WIF private key, ya sea en formato comprimido o no comprimido.
     /// Devuelve la private key en bytes
-    pub fn decode_wif_private_key(
-        wif_private_key: &str,
-    ) -> Result<([u8; 32], [u8; 33]), Box<dyn Error>> {
+    pub fn decode_wif_private_key(wif_private_key: &str) -> Result<[u8; 32], Box<dyn Error>> {
         // Decodificar la clave privada en formato WIF
         let decoded_result = bs58::decode(wif_private_key).into_vec();
         let decoded = match decoded_result {
@@ -102,14 +97,7 @@ impl User {
         let mut private_key_bytes = [0u8; 32];
         private_key_bytes.copy_from_slice(&vector);
 
-        // se aplica el algoritmo de ECDSA a la clave privada , luego
-        // a la clave publica
-        let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
-        let key: SecretKey = SecretKey::from_slice(&private_key_bytes)?;
-        let public_key: secp256k1::PublicKey = secp256k1::PublicKey::from_secret_key(&secp, &key);
-        let public_key_bytes_compressed = public_key.serialize();
-
-        Ok((private_key_bytes, public_key_bytes_compressed))
+        Ok(private_key_bytes)
     }
 
     pub fn get_account_balance(&self, node: &Node) -> i64 {
@@ -170,7 +158,7 @@ mod test {
             string_to_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
                 .unwrap();
 
-        let private_key = User::decode_wif_private_key(wif)?.0;
+        let private_key = User::decode_wif_private_key(wif)?;
 
         assert_eq!(private_key.to_vec(), expected_private_key_bytes);
         Ok(())
@@ -186,7 +174,7 @@ mod test {
             string_to_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
                 .unwrap();
 
-        let private_key = User::decode_wif_private_key(wif)?.0;
+        let private_key = User::decode_wif_private_key(wif)?;
         assert_eq!(private_key.to_vec(), expected_private_key_bytes);
         Ok(())
     }
