@@ -8,7 +8,6 @@ use bitcoin::logwriter::log_writer::{
 };
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
-use hex::ToHex;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
@@ -86,7 +85,6 @@ fn main() -> Result<(), GenericError> {
             },
         )?;
     let (headers, blocks) = headers_and_blocks;
-
 
     let node = Node::new(headers.clone(), blocks.clone());
     //  let headers: Vec<_> = Vec::new();
