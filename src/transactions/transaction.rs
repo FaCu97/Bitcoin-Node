@@ -143,7 +143,7 @@ mod test {
     use super::Transaction;
     use crate::{
         compact_size_uint::CompactSizeUint,
-        transactions::{outpoint::Outpoint, tx_in::TxIn, tx_out::TxOut},
+        transactions::{outpoint::Outpoint, sig_script::SigScript, tx_in::TxIn, tx_out::TxOut},
     };
     use bitcoin_hashes::{sha256d, Hash};
 
@@ -154,7 +154,8 @@ mod test {
             let index_outpoint: u32 = 0x30000000;
             let outpoint: Outpoint = Outpoint::new(tx_id, index_outpoint);
             let compact_txin: CompactSizeUint = CompactSizeUint::new(1);
-            let signature_script: Vec<u8> = vec![1];
+            let bytes: Vec<u8> = vec![1];
+            let signature_script = SigScript::new(bytes);
             let sequence: u32 = 0xffffffff;
             tx_in.push(TxIn::new(
                 outpoint,
@@ -213,7 +214,7 @@ mod test {
             previous_output,
             script_bytes,
             None,
-            Vec::new(),
+            SigScript::new(Vec::new()),
             0x11111111,
         ));
         let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(0);
@@ -261,7 +262,8 @@ mod test {
         let outpoint: Outpoint = Outpoint::new(tx_id, index_outpoint);
         let compact_txin: CompactSizeUint = CompactSizeUint::new(5);
         let height = Some(vec![1, 1, 1, 1]);
-        let signature_script: Vec<u8> = vec![1];
+        let bytes_to_sig: Vec<u8> = vec![1];
+        let signature_script = SigScript::new(bytes_to_sig);
         let sequence: u32 = 0xffffffff;
         let mut tx_in: Vec<TxIn> = Vec::new();
         tx_in.push(TxIn::new(

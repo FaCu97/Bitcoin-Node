@@ -174,7 +174,10 @@ mod test {
     use crate::{
         blocks::block_header::BlockHeader,
         compact_size_uint::CompactSizeUint,
-        transactions::{outpoint::Outpoint, transaction::Transaction, tx_in::TxIn, tx_out::TxOut},
+        transactions::{
+            outpoint::Outpoint, sig_script::SigScript, transaction::Transaction, tx_in::TxIn,
+            tx_out::TxOut,
+        },
     };
 
     use super::Block;
@@ -193,7 +196,8 @@ mod test {
             let index_outpoint: u32 = 0x30000000;
             let outpoint: Outpoint = Outpoint::new(tx_id, index_outpoint);
             let compact_txin: CompactSizeUint = CompactSizeUint::new(1);
-            let signature_script: Vec<u8> = vec![1];
+            let bytes: Vec<u8> = vec![1];
+            let signature_script = SigScript::new(bytes);
             let sequence: u32 = 0xffffffff;
             tx_in.push(TxIn::new(
                 outpoint,
