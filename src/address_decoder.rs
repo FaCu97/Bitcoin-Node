@@ -4,33 +4,41 @@ use std::io;
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
 
-/// Recibe la address sin comprimir
+/// Recibe la address comprimida
 /// Devuelve el PubkeyHash
-pub fn decode_address(address_uncompressed: &str) -> Result<[u8; 20], Box<dyn Error>> {
+/// Si la address es invalida, devuelve error
+pub fn get_pubkey_hash_from_address(address: &str) -> Result<[u8; 20], Box<dyn Error>> {
     //se decodifican de &str a bytes , desde el formate base58  a bytes
-    let bytes = bs58::decode(address_uncompressed).into_vec()?;
+    let address_decoded_bytes = bs58::decode(address).into_vec()?;
+    validate_address(&address_decoded_bytes)?;
+    let lenght_bytes = address_decoded_bytes.len();
+    let mut pubkey_hash: [u8; 20] = [0; 20];
 
-    //generacion del checksum
-    let lenght_bytes = bytes.len();
-    let mut pubkey_hash = vec![0x6f];
-    pubkey_hash.extend_from_slice(&bytes[1..(lenght_bytes - 4)]);
-    let checksum = Sha256::digest(Sha256::digest(&pubkey_hash));
-    // se guarda el checksum esperado
-    let mut checksum_expected: Vec<u8> = Vec::new();
-    checksum_expected.extend_from_slice(&checksum[..4]);
-    // se obtiene el checksum recibido
-    let mut checksum_received = Vec::new();
-    checksum_received.extend_from_slice(&bytes[(lenght_bytes - 4)..lenght_bytes]);
-    if checksum_received != checksum_expected {
+    // el pubkey hash es el que compone la address
+    // le saco el byte de la red y el checksum del final
+    pubkey_hash.copy_from_slice(&address_decoded_bytes[1..(lenght_bytes - 4)]);
+
+    Ok(pubkey_hash)
+}
+
+/// Recibe una bitcoin address decodificada.
+/// Revisa el checksum y devuelve error si es inválida.
+fn validate_address(address_decoded_bytes: &Vec<u8>) -> Result<(), Box<dyn Error>> {
+    // validacion checksum: evita errores de tipeo en la address
+    // Calcular el checksum (doble hash SHA-256) del hash extendido
+    let lenght_bytes = address_decoded_bytes.len();
+    let checksum_hash = Sha256::digest(Sha256::digest(
+        &address_decoded_bytes[0..(lenght_bytes - 4)],
+    ));
+
+    let checksum_address = &address_decoded_bytes[(lenght_bytes - 4)..lenght_bytes];
+    if checksum_address != &checksum_hash[..4] {
         return Err(Box::new(std::io::Error::new(
             io::ErrorKind::Other,
-            "El checksum recibido no es el esperado.",
+            "La dirección es inválida, falló la validación del checksum",
         )));
     }
-    // pubkey-hash
-    let mut pubkey_hash_to_return = [0; 20];
-    pubkey_hash_to_return.copy_from_slice(&bytes[1..(lenght_bytes - 4)]);
-    Ok(pubkey_hash_to_return)
+    Ok(())
 }
 
 //      <Sig> <PubKey> OP_DUP OP_HASH160 <PubkeyHash> OP_EQUALVERIFY OP_CHECKSIG
@@ -77,7 +85,7 @@ mod test {
     use crate::address_decoder::generate_p2pkh_pk_script;
     use crate::user::User;
 
-    use super::decode_address;
+    use super::get_pubkey_hash_from_address;
 
     fn generate_pubkey_hash(private_key: &[u8]) -> [u8; 20] {
         let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
@@ -96,7 +104,7 @@ mod test {
     #[test]
     fn test_decodificacion_de_address_valida_devuelve_ok() {
         let address = "mpzx6iZ1WX8hLSeDRKdkLatXXPN1GDWVaF";
-        let pubkey_hash_expected = decode_address(address);
+        let pubkey_hash_expected = get_pubkey_hash_from_address(address);
         assert!(pubkey_hash_expected.is_ok())
     }
 
@@ -106,7 +114,7 @@ mod test {
         let private_key: &str = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
         let private_key_bytes = User::decode_wif_private_key(private_key)?.0;
         let pubkey_hash_expected = generate_pubkey_hash(&private_key_bytes);
-        let pubkey_hash_generated = decode_address(address)?;
+        let pubkey_hash_generated = get_pubkey_hash_from_address(address)?;
         assert_eq!(pubkey_hash_expected, pubkey_hash_generated);
         Ok(())
     }
@@ -134,20 +142,32 @@ mod test {
 
     #[test]
     fn test_pub_key_hash_se_genera_con_el_largo_correcto() -> Result<(), Box<dyn Error>> {
-        let pub_key = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
-        let pub_key_hash = decode_address(pub_key)?;
+        let address = "mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV";
+        let pub_key_hash = get_pubkey_hash_from_address(address)?;
 
         assert_eq!(pub_key_hash.len(), 20);
         Ok(())
     }
-
     #[test]
-    fn test_pub_key_hash_se_genera_correctamente() -> Result<(), Box<dyn Error>> {
-        let pub_key = "02b4632d08485ff1df2db55b9dafd23347d1c47a457072a1e87be26896549a8737";
-        let pub_key_hash = decode_address(pub_key)?;
-        let pub_key_hash_expected = "93ce48570b55c42c2af816aeaba06cfee1224fae";
+    fn test_get_pubkey_hash_con_direccion_invalida_da_error() -> Result<(), Box<dyn Error>> {
+        let address = "1nEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV";
+        let pub_key_hash_result = get_pubkey_hash_from_address(address);
 
-        //   assert_eq!(pub_key_hash, [0x76]);
+        assert!(pub_key_hash_result.is_err());
         Ok(())
     }
+    /* todo:
+    #[test]
+    fn test_pub_key_hash_se_genera_correctamente() -> Result<(), Box<dyn Error>> {
+        let address = "mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV";
+
+        let pub_key_hash = get_pubkey_hash_from_address(address)?;
+        let private_key = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
+        // se puede crear esta funcion para testearlo. Seguramente haga falta también para validar el script.
+        let pub_key_hash_expected = get_pub_key_hash_from_private_key();
+
+        assert_eq!(pub_key_hash, [0x76]);
+        Ok(())
+    }
+    */
 }
