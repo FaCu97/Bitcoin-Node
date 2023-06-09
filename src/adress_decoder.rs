@@ -64,6 +64,8 @@ pub fn generate_p2pkh_pk_script(public_key: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 
 mod test {
+    use std::error::Error;
+
     use bitcoin_hashes::{ripemd160, Hash};
     use k256::sha2::Digest;
     use k256::sha2::Sha256;
@@ -96,10 +98,10 @@ mod test {
     }
 
     #[test]
-    fn test_decodificacion_de_adress_genera_pubkey_esperado() -> Result<(), &'static str> {
+    fn test_decodificacion_de_adress_genera_pubkey_esperado() -> Result<(), Box<dyn Error>> {
         let address: &str = "mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV";
         let private_key: &str = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
-        let private_key_bytes = User::decode_wif_private_key(private_key).unwrap();
+        let private_key_bytes = User::decode_wif_private_key(private_key)?.0;
         let pubkey_hash_expected = generate_pubkey_hash(&private_key_bytes);
         let pubkey_hash_generated = decode_address(address)?;
         assert_eq!(pubkey_hash_expected, pubkey_hash_generated);
@@ -129,7 +131,7 @@ mod test {
 
     #[test]
     fn test_pub_key_hash_se_genera_con_el_largo_correcto() -> Result<(), &'static str> {
-        let pub_key = "02b4632d08485ff1df2db55b9dafd23347d1c47a457072a1e87be26896549a8737";
+        let pub_key = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
         let pub_key_hash = decode_address(pub_key)?;
 
         assert_eq!(pub_key_hash.len(), 20);
