@@ -4,9 +4,11 @@ use std::{
     fmt,
     fs::{File, OpenOptions},
     io::Write,
-    sync::mpsc::{channel, Receiver, Sender},
-    thread::{self, JoinHandle},
+    sync::{mpsc::{channel, Receiver, Sender}, Arc},
+    thread::{self, JoinHandle}, path::PathBuf,
 };
+
+use crate::config::Config;
 
 const CENTER_DATE_LINE: &str = "-------------------------------------------";
 const LINEA_FINAL_LOG: &str = "-----------------------------------------------------------------------------------------------------------------------------";
@@ -64,14 +66,15 @@ pub fn write_in_log(log_sender: LogFileSender, msg: &str) {
 }
 
 pub fn set_up_loggers(
+    config: Arc<Config>,
     error_file_path: String,
     info_file_path: String,
     message_file_path: String,
 ) -> Result<Loggers, LoggingError> {
-    let (error_log_sender, error_handler) = LogWriter::new(error_file_path).create_logger()?;
-    let (info_log_sender, info_handler) = LogWriter::new(info_file_path).create_logger()?;
+    let (error_log_sender, error_handler) = LogWriter::new(error_file_path).create_logger(config.clone())?;
+    let (info_log_sender, info_handler) = LogWriter::new(info_file_path).create_logger(config.clone())?;
     let (message_log_sender, message_handler) =
-        LogWriter::new(message_file_path).create_logger()?;
+        LogWriter::new(message_file_path).create_logger(config)?;
     Ok((
         error_log_sender,
         error_handler,
@@ -136,9 +139,9 @@ impl LogWriter {
     /// calling_function(tx.clone(), ...);
     /// tx.send("second log!!".to_string())?
     /// log.shutdown(tx, handle)?;
-    pub fn create_logger(&self) -> Result<(LogFileSender, JoinHandle<()>), LoggingError> {
+    pub fn create_logger(&self, config: Arc<Config>) -> Result<(LogFileSender, JoinHandle<()>), LoggingError> {
         let (tx, rx): (Sender<String>, Receiver<String>) = channel();
-        let mut file = open_log_file(&self.log_file)?;
+        let mut file = open_log_file(&self.log_file, config)?;
         let local = Local::now();
         let date = format!(
             "\n{} Actual date: {}-{}-{} Hour: {:02}:{:02}:{:02} {}\n",
@@ -179,11 +182,18 @@ impl LogWriter {
     }
 }
 
-fn open_log_file(log_file: &String) -> Result<File, LoggingError> {
+fn open_log_file(log_file: &String, config: Arc<Config>) -> Result<File, LoggingError> {
+    let logs_dir = PathBuf::from(config.logs_folder_path.clone());
+    let log_path = logs_dir.join(log_file);
+
+    // Crea el directorio "logs" si no existe
+    if !logs_dir.exists() {
+        std::fs::create_dir(&logs_dir).map_err(|err| LoggingError::OpeningFileError(err.to_string()))?;
+    }
     let log_open_file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(log_file)
+        .open(log_path)
         .map_err(|err| LoggingError::OpeningFileError(err.to_string()))?;
     Ok(log_open_file)
 }

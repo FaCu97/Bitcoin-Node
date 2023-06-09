@@ -56,6 +56,7 @@ fn main() -> Result<(), GenericError> {
         message_log_sender,
         message_handler,
     ) = set_up_loggers(
+        config.clone(),
         config.error_log_path.clone(),
         config.info_log_path.clone(),
         config.message_log_path.clone(),
