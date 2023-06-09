@@ -193,7 +193,7 @@ fn open_log_file(log_file: &String, config: Arc<Config>) -> Result<File, Logging
     let log_open_file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(&log_path)
+        .open(log_path)
         .map_err(|err| LoggingError::OpeningFileError(err.to_string()))?;
     Ok(log_open_file)
 }
