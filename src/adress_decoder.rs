@@ -1,5 +1,3 @@
-use bitcoin_hashes::ripemd160;
-use bitcoin_hashes::Hash;
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
 
@@ -42,26 +40,25 @@ pub fn decode_address(address_uncompressed: &str) -> Result<[u8; 20], &'static s
 // <pubKeyHash>: Son 20 bytes. Es el resultado de aplicar hash160 (sha256 + ripemd160 hash) a la publicKey comprimida SEC
 
 // scriptSig:   <length sig>     <sig>   <length pubKey>   <pubKey>
-// <pubKey> es la publicKey comprimida SEC (33bytes)
+// <pubKey> es la publicKey comprimida SEC (33bytes) del receptor de la tx
 // Largo bytes: 1 + 72 + 1 + 33 = 107
 
 /// Genera el pk_script de una transaccion P2PKH
-/// Recibe la public key comprimida (33 bytes) de el receptor de la tx
-pub fn generate_p2pkh_pk_script(public_key: &Vec<u8>) -> Result<Vec<u8>, &'static str> {
-    // Falta probarla
+/// Recibe el <pubKeyHash> del receptor de la tx.
+pub fn generate_p2pkh_pk_script(public_key: &[u8]) -> Vec<u8> {
     let mut pk_script: Vec<u8> = Vec::new();
     pk_script.push(0x76); // OP_DUP  -> Pasar a constantes o enum
     pk_script.push(0xA9);
     pk_script.push(20); // <bytes_to_push>: Son 20 bytes
-    let pk = secp256k1::PublicKey::from_slice(public_key);
 
-    let public_key_sha256_hash = Sha256::digest(public_key);
-    let public_key_hash160 = *ripemd160::Hash::hash(&public_key_sha256_hash).as_byte_array();
+    //   let pk = secp256k1::PublicKey::from_slice(public_key).unwrap();
+    //    let public_key_sha256_hash = Sha256::digest(public_key);
+    //    let public_key_hash160 = *ripemd160::Hash::hash(&public_key_sha256_hash).as_byte_array();
 
-    pk_script.extend_from_slice(&public_key_hash160);
+    pk_script.extend_from_slice(public_key);
     pk_script.push(0x88);
     pk_script.push(0xAC);
-    Ok(pk_script)
+    pk_script
 }
 
 #[cfg(test)]
@@ -72,6 +69,7 @@ mod test {
     use k256::sha2::Sha256;
     use secp256k1::SecretKey;
 
+    use crate::adress_decoder::generate_p2pkh_pk_script;
     use crate::user::User;
 
     use super::decode_address;
@@ -106,5 +104,26 @@ mod test {
         let pubkey_hash_generated = decode_address(address)?;
         assert_eq!(pubkey_hash_expected, pubkey_hash_generated);
         Ok(())
+    }
+
+    #[test]
+    fn test_pk_script_se_genera_con_el_largo_correcto() {
+        let pub_key_hash: [u8; 20] = [0; 20];
+        let pk_script = generate_p2pkh_pk_script(&pub_key_hash);
+
+        assert_eq!(pk_script.len(), 25);
+    }
+
+    #[test]
+    fn test_pk_script_se_genera_con_el_contenido_correcto() {
+        let pub_key_hash: [u8; 20] = [0; 20];
+        let pk_script = generate_p2pkh_pk_script(&pub_key_hash);
+
+        assert_eq!(pk_script[..1], [0x76]);
+        assert_eq!(pk_script[1..2], [0xA9]);
+        assert_eq!(pk_script[2..3], [20]);
+        assert_eq!(pk_script[3..23], pub_key_hash);
+        assert_eq!(pk_script[23..24], [0x88]);
+        assert_eq!(pk_script[24..25], [0xAC]);
     }
 }
