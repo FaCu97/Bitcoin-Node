@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
-const CANTIDAD_ATRIBUTOS: usize = 16;
+const CANTIDAD_ATRIBUTOS: usize = 17;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub number_of_nodes: usize,
@@ -28,6 +28,7 @@ pub struct Config {
     pub fecha_inicio_proyecto: String,
     pub formato_fecha_inicio_proyecto: String,
     pub archivo_headers: String,
+    pub logs_folder_path: String,
 }
 impl Config {
     /// Crea un config leyendo un archivo de configuracion ubicado en la
@@ -76,6 +77,7 @@ impl Config {
             fecha_inicio_proyecto: String::new(),
             formato_fecha_inicio_proyecto: String::new(),
             archivo_headers: String::new(),
+            logs_folder_path: String::new(),
         };
 
         let mut number_of_settings_loaded: usize = 0;
@@ -179,6 +181,10 @@ impl Config {
             }
             "ARCHIVO_HEADERS" => {
                 self.archivo_headers = String::from(value);
+                *number_of_settings_loaded += 1;
+            }
+            "CARPETA_LOGS" => {
+                self.logs_folder_path = String::from(value);
                 *number_of_settings_loaded += 1;
             }
             _ => {
