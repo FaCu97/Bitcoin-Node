@@ -31,20 +31,23 @@ impl User {
     fn validate_address_private_key(
         private_key: &[u8],
         address: &String,
-    ) -> Result<(), &'static str> {
-        if !Self::generate_address(private_key).eq(address) {
-            return Err("La private key ingresada no se corresponde con la address");
+    ) -> Result<(), Box<dyn Error>> {
+        if !Self::generate_address(private_key)?.eq(address) {
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                "La private key ingresada no se corresponde con la address",
+            )));
         }
         Ok(())
     }
 
     /// Recibe la private key en bytes.
     /// Devuelve la address comprimida
-    fn generate_address(private_key: &[u8]) -> String {
+    fn generate_address(private_key: &[u8]) -> Result<String, Box<dyn Error>> {
         // se aplica el algoritmo de ECDSA a la clave privada , luego
         // a la clave publica
         let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
-        let key: SecretKey = SecretKey::from_slice(private_key).unwrap();
+        let key = SecretKey::from_slice(private_key)?;
         let public_key: secp256k1::PublicKey = secp256k1::PublicKey::from_secret_key(&secp, &key);
         let public_key_bytes_compressed = public_key.serialize();
 
@@ -64,7 +67,7 @@ impl User {
 
         // Codificar el hash extendido en Base58
         let encoded: bs58::encode::EncodeBuilder<&Vec<u8>> = bs58::encode(&extended_hash);
-        encoded.into_string()
+        Ok(encoded.into_string())
     }
 
     /// Recibe la WIF private key, ya sea en formato comprimido o no comprimido.
