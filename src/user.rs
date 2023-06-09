@@ -7,6 +7,7 @@ use k256::sha2::Sha256;
 use secp256k1::SecretKey;
 
 use crate::node::Node;
+const UNCOMPRESSED_WIF_LEN: usize = 51;
 
 pub struct User {
     private_key: String,
@@ -82,8 +83,7 @@ impl User {
         //Err("Falló la decodificación del wif private key en base58."),
 
         let mut vector = vec![];
-        let uncompressed_wif_len = 51;
-        if wif_private_key.len() == uncompressed_wif_len {
+        if wif_private_key.len() == UNCOMPRESSED_WIF_LEN {
             vector.extend_from_slice(&decoded[1..&decoded.len() - 4]);
         } else {
             vector.extend_from_slice(&decoded[1..&decoded.len() - 5]);
