@@ -4,8 +4,12 @@ use std::{
     fmt,
     fs::{File, OpenOptions},
     io::Write,
-    sync::{mpsc::{channel, Receiver, Sender}, Arc},
-    thread::{self, JoinHandle}, path::PathBuf,
+    path::PathBuf,
+    sync::{
+        mpsc::{channel, Receiver, Sender},
+        Arc,
+    },
+    thread::{self, JoinHandle},
 };
 
 use crate::config::Config;
@@ -71,8 +75,10 @@ pub fn set_up_loggers(
     info_file_path: String,
     message_file_path: String,
 ) -> Result<Loggers, LoggingError> {
-    let (error_log_sender, error_handler) = LogWriter::new(error_file_path).create_logger(config.clone())?;
-    let (info_log_sender, info_handler) = LogWriter::new(info_file_path).create_logger(config.clone())?;
+    let (error_log_sender, error_handler) =
+        LogWriter::new(error_file_path).create_logger(config.clone())?;
+    let (info_log_sender, info_handler) =
+        LogWriter::new(info_file_path).create_logger(config.clone())?;
     let (message_log_sender, message_handler) =
         LogWriter::new(message_file_path).create_logger(config)?;
     Ok((
@@ -139,7 +145,10 @@ impl LogWriter {
     /// calling_function(tx.clone(), ...);
     /// tx.send("second log!!".to_string())?
     /// log.shutdown(tx, handle)?;
-    pub fn create_logger(&self, config: Arc<Config>) -> Result<(LogFileSender, JoinHandle<()>), LoggingError> {
+    pub fn create_logger(
+        &self,
+        config: Arc<Config>,
+    ) -> Result<(LogFileSender, JoinHandle<()>), LoggingError> {
         let (tx, rx): (Sender<String>, Receiver<String>) = channel();
         let mut file = open_log_file(&self.log_file, config)?;
         let local = Local::now();
@@ -188,7 +197,8 @@ fn open_log_file(log_file: &String, config: Arc<Config>) -> Result<File, Logging
 
     // Crea el directorio "logs" si no existe
     if !logs_dir.exists() {
-        std::fs::create_dir(&logs_dir).map_err(|err| LoggingError::OpeningFileError(err.to_string()))?;
+        std::fs::create_dir(&logs_dir)
+            .map_err(|err| LoggingError::OpeningFileError(err.to_string()))?;
     }
     let log_open_file = OpenOptions::new()
         .create(true)

@@ -1,5 +1,4 @@
 use crate::compact_size_uint::CompactSizeUint;
-use hex::ToHex;
 
 use super::outpoint::Outpoint;
 #[derive(Debug, PartialEq, Clone)]

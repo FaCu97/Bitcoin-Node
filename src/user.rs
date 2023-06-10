@@ -1,43 +1,59 @@
+use std::error::Error;
+use std::io;
+
 use bitcoin_hashes::{ripemd160, Hash};
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
 use secp256k1::SecretKey;
 
 use crate::node::Node;
+const UNCOMPRESSED_WIF_LEN: usize = 51;
 
 pub struct User {
     pub private_key: String,
-    pub adress: String,
+    pub address: String,
 }
 
 impl User {
-    pub fn login_user(private_key: String, adress: String) -> Result<User, &'static str> {
-        let raw_private_key = Self::decode_wif_private_key(private_key.as_str());
-        let priv_key: [u8; 32] = match raw_private_key {
-            Some(number) => number,
-            None => return Err("fallo la decodificacion de la clave"),
-        };
-        let validate_adress = Self::generate_adress(&priv_key);
-        if validate_adress == adress {
-            return Ok(User {
-                private_key,
-                adress,
-            });
-        }
-        Err("los datos ingresados no corresponden a un usuario valido")
+    /// Recibe La address en formato comprimido
+    /// Y la WIF private key, ya sea en formato comprimido o no comprimido
+    pub fn login_user(wif_private_key: String, address: String) -> Result<User, Box<dyn Error>> {
+        let raw_private_key = Self::decode_wif_private_key(wif_private_key.as_str())?;
+
+        Self::validate_address_private_key(&raw_private_key, &address)?;
+        Ok(User {
+            private_key: wif_private_key,
+            address,
+        })
     }
 
-    fn generate_adress(private_key: &[u8]) -> String {
+    /// Recibe una private key en bytes y una address comprimida.
+    /// Devuelve true o false dependiendo si se corresponden entre si o no.
+    fn validate_address_private_key(
+        private_key: &[u8],
+        address: &String,
+    ) -> Result<(), Box<dyn Error>> {
+        if !Self::generate_address(private_key)?.eq(address) {
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                "La private key ingresada no se corresponde con la address",
+            )));
+        }
+        Ok(())
+    }
+
+    /// Recibe la private key en bytes.
+    /// Devuelve la address comprimida
+    fn generate_address(private_key: &[u8]) -> Result<String, Box<dyn Error>> {
         // se aplica el algoritmo de ECDSA a la clave privada , luego
         // a la clave publica
         let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
-        let key: SecretKey = SecretKey::from_slice(private_key).unwrap();
+        let key = SecretKey::from_slice(private_key)?;
         let public_key: secp256k1::PublicKey = secp256k1::PublicKey::from_secret_key(&secp, &key);
-        //  se aplica RIPEMD160(SHA256(ECDSA(public_key)))
-        let public_key_hexa = public_key.serialize_uncompressed();
-        // let pk_hex: String = public_key_hexa.encode_hex::<String>();
+        let public_key_bytes_compressed = public_key.serialize();
 
-        let sha256_hash = Sha256::digest(public_key_hexa);
+        //  se aplica RIPEMD160(SHA256(ECDSA(public_key)))
+        let sha256_hash = Sha256::digest(public_key_bytes_compressed);
         let ripemd160_hash = *ripemd160::Hash::hash(&sha256_hash).as_byte_array();
 
         // Añadir el byte de versión (0x00) al comienzo del hash RIPEMD-160
@@ -52,28 +68,51 @@ impl User {
 
         // Codificar el hash extendido en Base58
         let encoded: bs58::encode::EncodeBuilder<&Vec<u8>> = bs58::encode(&extended_hash);
-        encoded.into_string()
+        Ok(encoded.into_string())
     }
 
-    pub fn decode_wif_private_key(wif_private_key: &str) -> Option<[u8; 32]> {
+    /// Recibe la WIF private key, ya sea en formato comprimido o no comprimido.
+    /// Devuelve la private key en bytes
+    pub fn decode_wif_private_key(wif_private_key: &str) -> Result<[u8; 32], Box<dyn Error>> {
         // Decodificar la clave privada en formato WIF
-        let decoded = bs58::decode(wif_private_key).into_vec().ok()?;
+        let decoded_result = bs58::decode(wif_private_key).into_vec();
+        let decoded = match decoded_result {
+            Ok(decoded) => decoded,
+            Err(err) => return Err(Box::new(std::io::Error::new(io::ErrorKind::Other, err))),
+        };
+        //Err("Falló la decodificación del wif private key en base58."),
+
         let mut vector = vec![];
-        vector.extend_from_slice(&decoded[1..&decoded.len() - 5]);
+        if wif_private_key.len() == UNCOMPRESSED_WIF_LEN {
+            vector.extend_from_slice(&decoded[1..&decoded.len() - 4]);
+        } else {
+            vector.extend_from_slice(&decoded[1..&decoded.len() - 5]);
+        }
+
+        if vector.len() != 32 {
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                "No se pudo decodificar la WIF private key.",
+            )));
+        }
+
         // Obtener la clave privada de 32 bytes
         let mut private_key_bytes = [0u8; 32];
         private_key_bytes.copy_from_slice(&vector);
-        Some(private_key_bytes)
+
+        Ok(private_key_bytes)
     }
 
     pub fn get_account_balance(&self, node: &Node) -> i64 {
-        node.account_balance(self.adress.clone())
+        node.account_balance(self.address.clone())
     }
 }
 
 #[cfg(test)]
 
 mod test {
+    use std::error::Error;
+
     use hex;
 
     use crate::user::User;
@@ -86,27 +125,60 @@ mod test {
     }
 
     #[test]
-    fn test_se_genera_correctamente_el_usuario() {
-        let adress_expected: String = String::from("msknbbUREqQw9worGo17T8BwsHSEVScx5C");
+    fn test_se_genera_correctamente_el_usuario_con_wif_comprimida() {
+        let address_expected: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
         let private_key: String =
             String::from("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR");
-        let user: Result<User, &str> = User::login_user(private_key, adress_expected);
+        let user = User::login_user(private_key, address_expected);
         assert!(user.is_ok());
     }
 
     #[test]
-    fn test_decoding_wif_genera_correctamente_el_adress() {
-        // WIF COMPRIMIDA
+    fn test_se_genera_correctamente_el_usuario_con_wif_no_comprimida() {
+        let address_expected: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
+        let private_key: String =
+            String::from("91dkDNCCaMp2f91sVQRGgdZRw1QY4aptaeZ4vxEvuG5PvZ9hftJ");
+        let user = User::login_user(private_key, address_expected);
+        assert!(user.is_ok());
+    }
+
+    #[test]
+    fn test_no_se_puede_generar_el_usuario_con_wif_incorrecta() {
+        let address_expected: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
+        let private_key: String =
+            String::from("K1dkDNCCaMp2f91sVQRGgdZRw1QY4aptaeZ4vxEvuG5PvZ9hftJ");
+        let user = User::login_user(private_key, address_expected);
+        assert!(user.is_err());
+    }
+
+    #[test]
+    fn test_decoding_wif_compressed_genera_correctamente_el_private_key(
+    ) -> Result<(), Box<dyn Error>> {
+        // WIF COMPRESSED
         let wif = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
-        // PUBLIC KEY SIN
-        let expected_pk =
+        // PRIVATE KEY FROM HEX FORMAT
+        let expected_private_key_bytes =
             string_to_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
                 .unwrap();
 
-        let pk = match User::decode_wif_private_key(wif) {
-            Some(private_key) => private_key,
-            None => [0; 32],
-        };
-        assert_eq!(pk.to_vec(), expected_pk);
+        let private_key = User::decode_wif_private_key(wif)?;
+
+        assert_eq!(private_key.to_vec(), expected_private_key_bytes);
+        Ok(())
+    }
+
+    #[test]
+    fn test_decoding_wif_uncompressed_genera_correctamente_el_private_key(
+    ) -> Result<(), Box<dyn Error>> {
+        // WIF UNCOMPRESSED
+        let wif = "91dkDNCCaMp2f91sVQRGgdZRw1QY4aptaeZ4vxEvuG5PvZ9hftJ";
+        // PRIVATE KEY FROM HEX FORMAT
+        let expected_private_key_bytes =
+            string_to_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
+                .unwrap();
+
+        let private_key = User::decode_wif_private_key(wif)?;
+        assert_eq!(private_key.to_vec(), expected_private_key_bytes);
+        Ok(())
     }
 }
