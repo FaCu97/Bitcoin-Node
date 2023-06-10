@@ -1,4 +1,4 @@
-use crate::compact_size_uint::CompactSizeUint;
+use crate::{compact_size_uint::CompactSizeUint, user::User};
 
 use super::pubkey::Pubkey;
 #[derive(Debug, PartialEq, Clone)]
@@ -71,6 +71,18 @@ impl TxOut {
     }
     pub fn get_pub_key(&self) -> &Vec<u8> {
         self.pk_script.bytes()
+    }
+
+    pub fn involves_user_account(&self, accounts: Vec<User>) {
+        for account in accounts {
+            let tx_asociate_address = match self.get_adress() {
+                Ok(address) => address,
+                Err(e) => e.to_string(),
+            };
+            if tx_asociate_address == account.adress {
+                println!("%%%%%%%%%%% TRANSACCION INVOLUCRA AL USUARIO %%%%%%%%%%%%")
+            }
+        }
     }
 }
 

@@ -6,8 +6,8 @@ use secp256k1::SecretKey;
 use crate::node::Node;
 
 pub struct User {
-    private_key: String,
-    adress: String,
+    pub private_key: String,
+    pub adress: String,
 }
 
 impl User {
