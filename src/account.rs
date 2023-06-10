@@ -9,19 +9,20 @@ use secp256k1::SecretKey;
 use crate::node::Node;
 const UNCOMPRESSED_WIF_LEN: usize = 51;
 
-pub struct User {
+/// Guarda la address comprimida y la private key (comprimida o no)
+pub struct Account {
     private_key: String,
     address: String,
 }
 
-impl User {
-    /// Recibe La address en formato comprimido
+impl Account {
+    /// Recibe la address en formato comprimido
     /// Y la WIF private key, ya sea en formato comprimido o no comprimido
-    pub fn login_user(wif_private_key: String, address: String) -> Result<User, Box<dyn Error>> {
+    pub fn new(wif_private_key: String, address: String) -> Result<Account, Box<dyn Error>> {
         let raw_private_key = Self::decode_wif_private_key(wif_private_key.as_str())?;
 
         Self::validate_address_private_key(&raw_private_key, &address)?;
-        Ok(User {
+        Ok(Account {
             private_key: wif_private_key,
             address,
         })
@@ -80,7 +81,6 @@ impl User {
             Ok(decoded) => decoded,
             Err(err) => return Err(Box::new(std::io::Error::new(io::ErrorKind::Other, err))),
         };
-        //Err("Falló la decodificación del wif private key en base58."),
 
         let mut vector = vec![];
         if wif_private_key.len() == UNCOMPRESSED_WIF_LEN {
@@ -115,7 +115,7 @@ mod test {
 
     use hex;
 
-    use crate::user::User;
+    use crate::account::Account;
 
     fn string_to_bytes(input: &str) -> Result<[u8; 32], hex::FromHexError> {
         let bytes = hex::decode(input)?;
@@ -129,8 +129,8 @@ mod test {
         let address_expected: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
         let private_key: String =
             String::from("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR");
-        let user = User::login_user(private_key, address_expected);
-        assert!(user.is_ok());
+        let account_result = Account::new(private_key, address_expected);
+        assert!(account_result.is_ok());
     }
 
     #[test]
@@ -138,8 +138,8 @@ mod test {
         let address_expected: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
         let private_key: String =
             String::from("91dkDNCCaMp2f91sVQRGgdZRw1QY4aptaeZ4vxEvuG5PvZ9hftJ");
-        let user = User::login_user(private_key, address_expected);
-        assert!(user.is_ok());
+        let account_result = Account::new(private_key, address_expected);
+        assert!(account_result.is_ok());
     }
 
     #[test]
@@ -147,8 +147,8 @@ mod test {
         let address_expected: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
         let private_key: String =
             String::from("K1dkDNCCaMp2f91sVQRGgdZRw1QY4aptaeZ4vxEvuG5PvZ9hftJ");
-        let user = User::login_user(private_key, address_expected);
-        assert!(user.is_err());
+        let account_result = Account::new(private_key, address_expected);
+        assert!(account_result.is_err());
     }
 
     #[test]
@@ -161,7 +161,7 @@ mod test {
             string_to_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
                 .unwrap();
 
-        let private_key = User::decode_wif_private_key(wif)?;
+        let private_key = Account::decode_wif_private_key(wif)?;
 
         assert_eq!(private_key.to_vec(), expected_private_key_bytes);
         Ok(())
@@ -177,7 +177,7 @@ mod test {
             string_to_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
                 .unwrap();
 
-        let private_key = User::decode_wif_private_key(wif)?;
+        let private_key = Account::decode_wif_private_key(wif)?;
         assert_eq!(private_key.to_vec(), expected_private_key_bytes);
         Ok(())
     }
