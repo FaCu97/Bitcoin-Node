@@ -1,13 +1,15 @@
 use bitcoin::{
     blocks::{block::Block, block_header::BlockHeader},
     compact_size_uint::CompactSizeUint,
-    transactions::{outpoint::Outpoint, transaction::Transaction, tx_in::TxIn, tx_out::TxOut},
+    transactions::{
+        outpoint::Outpoint, sig_script::SigScript, transaction::Transaction, tx_in::TxIn,
+        tx_out::TxOut,
+    },
 };
 
 fn create_txout(value: i64) -> TxOut {
     let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(1);
     let pk_script: Vec<u8> = vec![1];
-    let utxo: bool = true;
     TxOut::new(value, pk_script_bytes, pk_script)
 }
 
@@ -21,7 +23,8 @@ fn create_tx_outs(values: Vec<i64>) -> Vec<TxOut> {
 
 fn create_txin(previous_output: Outpoint, height: Option<Vec<u8>>) -> TxIn {
     let script_bytes: CompactSizeUint = CompactSizeUint::new(1);
-    let signature_script: Vec<u8> = vec![1];
+    let bytes: Vec<u8> = vec![1];
+    let signature_script = SigScript::new(bytes);
     let sequence: u32 = 0x20202020;
     TxIn::new(
         previous_output,
