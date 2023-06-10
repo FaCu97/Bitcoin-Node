@@ -2,7 +2,9 @@ use bitcoin_hashes::{sha256d, Hash};
 
 use crate::compact_size_uint::CompactSizeUint;
 
-use super::{outpoint::Outpoint, tx_in::TxIn, tx_out::TxOut};
+use super::{tx_in::TxIn, tx_out::TxOut};
+
+type UtxoTuple = ([u8; 32], Vec<(TxOut, usize)>);
 #[derive(Debug, PartialEq, Clone)]
 pub struct Transaction {
     pub version: i32,
@@ -108,7 +110,7 @@ impl Transaction {
         self.tx_out.clone()
     }
     /// funcion que se encarga de remover las utxos usadas por esta tx
-    pub fn remove_utxos(&self, container: &mut Vec<([u8; 32], Vec<(TxOut, usize)>)>) {
+    pub fn remove_utxos(&self, container: &mut Vec<UtxoTuple>) {
         for list_utxos in container {
             for tx_in in &self.tx_in {
                 // aca nos fijamos si alguna de nuestra inputs usa outputs anteriores
@@ -125,7 +127,7 @@ impl Transaction {
             }
         }
     }
-    pub fn load_utxos(&self, container: &mut Vec<([u8; 32], Vec<(TxOut, usize)>)>) {
+    pub fn load_utxos(&self, container: &mut Vec<UtxoTuple>) {
         let hash = self.hash();
         let mut utxos_and_index = Vec::new();
         let position: usize = 0;

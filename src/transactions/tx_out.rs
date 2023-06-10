@@ -60,14 +60,13 @@ impl TxOut {
         bytes.extend_from_slice(&pk_script_bytes[0..pk_script_bytes.len()]);
         bytes.extend_from_slice(self.pk_script.bytes());
     }
-    
 
     pub fn value(&self) -> i64 {
         self.value
     }
 
     pub fn get_adress(&self) -> Result<String, &'static str> {
-        Ok(self.pk_script.generate_adress()?)
+        self.pk_script.generate_adress()
     }
     pub fn get_pub_key(&self) -> &Vec<u8> {
         self.pk_script.bytes()

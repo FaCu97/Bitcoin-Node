@@ -63,6 +63,8 @@ impl fmt::Display for DownloadError {
 
 impl Error for DownloadError {}
 
+// cambiar esta constante y borrar el archivo first_headers.csv (si existe) para ver cambios
+const CANTIDAD_HEADERS_EN_DISCO: usize = 2300000;
 const ALTURA_PRIMER_BLOQUE_A_DESCARGAR: usize = 2428000;
 const ALTURA_PRIMER_BLOQUE: usize = 2428246;
 type HeadersBlocksTuple = (Arc<RwLock<Vec<BlockHeader>>>, Arc<RwLock<Vec<Block>>>);
@@ -535,7 +537,7 @@ fn receive_requested_blocks_from_node(
     // Acá tengo que recibir los 16 bloques (o menos) de la llamada
     let mut current_blocks: Vec<Block> = Vec::new();
     for _ in 0..chunk_llamada.len() {
-        let mut bloque = match BlockMessage::read_from(log_sender.clone(), &mut node) {
+        let bloque = match BlockMessage::read_from(log_sender.clone(), &mut node) {
             Ok(bloque) => bloque,
             Err(err) => {
                 write_in_log(log_sender.error_log_sender,format!("No puedo descargar {:?} de bloques del nodo: {:?}. Se los voy a pedir a otro nodo y descarto este. Error: {err}", chunk_llamada.len(), node.peer_addr()).as_str());
@@ -643,7 +645,7 @@ pub fn initial_block_download(
     Ok((pointer_to_headers.clone(), pointer_to_blocks.clone()))
 }
 
-/// Gets the first 2 million headers.
+/// Gets the first 2.3 million headers.
 /// It reads them from disk. If the file doesn't exist, it is also downloaded.
 /// Returns error if something fails.
 fn get_initial_headers(
@@ -653,28 +655,26 @@ fn get_initial_headers(
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<(), Box<dyn Error>> {
     if Path::new(&config.archivo_headers).exists() {
-        read_first_2000000_headers_from_disk(config, log_sender.clone(), headers).map_err(
-            |err| {
-                write_in_log(
-                    log_sender.error_log_sender.clone(),
-                    format!("Error al descargar primeros 2 millones de headers de disco. {err}")
-                        .as_str(),
-                );
-                DownloadError::CanNotRead(format!(
-                    "Error al leer primeros 2 millones de headers. {}",
-                    err
-                ))
-            },
-        )?;
+        read_first_headers_from_disk(config, log_sender.clone(), headers).map_err(|err| {
+            write_in_log(
+                log_sender.error_log_sender.clone(),
+                format!("Error al descargar primeros 2 millones de headers de disco. {err}")
+                    .as_str(),
+            );
+            DownloadError::CanNotRead(format!(
+                "Error al leer primeros 2 millones de headers. {}",
+                err
+            ))
+        })?;
     } else {
-        download_first_2000000_headers(config, log_sender, headers, nodes)?;
+        download_first_headers(config, log_sender, headers, nodes)?;
     }
     Ok(())
 }
 
 /// Downloads the headers, stores them into the headers array and create the file and save them on disk.
 /// If a node fails, the download is continud from another nodes.
-fn download_first_2000000_headers(
+fn download_first_headers(
     config: Arc<Config>,
     log_sender: LogSender,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
@@ -682,7 +682,7 @@ fn download_first_2000000_headers(
 ) -> DownloadResult {
     write_in_log(
         log_sender.info_log_sender.clone(),
-        "Empiezo descarga de los primeros 2000000 de headers para guardarlos en disco",
+        "Empiezo descarga de los primeros headers para guardarlos en disco",
     );
     let mut file = File::create(&config.archivo_headers)
         .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
@@ -694,7 +694,7 @@ fn download_first_2000000_headers(
         .ok_or("Error no hay mas nodos para descargar los headers!\n")
         .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
     let headers_clone = headers.clone();
-    // first try to dowload headers from node
+    // first try to download headers from node
     let mut download_result = download_initial_headers_from_node(
         config.clone(),
         log_sender.clone(),
@@ -744,7 +744,7 @@ fn download_first_2000000_headers(
     Ok(())
 }
 
-/// Downloads the first 2 million headers from the node.
+/// Downloads the first 2.3 million headers from the node.
 /// Returns an error if something fails
 fn download_initial_headers_from_node(
     config: Arc<Config>,
@@ -765,7 +765,7 @@ fn download_initial_headers_from_node(
         .read()
         .map_err(|err| DownloadError::LockError(err.to_string()))?
         .len()
-        < 2000000
+        < CANTIDAD_HEADERS_EN_DISCO
     {
         println!(
             "{:?}",
@@ -810,14 +810,14 @@ fn receive_initial_headers_from_node(
 }
 
 /// Loads the headers from disk
-fn read_first_2000000_headers_from_disk(
+fn read_first_headers_from_disk(
     config: Arc<Config>,
     log_sender: LogSender,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
 ) -> Result<(), Box<dyn Error>> {
     write_in_log(
         log_sender.info_log_sender.clone(),
-        "Empiezo lectura de los primeros 2000000 de headers de disco",
+        "Empiezo lectura de los primeros headers de disco",
     );
     let mut data: Vec<u8> = Vec::new();
     let mut file = File::open(&config.archivo_headers)
@@ -840,7 +840,7 @@ fn read_first_2000000_headers_from_disk(
     }
     write_in_log(
         log_sender.info_log_sender,
-        "Termino lectura de los primeros 2000000 de headers de disco",
+        "Termino lectura de los primeros headers de disco",
     );
 
     Ok(())
