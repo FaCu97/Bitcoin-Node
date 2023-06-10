@@ -1,6 +1,10 @@
-use std::sync::{Arc, RwLock};
+use std::{
+    error::Error,
+    sync::{Arc, RwLock},
+};
 
 use crate::{
+    account::Account,
     blocks::{block::Block, block_header::BlockHeader},
     transactions::{transaction::Transaction, tx_out::TxOut},
 };
@@ -9,6 +13,7 @@ pub struct Node {
     pub headers: Arc<RwLock<Vec<BlockHeader>>>,
     pub block_chain: Arc<RwLock<Vec<Block>>>,
     pub utxo_set: Vec<TxOut>,
+    accounts: Vec<Account>,
 }
 
 impl Node {
@@ -21,6 +26,7 @@ impl Node {
             headers,
             block_chain,
             utxo_set,
+            accounts: vec![],
         }
     }
     /// funcion para validar un bloque
@@ -61,6 +67,15 @@ impl Node {
     ) -> bool {
         block.merkle_proof_of_inclusion(transaction.hash(), vector_hash)
     }
+
+    pub fn add_account(
+        &mut self,
+        wif_private_key: String,
+        address: String,
+    ) -> Result<(), Box<dyn Error>> {
+        self.accounts.push(Account::new(wif_private_key, address)?);
+        Ok(())
+    }
 }
 
 ///Funcion que se encarga de generar la lista de utxos
@@ -77,4 +92,28 @@ fn generate_utxo_set(block_chain: &Arc<RwLock<Vec<Block>>>) -> Vec<TxOut> {
     }
 
     list_of_utxos
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{account::Account, node::Node};
+    use std::{
+        error::Error,
+        sync::{Arc, RwLock},
+    };
+
+    #[test]
+    fn test_una_address_se_registra_correctamente() -> Result<(), Box<dyn Error>> {
+        let address: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
+        let private_key: String =
+            String::from("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR");
+        let blocks = Arc::new(RwLock::new(Vec::new()));
+        let headers = Arc::new(RwLock::new(Vec::new()));
+
+        let mut node = Node::new(headers, blocks);
+        let account_addecd_result = node.add_account(private_key, address);
+
+        assert!(account_addecd_result.is_ok());
+        Ok(())
+    }
 }

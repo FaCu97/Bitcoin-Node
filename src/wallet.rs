@@ -1,11 +1,15 @@
 pub struct Wallet {
-    account: Vec<User>,
+    account: Vec<Account>,
     node: Node,
     // current_account : User,
 }
 
 impl Wallet {
-    pub fn make_transaction(account: User, adress: &str, value: i64) -> Result<(), &'static str> {
+    pub fn make_transaction(
+        account: Account,
+        adress: &str,
+        value: i64,
+    ) -> Result<(), &'static str> {
         if !account.has_balance(value) {
             return Err(
                 "El balance de la cuenta {} tiene menos de {} satoshis",

@@ -109,7 +109,6 @@ impl Account {
 }
 
 #[cfg(test)]
-
 mod test {
     use std::error::Error;
 
