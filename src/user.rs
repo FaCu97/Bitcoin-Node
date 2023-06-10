@@ -102,11 +102,11 @@ impl User {
 
         Ok(private_key_bytes)
     }
-
-    pub fn get_account_balance(&self, node: &Node) -> i64 {
-        node.account_balance(self.address.clone())
-    }
-
+    /*
+        pub fn get_account_balance(&self, node: &Node) -> i64 {
+            node.account_balance(self.address.clone())
+        }
+    */
     /// Devuelve la clave publica comprimida (33 bytes) a partir de la privada
     pub fn get_pubkey_compressed(&self) -> Result<[u8; 33], Box<dyn Error>> {
         let private_key = Self::decode_wif_private_key(self.private_key.as_str())?;

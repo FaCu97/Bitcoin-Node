@@ -3,6 +3,7 @@ use std::sync::{Arc, RwLock};
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     transactions::{pubkey, transaction::Transaction, tx_out::TxOut},
+    user::User,
 };
 
 pub struct Node {
@@ -28,14 +29,14 @@ impl Node {
         block.validate()
     }
 
-    /// funcion que mostrara la cantidad de satoshis en nuestra cuenta
-    pub fn account_balance(&self, adress: String) -> i64 {
-        let mut account_balance: i64 = 0;
+    /// funcion que cargara las utxos asociadas a la respectiva cuenta
+    pub fn utxos_referenced_to_account(&self, adress: String) -> Vec<TxOut> {
+        let mut utxo_set: Vec<TxOut> = Vec::new();
         for utxo in &self.utxo_set {
             match utxo.get_adress() {
                 Ok(value) => {
                     if value == adress {
-                        account_balance += utxo.value()
+                        utxo_set.push(utxo.clone());
                     }
                 }
                 Err(_) => {
@@ -43,15 +44,20 @@ impl Node {
                 }
             }
         }
-        account_balance
-    }
-    pub fn make_transaction(
-        &mut self,
-        adress_receiver: &str,
-        amount_to_spend: i64,
-    ) -> Result<(), &'static str> {
-        Ok(())
-    }
+        utxo_set
+    } /*
+      pub fn make_transaction(
+          &mut self,
+          adress_receiver: &str,
+          amount_to_spend: i64,
+          account: User,
+      ) -> Result<(), &'static str> {
+          if account.has_balance(amount_to_spend) {
+              return Err("no tenes saldo disponible para realizar la operacion");
+          }
+          account.make_transaction(adress_receiver, amount_to_spend);
+          Ok(())
+      }*/
 
     /// funcion que muestra si una transaccion se encuentra en un determinado bloque
     pub fn merkle_proof_of_inclusion(
