@@ -4,6 +4,7 @@ use crate::compact_size_uint::CompactSizeUint;
 
 use super::{tx_in::TxIn, tx_out::TxOut};
 
+/// Guarda el txid(hash de la transaccion) y el vector con los utxos (valor e indice)
 type UtxoTuple = ([u8; 32], Vec<(TxOut, usize)>);
 #[derive(Debug, PartialEq, Clone)]
 pub struct Transaction {
@@ -136,6 +137,13 @@ impl Transaction {
             utxos_and_index.push(utxo_and_index);
         }
         container.push((hash, utxos_and_index));
+    }
+
+    pub fn generate_transaction_to(
+        account_sender: Account,
+        address_receiver: &str,
+        value: i64,
+    ) -> Result<(), Box<dyn Error>> {
     }
 }
 

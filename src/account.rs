@@ -150,7 +150,7 @@ impl Account {
                 ),
             )));
         }
-        //let transaction: Transaction::generate_transaction_to(address: &str, amount: i64)?;
+        let transaction: Transaction::generate_transaction_to(address: &str, amount: i64)?;
         // letTransaction::new(...)
         Ok(())
     }
