@@ -1,12 +1,12 @@
 use crate::compact_size_uint::CompactSizeUint;
 
-use super::outpoint::Outpoint;
+use super::{outpoint::Outpoint, sig_script::SigScript};
 #[derive(Debug, PartialEq, Clone)]
 pub struct TxIn {
     previous_output: Outpoint,
     script_bytes: CompactSizeUint,
     pub height: Option<Vec<u8>>,
-    pub signature_script: Vec<u8>,
+    pub signature_script: SigScript,
     sequence: u32,
 }
 
@@ -15,7 +15,7 @@ impl TxIn {
         previous_output: Outpoint,
         script_bytes: CompactSizeUint,
         height: Option<Vec<u8>>,
-        signature_script: Vec<u8>,
+        signature_script: SigScript,
         sequence: u32,
     ) -> Self {
         TxIn {
@@ -65,7 +65,7 @@ impl TxIn {
             previous_output,
             script_bytes,
             height,
-            signature_script,
+            signature_script: SigScript::new(signature_script),
             sequence,
         })
     }
@@ -93,7 +93,7 @@ impl TxIn {
                 bytes.extend_from_slice(height)
             }
         }
-        bytes.extend_from_slice(&self.signature_script);
+        bytes.extend_from_slice(&self.signature_script.get_bytes());
         let sequence_bytes: [u8; 4] = self.sequence.to_le_bytes();
         bytes.extend_from_slice(&sequence_bytes);
     }
@@ -131,7 +131,10 @@ impl TxIn {
 
 mod test {
     use super::TxIn;
-    use crate::{compact_size_uint::CompactSizeUint, transactions::outpoint::Outpoint};
+    use crate::{
+        compact_size_uint::CompactSizeUint,
+        transactions::{outpoint::Outpoint, sig_script::SigScript},
+    };
 
     fn simular_flujo_de_datos(
         tx_id: [u8; 32],
@@ -151,7 +154,7 @@ mod test {
             previous_output,
             script_bytes,
             height,
-            signature_script,
+            signature_script: SigScript::new(signature_script),
             sequence,
         };
         txin_to_marshalling.marshalling(&mut bytes_txin);
@@ -212,7 +215,10 @@ mod test {
         bytes.extend_from_slice(&sequence[0..4]);
         let mut offset: usize = 0;
         let expected_txin: TxIn = TxIn::unmarshalling(&bytes, &mut offset)?;
-        assert_eq!(expected_txin.signature_script, signature_script);
+        assert_eq!(
+            *expected_txin.signature_script.get_bytes(),
+            signature_script
+        );
         assert_eq!(offset, 42);
         Ok(())
     }
@@ -311,7 +317,10 @@ mod test {
         let mut offset: usize = 0;
         let txin_unmarshaled: TxIn = TxIn::unmarshalling(&bytes_txin, &mut offset)?;
         let expected_signature_script: Vec<u8> = vec![1, 1];
-        assert_eq!(txin_unmarshaled.signature_script, expected_signature_script);
+        assert_eq!(
+            *txin_unmarshaled.signature_script.get_bytes(),
+            expected_signature_script
+        );
         Ok(())
     }
 

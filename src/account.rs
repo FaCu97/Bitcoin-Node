@@ -102,9 +102,21 @@ impl Account {
 
         Ok(private_key_bytes)
     }
-
-    pub fn get_account_balance(&self, node: &Node) -> i64 {
-        node.account_balance(self.address.clone())
+    /*
+        pub fn get_account_balance(&self, node: &Node) -> i64 {
+            node.account_balance(self.address.clone())
+        }
+    */
+    /// Devuelve la clave publica comprimida (33 bytes) a partir de la privada
+    pub fn get_pubkey_compressed(&self) -> Result<[u8; 33], Box<dyn Error>> {
+        let private_key = Self::decode_wif_private_key(self.private_key.as_str())?;
+        let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
+        let key: SecretKey = SecretKey::from_slice(&private_key).unwrap();
+        let public_key: secp256k1::PublicKey = secp256k1::PublicKey::from_secret_key(&secp, &key);
+        Ok(public_key.serialize())
+    }
+    pub fn get_private_key(&self) -> Result<[u8; 32], Box<dyn Error>> {
+        Ok(Self::decode_wif_private_key(self.private_key.as_str())?)
     }
 }
 
@@ -116,10 +128,16 @@ mod test {
 
     use crate::account::Account;
 
-    fn string_to_bytes(input: &str) -> Result<[u8; 32], hex::FromHexError> {
+    fn string_to_32_bytes(input: &str) -> Result<[u8; 32], hex::FromHexError> {
         let bytes = hex::decode(input)?;
         let mut result = [0; 32];
         result.copy_from_slice(&bytes[..32]);
+        Ok(result)
+    }
+    fn string_to_33_bytes(input: &str) -> Result<[u8; 33], hex::FromHexError> {
+        let bytes = hex::decode(input)?;
+        let mut result = [0; 33];
+        result.copy_from_slice(&bytes[..33]);
         Ok(result)
     }
 
@@ -157,7 +175,7 @@ mod test {
         let wif = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
         // PRIVATE KEY FROM HEX FORMAT
         let expected_private_key_bytes =
-            string_to_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
+            string_to_32_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
                 .unwrap();
 
         let private_key = Account::decode_wif_private_key(wif)?;
@@ -173,11 +191,25 @@ mod test {
         let wif = "91dkDNCCaMp2f91sVQRGgdZRw1QY4aptaeZ4vxEvuG5PvZ9hftJ";
         // PRIVATE KEY FROM HEX FORMAT
         let expected_private_key_bytes =
-            string_to_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
+            string_to_32_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
                 .unwrap();
 
         let private_key = Account::decode_wif_private_key(wif)?;
         assert_eq!(private_key.to_vec(), expected_private_key_bytes);
         Ok(())
+    }
+    #[test]
+    fn test_usuario_devuelve_clave_publica_comprimida_esperada() {
+        let address = String::from("mpzx6iZ1WX8hLSeDRKdkLatXXPN1GDWVaF");
+        let private_key = String::from("cQojsQ5fSonENC5EnrzzTAWSGX8PB4TBh6GunBxcCdGMJJiLULwZ");
+        let user = User {
+            private_key,
+            address,
+        };
+        let expected_pubkey = string_to_33_bytes(
+            "0345EC0AA86BAF64ED626EE86B4A76C12A92D5F6DD1C1D6E4658E26666153DAFA6",
+        )
+        .unwrap();
+        assert_eq!(user.get_pubkey_compressed().unwrap(), expected_pubkey);
     }
 }
