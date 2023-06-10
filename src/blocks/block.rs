@@ -1,12 +1,11 @@
 use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{
-    compact_size_uint::CompactSizeUint,
-    transactions::{transaction::Transaction, tx_out::TxOut},
+    compact_size_uint::CompactSizeUint, transactions::transaction::Transaction,
+    utxo_tuple::UtxoTuple,
 };
 
 use super::block_header::BlockHeader;
-type UtxoTuple = ([u8; 32], Vec<(TxOut, usize)>);
 #[derive(Debug, Clone)]
 pub struct Block {
     pub block_header: BlockHeader,

@@ -6,16 +6,14 @@ use k256::sha2::Digest;
 use k256::sha2::Sha256;
 use secp256k1::SecretKey;
 
-use crate::node::Node;
-use crate::transactions::transaction::Transaction;
-use crate::transactions::tx_out::TxOut;
+use crate::utxo_tuple::UtxoTuple;
 const UNCOMPRESSED_WIF_LEN: usize = 51;
 
 /// Guarda la address comprimida y la private key (comprimida o no)
 pub struct Account {
     private_key: String,
     pub address: String,
-    utxo_set: Vec<TxOut>,
+    utxo_set: Vec<UtxoTuple>,
 }
 
 impl Account {
@@ -120,18 +118,18 @@ impl Account {
         Ok(public_key.serialize())
     }
     pub fn get_private_key(&self) -> Result<[u8; 32], Box<dyn Error>> {
-        Ok(Self::decode_wif_private_key(self.private_key.as_str())?)
+        Self::decode_wif_private_key(self.private_key.as_str())
     }
     pub fn get_address(&self) -> &String {
         &self.address
     }
-    pub fn load_utxos(&mut self, utxos: Vec<TxOut>) {
+    pub fn load_utxos(&mut self, utxos: Vec<UtxoTuple>) {
         self.utxo_set.extend_from_slice(&utxos);
     }
     pub fn has_balance(&self, value: i64) -> bool {
         let mut balance: i64 = 0;
         for utxo in &self.utxo_set {
-            balance += utxo.value();
+            balance += utxo.balance();
         }
         balance > value
     }

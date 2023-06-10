@@ -22,8 +22,7 @@ impl SigScript {
     pub fn generate_sig(hash: [u8; 32], private_key: [u8; 32]) -> Vec<u8> {
         let signature = Signature::from_scalars(hash, private_key).unwrap();
         let bytes_signature = signature.to_der().to_bytes();
-        let bytes = bytes_signature.to_vec();
-        bytes
+        bytes_signature.to_vec()
     }
     ///funcion que devuelve el signature script con la clave publica comprimida
     pub fn generate_sig_script(
