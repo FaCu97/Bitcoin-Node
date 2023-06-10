@@ -7,11 +7,14 @@ use k256::sha2::Sha256;
 use secp256k1::SecretKey;
 
 use crate::node::Node;
+use crate::transactions::transaction::Transaction;
 const UNCOMPRESSED_WIF_LEN: usize = 51;
+#[derive(Debug, PartialEq, Clone)]
 
 pub struct User {
     pub private_key: String,
     pub address: String,
+    pub pending_transactions: Vec<Transaction>,
 }
 
 impl User {
@@ -24,6 +27,7 @@ impl User {
         Ok(User {
             private_key: wif_private_key,
             address,
+            pending_transactions: vec![],
         })
     }
 

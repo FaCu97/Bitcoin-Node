@@ -14,7 +14,7 @@ use crate::{
         headers_message::{is_terminated, HeadersMessage},
         inventory::Inventory,
         message_header::{write_pong_message, HeaderMessage},
-    },
+    }, transactions::transaction::Transaction, user::User, wallet::Wallet,
 };
 
 /// Recives a node to listen from and a pointer to a bool to stop the cycle of listening in case this is false. Reads
@@ -23,6 +23,7 @@ use crate::{
 /// message (ping, inv, tx) and handles it depending of the message.
 pub fn listen_for_incoming_messages(
     log_sender: LogSender,
+    wallet: Wallet,
     stream: &mut TcpStream,
     finish: Option<Arc<RwLock<bool>>>,
 ) -> Result<Vec<BlockHeader>, Box<dyn std::error::Error>> {
@@ -69,8 +70,10 @@ pub fn listen_for_incoming_messages(
                     )
                     .as_str(),
                 );
-                //println!("{:?}\n", Transaction::unmarshalling(&payload_buffer_num, &mut 0));
-                //check_if_tx_involves_user();
+                let tx = Transaction::unmarshalling(&payload_buffer_num, &mut 0)?;
+                //println!("TX:    {:?}\n", tx);
+
+                check_if_tx_involves_user_account(tx, wallet.account.clone());
             }
             _ => {
                 write_in_log(
@@ -126,4 +129,11 @@ fn ask_for_incoming_tx(
     let get_data_message = GetDataMessage::new(inventories);
     get_data_message.write_to(&mut stream)?;
     Ok(())
+}
+
+
+fn check_if_tx_involves_user_account(tx: Transaction, accounts: Vec<User>) {
+    for tx_out in tx.tx_out {
+        tx_out.involves_user_account(&accounts);
+    }
 }

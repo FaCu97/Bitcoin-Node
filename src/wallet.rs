@@ -1,9 +1,12 @@
+use crate::{node::Node, user::User, transactions::transaction::Transaction};
+#[derive(Debug, Clone)]
 pub struct Wallet {
-    account: Vec<User>,
-    node: Node,
+    pub account: Vec<User>,
+    pub node: Node,
     // current_account : User,
 }
 
+/* 
 impl Wallet {
     pub fn make_transaction(account: User, adress: &str, value: i64) -> Result<(), &'static str> {
         if !account.has_balance(value) {
@@ -13,6 +16,7 @@ impl Wallet {
                 value,
             );
         }
-        self.node.make_transaction(account.get_adress())
+        self.node.make_transaction(account.get_address())
     }
 }
+*/

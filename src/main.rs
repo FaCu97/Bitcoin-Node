@@ -8,6 +8,8 @@ use bitcoin::logwriter::log_writer::{
 };
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
+use bitcoin::user::User;
+use bitcoin::wallet;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
@@ -86,15 +88,14 @@ fn main() -> Result<(), GenericError> {
         )?;
     let (headers, blocks) = headers_and_blocks;
 
-    let node = Node::new(headers.clone(), blocks.clone());
+    let node = Node::new(pointer_to_nodes,headers.clone(), blocks.clone());
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
+    let wallet = wallet::Wallet { account: vec![User{private_key: "cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(), address: "mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(), pending_transactions: vec![]}], node };
 
     let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
         logsender.clone(),
-        pointer_to_nodes,
-        headers,
-        blocks,
+        wallet
     )
     .map_err(GenericError::BroadcastingError)?;
 
