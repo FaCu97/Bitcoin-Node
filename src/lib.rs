@@ -13,3 +13,4 @@ pub mod messages;
 pub mod network;
 pub mod node;
 pub mod transactions;
+pub mod wallet;
