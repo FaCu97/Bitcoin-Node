@@ -78,7 +78,7 @@ impl TxOut {
                 Ok(address) => address,
                 Err(e) => e.to_string(),
             };
-            if tx_asociate_address == account.adress {
+            if tx_asociate_address == account.address {
                 println!("%%%%%%%%%%% TRANSACCION INVOLUCRA AL USUARIO %%%%%%%%%%%%")
             }
         }
