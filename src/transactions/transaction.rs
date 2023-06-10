@@ -1,6 +1,8 @@
+use std::error::Error;
+
 use bitcoin_hashes::{sha256d, Hash};
 
-use crate::compact_size_uint::CompactSizeUint;
+use crate::{account::Account, compact_size_uint::CompactSizeUint};
 
 use super::{tx_in::TxIn, tx_out::TxOut};
 
@@ -144,6 +146,7 @@ impl Transaction {
         address_receiver: &str,
         value: i64,
     ) -> Result<(), Box<dyn Error>> {
+        Ok(())
     }
 }
 

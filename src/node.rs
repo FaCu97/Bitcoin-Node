@@ -7,12 +7,12 @@ use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
     transactions::{transaction::Transaction, tx_out::TxOut},
+    utxo_tuple::UtxoTuple,
 };
-
 pub struct Node {
     pub headers: Arc<RwLock<Vec<BlockHeader>>>,
     pub block_chain: Arc<RwLock<Vec<Block>>>,
-    pub utxo_set: Vec<TxOut>,
+    pub utxo_set: Vec<UtxoTuple>,
 }
 
 impl Node {
@@ -73,8 +73,8 @@ impl Node {
 }
 
 ///Funcion que se encarga de generar la lista de utxos
-fn generate_utxo_set(block_chain: &Arc<RwLock<Vec<Block>>>) -> Vec<TxOut> {
-    let mut list_of_utxos = Vec::new();
+fn generate_utxo_set(block_chain: &Arc<RwLock<Vec<Block>>>) -> Vec<UtxoTuple> {
+    let mut list_of_utxos: UtxoTuple;
 
     {
         let block_chain_lock = block_chain.read().unwrap();
@@ -84,6 +84,5 @@ fn generate_utxo_set(block_chain: &Arc<RwLock<Vec<Block>>>) -> Vec<TxOut> {
             list_of_utxos.extend_from_slice(&utxos);
         }
     }
-
     list_of_utxos
 }

@@ -135,7 +135,7 @@ impl Block {
         current_hash == self.generate_merkle_root()
     }
 
-    pub fn give_me_utxos(&self) -> Vec<TxOut> {
+    pub fn give_me_utxos(&self) -> Vec<UtxoTuple> {
         // este vector contiene el hash de una transaccion y todas las utxos correspondientes
         // y sus respectivas posiciones en la tx
         let mut utxo_container: Vec<UtxoTuple> = Vec::new();
@@ -152,16 +152,7 @@ impl Block {
                 tx.load_utxos(&mut utxo_container);
             }
         }
-        // vector con todas las utxos de la red
-        let mut utxos = Vec::new();
-        // en este punto en el container solo quedaran las utxos
-        // por lo tanto las agrego al vector
-        for utxo_set in utxo_container {
-            for utxo in utxo_set.1 {
-                utxos.push(utxo.0);
-            }
-        }
-        utxos
+        utxo_container
     }
 }
 
