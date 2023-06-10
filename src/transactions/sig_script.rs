@@ -1,7 +1,7 @@
 use k256::ecdsa::Signature;
 use std::error::Error;
 
-use crate::user::User;
+use crate::account::Account;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct SigScript {
@@ -28,7 +28,7 @@ impl SigScript {
     ///funcion que devuelve el signature script con la clave publica comprimida
     pub fn generate_sig_script(
         hash_transaction: [u8; 32],
-        user: User,
+        user: Account,
     ) -> Result<SigScript, Box<dyn Error>> {
         let mut sig_script_bytes: Vec<u8> = Vec::new();
         let private_key = user.get_private_key()?;

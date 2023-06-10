@@ -7,12 +7,15 @@ use k256::sha2::Sha256;
 use secp256k1::SecretKey;
 
 use crate::node::Node;
+use crate::transactions::transaction::Transaction;
+use crate::transactions::tx_out::TxOut;
 const UNCOMPRESSED_WIF_LEN: usize = 51;
 
 /// Guarda la address comprimida y la private key (comprimida o no)
 pub struct Account {
     private_key: String,
-    address: String,
+    pub address: String,
+    utxo_set: Vec<TxOut>,
 }
 
 impl Account {
@@ -25,6 +28,7 @@ impl Account {
         Ok(Account {
             private_key: wif_private_key,
             address,
+            utxo_set: Vec::new(),
         })
     }
 
@@ -118,6 +122,38 @@ impl Account {
     pub fn get_private_key(&self) -> Result<[u8; 32], Box<dyn Error>> {
         Ok(Self::decode_wif_private_key(self.private_key.as_str())?)
     }
+    pub fn get_address(&self) -> &String {
+        &self.address
+    }
+    pub fn load_utxos(&mut self, utxos: Vec<TxOut>) {
+        self.utxo_set.extend_from_slice(&utxos);
+    }
+    pub fn has_balance(&self, value: i64) -> bool {
+        let mut balance: i64 = 0;
+        for utxo in &self.utxo_set {
+            balance += utxo.value();
+        }
+        balance > value
+    }
+
+    pub fn make_transaction(
+        &self,
+        address_receiver: &str,
+        amount: i64,
+    ) -> Result<(), Box<dyn Error>> {
+        if !self.has_balance(amount) {
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                format!(
+                    "El balance de la cuenta {} tiene menos de {} satoshis",
+                    self.address, amount,
+                ),
+            )));
+        }
+        //let transaction: Transaction::generate_transaction_to(address: &str, amount: i64)?;
+        // letTransaction::new(...)
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -202,9 +238,10 @@ mod test {
     fn test_usuario_devuelve_clave_publica_comprimida_esperada() {
         let address = String::from("mpzx6iZ1WX8hLSeDRKdkLatXXPN1GDWVaF");
         let private_key = String::from("cQojsQ5fSonENC5EnrzzTAWSGX8PB4TBh6GunBxcCdGMJJiLULwZ");
-        let user = User {
+        let user = Account {
             private_key,
             address,
+            utxo_set: Vec::new(),
         };
         let expected_pubkey = string_to_33_bytes(
             "0345EC0AA86BAF64ED626EE86B4A76C12A92D5F6DD1C1D6E4658E26666153DAFA6",

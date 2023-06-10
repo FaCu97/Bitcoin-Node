@@ -6,9 +6,7 @@ use std::{
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
-
-    transactions::{pubkey, transaction::Transaction, tx_out::TxOut},
-    user::User,
+    transactions::{transaction::Transaction, tx_out::TxOut},
 };
 
 pub struct Node {
@@ -35,12 +33,12 @@ impl Node {
     }
 
     /// funcion que cargara las utxos asociadas a la respectiva cuenta
-    pub fn utxos_referenced_to_account(&self, adress: String) -> Vec<TxOut> {
+    pub fn utxos_referenced_to_account(&self, adress: &String) -> Vec<TxOut> {
         let mut utxo_set: Vec<TxOut> = Vec::new();
         for utxo in &self.utxo_set {
             match utxo.get_adress() {
                 Ok(value) => {
-                    if value == adress {
+                    if *adress == value {
                         utxo_set.push(utxo.clone());
                     }
                 }
