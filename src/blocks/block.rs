@@ -1,10 +1,10 @@
-use std::sync::{RwLock, Arc};
+use std::sync::{Arc, RwLock};
 
 use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{
-    compact_size_uint::CompactSizeUint, transactions::transaction::Transaction,
-    utxo_tuple::UtxoTuple, block_broadcasting::BroadcastingError,
+    block_broadcasting::BroadcastingError, compact_size_uint::CompactSizeUint,
+    transactions::transaction::Transaction, utxo_tuple::UtxoTuple,
 };
 
 use super::block_header::BlockHeader;
@@ -156,14 +156,35 @@ impl Block {
         utxo_container
     }
 
-    pub fn contains_pending_tx(&self, pending_transactions: Arc<RwLock<Vec<Transaction>>>, confirmed_transactions: Arc<RwLock<Vec<Transaction>>>) -> Result<(), BroadcastingError> {
+    pub fn contains_pending_tx(
+        &self,
+        pending_transactions: Arc<RwLock<Vec<Transaction>>>,
+        confirmed_transactions: Arc<RwLock<Vec<Transaction>>>,
+    ) -> Result<(), BroadcastingError> {
         for tx in &self.txn {
-            if pending_transactions.read().map_err(|err| BroadcastingError::LockError(err.to_string()))?.contains(&tx) {
-                println!("%%%%%%%%% El bloque contiene la transaccion {:?} confirmada %%%%%%%%%%%", tx.hash());
-                let pending_transaction_index = pending_transactions.read().map_err(|err| BroadcastingError::LockError(err.to_string()))?.iter().position(|pending_tx| pending_tx.hash() == tx.hash());
+            if pending_transactions
+                .read()
+                .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+                .contains(&tx)
+            {
+                println!(
+                    "%%%%%%%%% El bloque contiene la transaccion {:?} confirmada %%%%%%%%%%%",
+                    tx.hash()
+                );
+                let pending_transaction_index = pending_transactions
+                    .read()
+                    .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+                    .iter()
+                    .position(|pending_tx| pending_tx.hash() == tx.hash());
                 if let Some(pending_transaction_index) = pending_transaction_index {
-                    let confirmed_tx = pending_transactions.write().map_err(|err| BroadcastingError::LockError(err.to_string()))?.remove(pending_transaction_index);
-                    confirmed_transactions.write().map_err(|err| BroadcastingError::LockError(err.to_string()))?.push(confirmed_tx);
+                    let confirmed_tx = pending_transactions
+                        .write()
+                        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+                        .remove(pending_transaction_index);
+                    confirmed_transactions
+                        .write()
+                        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+                        .push(confirmed_tx);
                 }
             }
         }

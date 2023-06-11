@@ -338,6 +338,3 @@ fn header_is_not_included(
     }
     Ok(true)
 }
-
-
-
