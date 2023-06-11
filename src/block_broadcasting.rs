@@ -243,9 +243,10 @@ fn recieve_new_block(
             blocks
                 .write()
                 .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-                .push(new_block);
+                .push(new_block.clone());
             println!("%%%%%%%% RECIBO NUEVO BLOQUE %%%%%%%\n");
             write_in_log(log_sender.info_log_sender, "NUEVO BLOQUE AGREGADO!");
+            new_block.contains_pending_tx(pending_transactions, confirmed_transactions)?;
         }
     } else {
         write_in_log(
@@ -337,3 +338,6 @@ fn header_is_not_included(
     }
     Ok(true)
 }
+
+
+
