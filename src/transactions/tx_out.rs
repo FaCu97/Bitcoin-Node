@@ -1,3 +1,5 @@
+use std::sync::{RwLock, Arc};
+
 use crate::{compact_size_uint::CompactSizeUint, account::Account};
 
 use super::{pubkey::Pubkey, transaction::Transaction};
@@ -73,7 +75,7 @@ impl TxOut {
     }
 
  
-    pub fn involves_user_account(&self, accounts: Vec<Account>, tx: Transaction) {
+    pub fn involves_user_account(&self, accounts: Vec<Account>, tx: Transaction, pending_transactions: Arc<RwLock<Vec<Transaction>>>) {
         for account in accounts {
             if !account.pending_transactions.read().unwrap().contains(&tx) {
                 let tx_asociate_address = match self.get_adress() {
@@ -83,6 +85,7 @@ impl TxOut {
                 if tx_asociate_address == account.address {
                     println!("%%%%%%%%%%% TRANSACCION INVOLUCRA AL USUARIO, AUN NO SE ENCUENTRA EN UN BLOQUE (PENDING) %%%%%%%%%%%%");
                     account.pending_transactions.write().unwrap().push(tx.clone());
+                    pending_transactions.write().unwrap().push(tx.clone());
                 }
    
             }

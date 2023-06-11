@@ -12,7 +12,7 @@ use std::{
     fmt,
     net::TcpStream,
     sync::{Arc, Mutex, RwLock},
-    thread::{self, JoinHandle},
+    thread::{self, JoinHandle}
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -68,7 +68,10 @@ impl BlockBroadcasting {
         let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<BroadcastingResult>> = vec![];
         let cant_nodos = get_amount_of_nodes(wallet.node.connected_nodes.clone())?;
+        // lista de transacciones recibidas para no recibir las mismas de varios nodos
         let transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>> = Arc::new(RwLock::new(Vec::new()));
+        let pending_transactions: Arc<RwLock<Vec<Transaction>>> = Arc::new(RwLock::new(Vec::new()));
+        let confirmed_transactions: Arc<RwLock<Vec<Transaction>>> = Arc::new(RwLock::new(Vec::new()));
         for _ in 0..cant_nodos {
             let node = get_last_node(wallet.node.connected_nodes.clone())?;
             println!(
@@ -79,6 +82,8 @@ impl BlockBroadcasting {
                 log_sender.clone(),
                 wallet.clone(),
                 transactions_recieved.clone(),
+                pending_transactions.clone(),
+                confirmed_transactions.clone(),
                 node,
                 finish.clone(),
             ))
@@ -118,6 +123,8 @@ pub fn listen_for_incoming_blocks_from_node(
     log_sender: LogSender,
     wallet: Wallet,
     transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>>,
+    pending_transactions: Arc<RwLock<Vec<Transaction>>>,
+    confirmed_transactions: Arc<RwLock<Vec<Transaction>>>,
     mut node: TcpStream,
     finish: Arc<RwLock<bool>>,
 ) -> JoinHandle<BroadcastingResult> {
@@ -130,6 +137,7 @@ pub fn listen_for_incoming_blocks_from_node(
                 log_sender_clone.clone(),
                 wallet.clone(),
                 transactions_recieved.clone(),
+                pending_transactions.clone(),
                 &mut node,
                 Some(finish.clone()),
             ) {
@@ -148,7 +156,9 @@ pub fn listen_for_incoming_blocks_from_node(
                 log_sender.clone(),
                 new_headers,
                 cloned_node,
-                wallet.clone()
+                wallet.clone(), 
+                pending_transactions.clone(),
+                confirmed_transactions.clone()
             )?;
         }
         Ok(())
@@ -159,7 +169,9 @@ fn ask_for_new_blocks(
     log_sender: LogSender,
     new_headers: Vec<BlockHeader>,
     node: TcpStream,
-    wallet: Wallet
+    wallet: Wallet, 
+    pending_transactions: Arc<RwLock<Vec<Transaction>>>,
+    confirmed_transactions: Arc<RwLock<Vec<Transaction>>>,
 ) -> BroadcastingResult {
     for header in new_headers {
         if !header.validate() {
@@ -181,7 +193,7 @@ fn ask_for_new_blocks(
                     .try_clone()
                     .map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
                 if let Err(BroadcastingError::CanNotRead(err)) =
-                    recieve_new_block(log_sender.clone(), cloned_node, wallet.node.block_chain.clone())
+                    recieve_new_block(log_sender.clone(), cloned_node, wallet.node.block_chain.clone(), pending_transactions.clone(), confirmed_transactions.clone())
                 {
                     write_in_log(
                         log_sender.error_log_sender.clone(),
@@ -204,6 +216,8 @@ fn recieve_new_block(
     log_sender: LogSender,
     mut node: TcpStream,
     blocks: Arc<RwLock<Vec<Block>>>,
+    pending_transactions: Arc<RwLock<Vec<Transaction>>>,
+    confirmed_transactions: Arc<RwLock<Vec<Transaction>>>
 ) -> BroadcastingResult {
     let new_block: Block = match BlockMessage::read_from(log_sender.clone(), &mut node) {
         Err(err) => return Err(BroadcastingError::CanNotRead(err.to_string())),
@@ -215,8 +229,9 @@ fn recieve_new_block(
         blocks
             .write()
             .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-            .push(new_block);
+            .push(new_block.clone());
         write_in_log(log_sender.info_log_sender, "NUEVO BLOQUE AGREGADO!");
+        check_if_new_block_contains_pending_tx(new_block, pending_transactions, confirmed_transactions);
     } else {
         write_in_log(
             log_sender.error_log_sender,
@@ -293,4 +308,18 @@ fn get_amount_of_nodes(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<usize, Broa
         .map_err(|err| BroadcastingError::LockError(err.to_string()))?
         .len();
     Ok(amount_of_nodes)
+}
+
+fn check_if_new_block_contains_pending_tx(block: Block, pending_transactions: Arc<RwLock<Vec<Transaction>>>, confirmed_transactions: Arc<RwLock<Vec<Transaction>>>) {
+    for tx in block.txn {
+        if pending_transactions.read().unwrap().contains(&tx) {
+            println!("%%%%%%%%% El bloque contiene la transaccion {:?} confirmada %%%%%%%%%%%", tx.hash());
+
+            let pending_transaction_index = pending_transactions.read().unwrap().iter().position(|pending_tx| pending_tx.hash() == tx.hash());
+            if let Some(pending_transaction_index) = pending_transaction_index {
+                let confirmed_tx = pending_transactions.write().unwrap().remove(pending_transaction_index);
+                confirmed_transactions.write().unwrap().push(confirmed_tx);
+            }
+        }
+    }
 }

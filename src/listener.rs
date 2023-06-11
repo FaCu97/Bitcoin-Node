@@ -25,6 +25,7 @@ pub fn listen_for_incoming_messages(
     log_sender: LogSender,
     wallet: Wallet,
     transactions_reccieved: Arc<RwLock<Vec<[u8; 32]>>>,
+    pending_transactions: Arc<RwLock<Vec<Transaction>>>,
     stream: &mut TcpStream,
     finish: Option<Arc<RwLock<bool>>>,
 ) -> Result<Vec<BlockHeader>, Box<dyn std::error::Error>> {
@@ -74,7 +75,7 @@ pub fn listen_for_incoming_messages(
                 let tx = Transaction::unmarshalling(&payload_buffer_num, &mut 0)?;
                 //println!("TX:    {:?}\n", tx);
 
-                check_if_tx_involves_user_account(tx, wallet.accounts.clone());
+                check_if_tx_involves_user_account(tx, wallet.accounts.clone(), pending_transactions.clone());
             }
             _ => {
                 write_in_log(
@@ -138,8 +139,8 @@ fn ask_for_incoming_tx(
 }
 
 
-fn check_if_tx_involves_user_account(tx: Transaction, accounts: Vec<Account>) {
+fn check_if_tx_involves_user_account(tx: Transaction, accounts: Vec<Account>, pending_transactions: Arc<RwLock<Vec<Transaction>>>) {
     for tx_out in tx.tx_out.clone() {
-        tx_out.involves_user_account(accounts.clone(), tx.clone());
+        tx_out.involves_user_account(accounts.clone(), tx.clone(), pending_transactions.clone());
     }
 }
