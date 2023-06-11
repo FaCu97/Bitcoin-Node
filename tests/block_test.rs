@@ -246,5 +246,12 @@ fn test_lista_de_utxos_de_un_bloque_con_2_transacciones_tiene_largo_esperado() {
         txn,
     };
     let utxos = block.give_me_utxos();
-    assert_eq!(utxos.len(), 4);
+    let mut amount_utxos = 0;
+    for utxo_tuple in utxos {
+        amount_utxos += utxo_tuple.utxo_set.len();
+    }
+
+    // se esperan 4 transacciones ya que se usan las 2 primeras de la coinbase(utxos)
+    // y de la primera no se utiliza ninguna utxo
+    assert_eq!(amount_utxos, 4);
 }
