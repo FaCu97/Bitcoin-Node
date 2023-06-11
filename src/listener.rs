@@ -14,7 +14,7 @@ use crate::{
         headers_message::{is_terminated, HeadersMessage},
         inventory::Inventory,
         message_header::{write_pong_message, HeaderMessage},
-    }, transactions::transaction::Transaction, wallet::Wallet, account::Account
+    }, transactions::transaction::Transaction, wallet::Wallet
 };
 
 /// Recives a node to listen from and a pointer to a bool to stop the cycle of listening in case this is false. Reads
@@ -73,9 +73,7 @@ pub fn listen_for_incoming_messages(
                     .as_str(),
                 );
                 let tx = Transaction::unmarshalling(&payload_buffer_num, &mut 0)?;
-                //println!("TX:    {:?}\n", tx);
-
-                check_if_tx_involves_user_account(tx, wallet.accounts.clone(), pending_transactions.clone());
+                tx.check_if_tx_involves_user_account(wallet.accounts.clone(), pending_transactions.clone())?;
             }
             _ => {
                 write_in_log(
@@ -114,15 +112,13 @@ fn handle_inv_message(stream: TcpStream, payload_bytes: Vec<u8>, transactions_re
         let mut inventory_bytes = vec![0; 36];
         inventory_bytes.copy_from_slice(&payload_bytes[offset..(offset + 36)]);
         let inv = Inventory::from_le_bytes(&inventory_bytes);
-        if inv.type_identifier == 1{
-            if !transactions_reccieved.read().unwrap().contains(&inv.hash()){
-                transactions_reccieved.write().unwrap().push(inv.hash());
-                inventories.push(inv);
-            }
+        if inv.type_identifier == 1 && !transactions_reccieved.read().map_err(|_| "Error al intentar leer el puntero a transacciones pendientes")?.contains(&inv.hash()){   
+            transactions_reccieved.write().map_err(|_| "Error al intentar leer el puntero a transacciones recibidas")?.push(inv.hash());
+            inventories.push(inv);        
         }
         offset += 36;
     }
-    if inventories.len() > 0 {
+    if !inventories.is_empty() {
         ask_for_incoming_tx(stream, inventories).map_err(Box::new)?;
     }
     Ok(())
@@ -139,8 +135,3 @@ fn ask_for_incoming_tx(
 }
 
 
-fn check_if_tx_involves_user_account(tx: Transaction, accounts: Vec<Account>, pending_transactions: Arc<RwLock<Vec<Transaction>>>) {
-    for tx_out in tx.tx_out.clone() {
-        tx_out.involves_user_account(accounts.clone(), tx.clone(), pending_transactions.clone());
-    }
-}

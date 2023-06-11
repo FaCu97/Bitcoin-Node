@@ -75,21 +75,22 @@ impl TxOut {
     }
 
  
-    pub fn involves_user_account(&self, accounts: Vec<Account>, tx: Transaction, pending_transactions: Arc<RwLock<Vec<Transaction>>>) {
+    pub fn involves_user_account(&self, accounts: Vec<Account>, tx: Transaction, pending_transactions: Arc<RwLock<Vec<Transaction>>>) -> Result<(), &'static str>{
         for account in accounts {
-            if !account.pending_transactions.read().unwrap().contains(&tx) {
+            if !account.pending_transactions.read().map_err(|_| "Error al leer puntero a vector de transacciones pendientes")?.contains(&tx) {
                 let tx_asociate_address = match self.get_adress() {
                     Ok(address) => address,
                     Err(e) => e.to_string(),
                 };
                 if tx_asociate_address == account.address {
-                    println!("%%%%%%%%%%% TRANSACCION INVOLUCRA AL USUARIO, AUN NO SE ENCUENTRA EN UN BLOQUE (PENDING) %%%%%%%%%%%%");
-                    account.pending_transactions.write().unwrap().push(tx.clone());
-                    pending_transactions.write().unwrap().push(tx.clone());
+                    println!("%%%%%%%%%%% TRANSACCION INVOLUCRA AL USUARIO {:?}, AUN NO SE ENCUENTRA EN UN BLOQUE (PENDING) %%%%%%%%%%%%", account.address);
+                    account.pending_transactions.write().map_err(|_| "Error al escribir puntero a vector de transacciones pendientes de la cuenta")?.push(tx.clone());
+                    pending_transactions.write().map_err(|_| "Error al leer puntero a vector de transacciones pendientes")?.push(tx.clone());
                 }
    
             }
         }
+        Ok(())
     }
 }
 

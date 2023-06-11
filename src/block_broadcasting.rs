@@ -231,7 +231,7 @@ fn recieve_new_block(
             .map_err(|err| BroadcastingError::LockError(err.to_string()))?
             .push(new_block.clone());
         write_in_log(log_sender.info_log_sender, "NUEVO BLOQUE AGREGADO!");
-        check_if_new_block_contains_pending_tx(new_block, pending_transactions, confirmed_transactions);
+        check_if_new_block_contains_pending_tx(new_block, pending_transactions, confirmed_transactions)?;
     } else {
         write_in_log(
             log_sender.error_log_sender,
@@ -310,16 +310,16 @@ fn get_amount_of_nodes(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<usize, Broa
     Ok(amount_of_nodes)
 }
 
-fn check_if_new_block_contains_pending_tx(block: Block, pending_transactions: Arc<RwLock<Vec<Transaction>>>, confirmed_transactions: Arc<RwLock<Vec<Transaction>>>) {
+fn check_if_new_block_contains_pending_tx(block: Block, pending_transactions: Arc<RwLock<Vec<Transaction>>>, confirmed_transactions: Arc<RwLock<Vec<Transaction>>>) -> BroadcastingResult {
     for tx in block.txn {
-        if pending_transactions.read().unwrap().contains(&tx) {
+        if pending_transactions.read().map_err(|err| BroadcastingError::LockError(err.to_string()))?.contains(&tx) {
             println!("%%%%%%%%% El bloque contiene la transaccion {:?} confirmada %%%%%%%%%%%", tx.hash());
-
-            let pending_transaction_index = pending_transactions.read().unwrap().iter().position(|pending_tx| pending_tx.hash() == tx.hash());
+            let pending_transaction_index = pending_transactions.read().map_err(|err| BroadcastingError::LockError(err.to_string()))?.iter().position(|pending_tx| pending_tx.hash() == tx.hash());
             if let Some(pending_transaction_index) = pending_transaction_index {
-                let confirmed_tx = pending_transactions.write().unwrap().remove(pending_transaction_index);
-                confirmed_transactions.write().unwrap().push(confirmed_tx);
+                let confirmed_tx = pending_transactions.write().map_err(|err| BroadcastingError::LockError(err.to_string()))?.remove(pending_transaction_index);
+                confirmed_transactions.write().map_err(|err| BroadcastingError::LockError(err.to_string()))?.push(confirmed_tx);
             }
         }
     }
+    Ok(())
 }
