@@ -199,10 +199,9 @@ fn ask_for_new_blocks(
                 if let Err(BroadcastingError::CanNotRead(err)) = recieve_new_block(
                     log_sender.clone(),
                     cloned_node,
-                    wallet.node.block_chain.clone(),
+                    wallet.clone(),
                     pending_transactions.clone(),
                     confirmed_transactions.clone(),
-                    wallet.node.headers.clone(),
                     header,
                 ) {
                     write_in_log(
@@ -225,10 +224,9 @@ fn ask_for_new_blocks(
 fn recieve_new_block(
     log_sender: LogSender,
     mut node: TcpStream,
-    blocks: Arc<RwLock<Vec<Block>>>,
+    wallet: Wallet,
     pending_transactions: Arc<RwLock<Vec<Transaction>>>,
     confirmed_transactions: Arc<RwLock<Vec<Transaction>>>,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
     header: BlockHeader,
 ) -> BroadcastingResult {
     let new_block: Block = match BlockMessage::read_from(log_sender.clone(), &mut node) {
@@ -237,10 +235,10 @@ fn recieve_new_block(
     };
     if new_block.validate().0 {
         //new_block.set_utxos(); // seteo utxos de las transacciones del bloque
-        let header_is_not_included_yet = header_is_not_included(header.clone(), headers.clone())?;
+        let header_is_not_included_yet = header_is_not_included(header.clone(), wallet.node.headers.clone())?;
         if header_is_not_included_yet {
-            recieve_new_header(log_sender.clone(), header, headers)?;
-            blocks
+            recieve_new_header(log_sender.clone(), header, wallet.node.headers)?;
+            wallet.node.block_chain
                 .write()
                 .map_err(|err| BroadcastingError::LockError(err.to_string()))?
                 .push(new_block.clone());

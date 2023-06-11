@@ -5,7 +5,7 @@ use std::{
 
 use bitcoin_hashes::{sha256d, Hash};
 
-use crate::{account::Account, compact_size_uint::CompactSizeUint, utxo_tuple::UtxoTuple};
+use crate::{account::Account, compact_size_uint::CompactSizeUint, utxo_tuple::UtxoTuple, wallet::Wallet};
 
 use super::{tx_in::TxIn, tx_out::TxOut};
 
@@ -146,12 +146,12 @@ impl Transaction {
 
     pub fn check_if_tx_involves_user_account(
         &self,
-        accounts: Vec<Account>,
+        wallet: Wallet,
         pending_transactions: Arc<RwLock<Vec<Transaction>>>,
     ) -> Result<(), &'static str> {
         for tx_out in self.tx_out.clone() {
             tx_out.involves_user_account(
-                accounts.clone(),
+                wallet.accounts.clone(),
                 self.clone(),
                 pending_transactions.clone(),
             )?;
