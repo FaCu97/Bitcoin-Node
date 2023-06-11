@@ -170,8 +170,8 @@ fn ask_for_new_blocks(
             );
         } else {
             // se fija que el header que recibio no este ya incluido en la cadena de headers (con verificar los ultimos 10 alcanza)
-            let header_not_included = header_is_not_included(header.clone(), headers.clone())?;
-            if  header_not_included {
+            let header_not_included = header_is_not_included(header, headers.clone())?;
+            if header_not_included {
                 let cloned_node = node
                     .try_clone()
                     .map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
@@ -182,9 +182,13 @@ fn ask_for_new_blocks(
                 let cloned_node = node
                     .try_clone()
                     .map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
-                if let Err(BroadcastingError::CanNotRead(err)) =
-                    recieve_new_block(log_sender.clone(), cloned_node, blocks.clone(), headers.clone(), header.clone())
-                {
+                if let Err(BroadcastingError::CanNotRead(err)) = recieve_new_block(
+                    log_sender.clone(),
+                    cloned_node,
+                    blocks.clone(),
+                    headers.clone(),
+                    header,
+                ) {
                     write_in_log(
                         log_sender.error_log_sender.clone(),
                         format!(
@@ -217,11 +221,11 @@ fn recieve_new_block(
         //new_block.set_utxos(); // seteo utxos de las transacciones del bloque
         let header_is_not_included_yet = header_is_not_included(header.clone(), headers.clone())?;
         if header_is_not_included_yet {
-            recieve_new_header(log_sender.clone(), header.clone(), headers.clone())?;
+            recieve_new_header(log_sender.clone(), header, headers)?;
             blocks
-            .write()
-            .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-            .push(new_block);
+                .write()
+                .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+                .push(new_block);
             println!("%%%%%%%% RECIBO NUEVO BLOQUE %%%%%%%\n");
             write_in_log(log_sender.info_log_sender, "NUEVO BLOQUE AGREGADO!");
         }
@@ -256,7 +260,6 @@ fn ask_for_new_block(
     Ok(())
 }
 
-
 /// Recibe un header a agregar a la cadena de headers y el Arc apuntando a la cadena de headers y lo agrega
 /// Devuelve Ok(()) en caso de poder agregarlo correctamente o error del tipo BroadcastingError en caso de no poder
 fn recieve_new_header(
@@ -275,7 +278,7 @@ fn recieve_new_header(
     Ok(())
 }
 
-/// Recibe un Arc apuntando a un RwLock de un vector de TcpStreams y devuelve el ultimo nodo TcpStream del vector si es que 
+/// Recibe un Arc apuntando a un RwLock de un vector de TcpStreams y devuelve el ultimo nodo TcpStream del vector si es que
 /// hay, si no devuelve un error del tipo BroadcastingError
 fn get_last_node(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<TcpStream, BroadcastingError> {
     let node = nodes
@@ -296,11 +299,16 @@ fn get_amount_of_nodes(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<usize, Broa
     Ok(amount_of_nodes)
 }
 
-/// Recibe un header y la lista de headers y se fija en los ulitmos 10 headers de la lista, si es que existen, que el header 
+/// Recibe un header y la lista de headers y se fija en los ulitmos 10 headers de la lista, si es que existen, que el header
 /// no este incluido ya. En caso de estar incluido devuelve false y en caso de nos estar incluido devuelve true. Devuelve error en caso de
 /// que no se pueda leer la lista de headers
-fn header_is_not_included(header: BlockHeader, headers: Arc<RwLock<Vec<BlockHeader>>>) -> Result<bool, BroadcastingError> {
-    let headers_guard = headers.read().map_err(|err| BroadcastingError::LockError(err.to_string()))?;
+fn header_is_not_included(
+    header: BlockHeader,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+) -> Result<bool, BroadcastingError> {
+    let headers_guard = headers
+        .read()
+        .map_err(|err| BroadcastingError::LockError(err.to_string()))?;
     let start_index = headers_guard.len().saturating_sub(10);
     let last_10_headers = &headers_guard[start_index..];
     // Verificar si el header está en los ultimos 10 headers
@@ -309,5 +317,5 @@ fn header_is_not_included(header: BlockHeader, headers: Arc<RwLock<Vec<BlockHead
             return Ok(false);
         }
     }
-    Ok(true)   
+    Ok(true)
 }

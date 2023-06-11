@@ -2,7 +2,6 @@ use std::sync::{Arc, RwLock};
 
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
-
     transactions::{pubkey, transaction::Transaction, tx_out::TxOut},
     user::User,
 };
