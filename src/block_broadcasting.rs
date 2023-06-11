@@ -169,21 +169,26 @@ fn ask_for_new_blocks(
                 "Error en validacion de la proof of work de nuevo header",
             );
         } else {
-            let last_header = get_last_header(headers.clone())?;
-            if last_header != header {
-                recieve_new_header(log_sender.clone(), header, headers.clone())?;
+            // se fija que el header que recibio no este ya incluido en la cadena de headers (con verificar los ultimos 10 alcanza)
+            let header_not_included = header_is_not_included(header, headers.clone())?;
+            if header_not_included {
                 let cloned_node = node
                     .try_clone()
                     .map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
+                // pide el nuevo bloque
                 if ask_for_new_block(log_sender.clone(), cloned_node, header).is_err() {
                     continue;
                 }
                 let cloned_node = node
                     .try_clone()
                     .map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
-                if let Err(BroadcastingError::CanNotRead(err)) =
-                    recieve_new_block(log_sender.clone(), cloned_node, blocks.clone())
-                {
+                if let Err(BroadcastingError::CanNotRead(err)) = recieve_new_block(
+                    log_sender.clone(),
+                    cloned_node,
+                    blocks.clone(),
+                    headers.clone(),
+                    header,
+                ) {
                     write_in_log(
                         log_sender.error_log_sender.clone(),
                         format!(
@@ -205,6 +210,8 @@ fn recieve_new_block(
     log_sender: LogSender,
     mut node: TcpStream,
     blocks: Arc<RwLock<Vec<Block>>>,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    header: BlockHeader,
 ) -> BroadcastingResult {
     let new_block: Block = match BlockMessage::read_from(log_sender.clone(), &mut node) {
         Err(err) => return Err(BroadcastingError::CanNotRead(err.to_string())),
@@ -212,11 +219,16 @@ fn recieve_new_block(
     };
     if new_block.validate().0 {
         //new_block.set_utxos(); // seteo utxos de las transacciones del bloque
-        blocks
-            .write()
-            .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-            .push(new_block);
-        write_in_log(log_sender.info_log_sender, "NUEVO BLOQUE AGREGADO!");
+        let header_is_not_included_yet = header_is_not_included(header.clone(), headers.clone())?;
+        if header_is_not_included_yet {
+            recieve_new_header(log_sender.clone(), header, headers)?;
+            blocks
+                .write()
+                .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+                .push(new_block);
+            println!("%%%%%%%% RECIBO NUEVO BLOQUE %%%%%%%\n");
+            write_in_log(log_sender.info_log_sender, "NUEVO BLOQUE AGREGADO!");
+        }
     } else {
         write_in_log(
             log_sender.error_log_sender,
@@ -248,12 +260,13 @@ fn ask_for_new_block(
     Ok(())
 }
 
+/// Recibe un header a agregar a la cadena de headers y el Arc apuntando a la cadena de headers y lo agrega
+/// Devuelve Ok(()) en caso de poder agregarlo correctamente o error del tipo BroadcastingError en caso de no poder
 fn recieve_new_header(
     log_sender: LogSender,
     header: BlockHeader,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
 ) -> BroadcastingResult {
-    println!("%%%%%%%    Recibo nuevo header!!!    %%%%%%%");
     headers
         .write()
         .map_err(|err| BroadcastingError::LockError(err.to_string()))?
@@ -265,18 +278,8 @@ fn recieve_new_header(
     Ok(())
 }
 
-fn get_last_header(
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-) -> Result<BlockHeader, BroadcastingError> {
-    let last_header = *headers
-        .read()
-        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-        .last()
-        .ok_or("No se pudo obtener el último header")
-        .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
-    Ok(last_header)
-}
-
+/// Recibe un Arc apuntando a un RwLock de un vector de TcpStreams y devuelve el ultimo nodo TcpStream del vector si es que
+/// hay, si no devuelve un error del tipo BroadcastingError
 fn get_last_node(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<TcpStream, BroadcastingError> {
     let node = nodes
         .try_write()
@@ -287,10 +290,32 @@ fn get_last_node(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<TcpStream, Broadc
     Ok(node)
 }
 
+/// Recibe un Arc apuntando a un vector de TcpStream y devuelve el largo del vector
 fn get_amount_of_nodes(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<usize, BroadcastingError> {
     let amount_of_nodes = nodes
         .read()
         .map_err(|err| BroadcastingError::LockError(err.to_string()))?
         .len();
     Ok(amount_of_nodes)
+}
+
+/// Recibe un header y la lista de headers y se fija en los ulitmos 10 headers de la lista, si es que existen, que el header
+/// no este incluido ya. En caso de estar incluido devuelve false y en caso de nos estar incluido devuelve true. Devuelve error en caso de
+/// que no se pueda leer la lista de headers
+fn header_is_not_included(
+    header: BlockHeader,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+) -> Result<bool, BroadcastingError> {
+    let headers_guard = headers
+        .read()
+        .map_err(|err| BroadcastingError::LockError(err.to_string()))?;
+    let start_index = headers_guard.len().saturating_sub(10);
+    let last_10_headers = &headers_guard[start_index..];
+    // Verificar si el header está en los ultimos 10 headers
+    for included_header in last_10_headers.iter() {
+        if *included_header == header {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }
