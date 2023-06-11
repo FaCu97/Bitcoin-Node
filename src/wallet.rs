@@ -9,7 +9,6 @@ pub struct Wallet {
     pub accounts: Vec<Account>,
 }
 
- 
 impl Wallet {
     pub fn new(node: Node) -> Wallet {
         Wallet {
@@ -66,7 +65,7 @@ mod test {
         let blocks = Arc::new(RwLock::new(Vec::new()));
         let headers = Arc::new(RwLock::new(Vec::new()));
 
-        let node = Node::new(Arc::new(RwLock::new(vec![])),headers, blocks);
+        let node = Node::new(Arc::new(RwLock::new(vec![])), headers, blocks);
         let mut wallet = Wallet::new(node);
         let account_addecd_result = wallet.add_account(private_key, address);
 
@@ -74,4 +73,3 @@ mod test {
         Ok(())
     }
 }
-

@@ -1,4 +1,7 @@
-use std::{error::Error, sync::{RwLock, Arc}};
+use std::{
+    error::Error,
+    sync::{Arc, RwLock},
+};
 
 use bitcoin_hashes::{sha256d, Hash};
 
@@ -141,13 +144,20 @@ impl Transaction {
         container.push(utxo_tuple);
     }
 
-    pub fn check_if_tx_involves_user_account(&self, accounts: Vec<Account>, pending_transactions: Arc<RwLock<Vec<Transaction>>>) -> Result<(), &'static str>{
+    pub fn check_if_tx_involves_user_account(
+        &self,
+        accounts: Vec<Account>,
+        pending_transactions: Arc<RwLock<Vec<Transaction>>>,
+    ) -> Result<(), &'static str> {
         for tx_out in self.tx_out.clone() {
-            tx_out.involves_user_account(accounts.clone(), self.clone(), pending_transactions.clone())?;
+            tx_out.involves_user_account(
+                accounts.clone(),
+                self.clone(),
+                pending_transactions.clone(),
+            )?;
         }
         Ok(())
     }
-    
 
     pub fn generate_transaction_to(
         account_sender: Account,

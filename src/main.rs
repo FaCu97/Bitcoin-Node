@@ -88,7 +88,7 @@ fn main() -> Result<(), GenericError> {
         )?;
     let (headers, blocks) = headers_and_blocks;
 
-    let node = Node::new(pointer_to_nodes,headers.clone(), blocks.clone());
+    let node = Node::new(pointer_to_nodes, headers.clone(), blocks.clone());
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
     //let wallet = wallet::Wallet { account: vec![User{private_key: "cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(), address: "mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(), pending_transactions: vec![]}], node };
@@ -96,13 +96,15 @@ fn main() -> Result<(), GenericError> {
         node,
         current_account_index: 0,
         //accounts: vec![Account {private_key:"cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(),address:"mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(),utxo_set:vec![], pending_transactions: Arc::new(RwLock::new(Vec::new())) }]
-        accounts: vec![Account {private_key:"cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(),address:"mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),utxo_set:vec![], pending_transactions: Arc::new(RwLock::new(Vec::new())) }]
+        accounts: vec![Account {
+            private_key: "cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(),
+            address: "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),
+            utxo_set: vec![],
+            pending_transactions: Arc::new(RwLock::new(Vec::new())),
+        }],
     };
-    let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
-        logsender.clone(),
-        wallet
-    )
-    .map_err(GenericError::BroadcastingError)?;
+    let block_listener = BlockBroadcasting::listen_for_incoming_blocks(logsender.clone(), wallet)
+        .map_err(GenericError::BroadcastingError)?;
 
     if let Err(err) = handle_input(block_listener) {
         println!("Error al leer la entrada por terminal. {}", err);

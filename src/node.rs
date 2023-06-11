@@ -1,4 +1,7 @@
-use std::{sync::{Arc, RwLock}, net::TcpStream};
+use std::{
+    net::TcpStream,
+    sync::{Arc, RwLock},
+};
 
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},

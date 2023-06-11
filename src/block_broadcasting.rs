@@ -5,14 +5,16 @@ use crate::{
     messages::{
         block_message::BlockMessage, get_data_message::GetDataMessage,
         headers_message::is_terminated, inventory::Inventory,
-    }, wallet::Wallet, transactions::transaction::Transaction,
+    },
+    transactions::transaction::Transaction,
+    wallet::Wallet,
 };
 use std::{
     error::Error,
     fmt,
     net::TcpStream,
     sync::{Arc, Mutex, RwLock},
-    thread::{self, JoinHandle}
+    thread::{self, JoinHandle},
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -71,7 +73,8 @@ impl BlockBroadcasting {
         // lista de transacciones recibidas para no recibir las mismas de varios nodos
         let transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>> = Arc::new(RwLock::new(Vec::new()));
         let pending_transactions: Arc<RwLock<Vec<Transaction>>> = Arc::new(RwLock::new(Vec::new()));
-        let confirmed_transactions: Arc<RwLock<Vec<Transaction>>> = Arc::new(RwLock::new(Vec::new()));
+        let confirmed_transactions: Arc<RwLock<Vec<Transaction>>> =
+            Arc::new(RwLock::new(Vec::new()));
         for _ in 0..cant_nodos {
             let node = get_last_node(wallet.node.connected_nodes.clone())?;
             println!(
@@ -156,9 +159,9 @@ pub fn listen_for_incoming_blocks_from_node(
                 log_sender.clone(),
                 new_headers,
                 cloned_node,
-                wallet.clone(), 
+                wallet.clone(),
                 pending_transactions.clone(),
-                confirmed_transactions.clone()
+                confirmed_transactions.clone(),
             )?;
         }
         Ok(())
@@ -169,7 +172,7 @@ fn ask_for_new_blocks(
     log_sender: LogSender,
     new_headers: Vec<BlockHeader>,
     node: TcpStream,
-    wallet: Wallet, 
+    wallet: Wallet,
     pending_transactions: Arc<RwLock<Vec<Transaction>>>,
     confirmed_transactions: Arc<RwLock<Vec<Transaction>>>,
 ) -> BroadcastingResult {
@@ -193,9 +196,15 @@ fn ask_for_new_blocks(
                 let cloned_node = node
                     .try_clone()
                     .map_err(|err| BroadcastingError::ReadNodeError(err.to_string()))?;
-                if let Err(BroadcastingError::CanNotRead(err)) =
-                    recieve_new_block(log_sender.clone(), cloned_node, wallet.node.block_chain.clone(), pending_transactions.clone(), confirmed_transactions.clone(), wallet.node.headers.clone(), header)
-                {
+                if let Err(BroadcastingError::CanNotRead(err)) = recieve_new_block(
+                    log_sender.clone(),
+                    cloned_node,
+                    wallet.node.block_chain.clone(),
+                    pending_transactions.clone(),
+                    confirmed_transactions.clone(),
+                    wallet.node.headers.clone(),
+                    header,
+                ) {
                     write_in_log(
                         log_sender.error_log_sender.clone(),
                         format!(

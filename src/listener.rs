@@ -14,7 +14,9 @@ use crate::{
         headers_message::{is_terminated, HeadersMessage},
         inventory::Inventory,
         message_header::{write_pong_message, HeaderMessage},
-    }, transactions::transaction::Transaction, wallet::Wallet
+    },
+    transactions::transaction::Transaction,
+    wallet::Wallet,
 };
 
 /// Recives a node to listen from and a pointer to a bool to stop the cycle of listening in case this is false. Reads
@@ -39,7 +41,9 @@ pub fn listen_for_incoming_messages(
         match &header.command_name {
             header_name if header_name.contains("inv") => {
                 let node = stream.try_clone()?;
-                if let Err(err) = handle_inv_message(node, payload_buffer_num, transactions_reccieved.clone()) {
+                if let Err(err) =
+                    handle_inv_message(node, payload_buffer_num, transactions_reccieved.clone())
+                {
                     write_in_log(
                         log_sender.error_log_sender.clone(),
                         format!(
@@ -73,7 +77,10 @@ pub fn listen_for_incoming_messages(
                     .as_str(),
                 );
                 let tx = Transaction::unmarshalling(&payload_buffer_num, &mut 0)?;
-                tx.check_if_tx_involves_user_account(wallet.accounts.clone(), pending_transactions.clone())?;
+                tx.check_if_tx_involves_user_account(
+                    wallet.accounts.clone(),
+                    pending_transactions.clone(),
+                )?;
             }
             _ => {
                 write_in_log(
@@ -104,7 +111,11 @@ pub fn listen_for_incoming_messages(
 
 /// recieves a Node and the payload of the inv message and creates the invetories to ask for the incoming
 /// txs the node sent via inv. Returns error in case of failure or Ok(())
-fn handle_inv_message(stream: TcpStream, payload_bytes: Vec<u8>, transactions_reccieved: Arc<RwLock<Vec<[u8; 32]>>>) -> Result<(), Box<dyn Error>> {
+fn handle_inv_message(
+    stream: TcpStream,
+    payload_bytes: Vec<u8>,
+    transactions_reccieved: Arc<RwLock<Vec<[u8; 32]>>>,
+) -> Result<(), Box<dyn Error>> {
     let mut offset: usize = 0;
     let count = CompactSizeUint::unmarshalling(&payload_bytes, &mut offset)?;
     let mut inventories = vec![];
@@ -112,9 +123,17 @@ fn handle_inv_message(stream: TcpStream, payload_bytes: Vec<u8>, transactions_re
         let mut inventory_bytes = vec![0; 36];
         inventory_bytes.copy_from_slice(&payload_bytes[offset..(offset + 36)]);
         let inv = Inventory::from_le_bytes(&inventory_bytes);
-        if inv.type_identifier == 1 && !transactions_reccieved.read().map_err(|_| "Error al intentar leer el puntero a transacciones pendientes")?.contains(&inv.hash()){   
-            transactions_reccieved.write().map_err(|_| "Error al intentar leer el puntero a transacciones recibidas")?.push(inv.hash());
-            inventories.push(inv);        
+        if inv.type_identifier == 1
+            && !transactions_reccieved
+                .read()
+                .map_err(|_| "Error al intentar leer el puntero a transacciones pendientes")?
+                .contains(&inv.hash())
+        {
+            transactions_reccieved
+                .write()
+                .map_err(|_| "Error al intentar leer el puntero a transacciones recibidas")?
+                .push(inv.hash());
+            inventories.push(inv);
         }
         offset += 36;
     }
@@ -133,5 +152,3 @@ fn ask_for_incoming_tx(
     get_data_message.write_to(&mut stream)?;
     Ok(())
 }
-
-
