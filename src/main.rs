@@ -1,3 +1,4 @@
+use bitcoin::account::Account;
 use bitcoin::block_broadcasting::{BlockBroadcasting, BroadcastingError};
 use bitcoin::config::Config;
 use bitcoin::gtk::gtk::Gtk;
@@ -91,9 +92,15 @@ fn main() -> Result<(), GenericError> {
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
     //let wallet = wallet::Wallet { account: vec![User{private_key: "cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(), address: "mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(), pending_transactions: vec![]}], node };
+    let wallet = Wallet {
+        node,
+        current_account_index: 0,
+        //accounts: vec![Account {private_key:"cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(),address:"mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(),utxo_set:vec![], pending_transactions: Arc::new(RwLock::new(Vec::new())) }]
+        accounts: vec![Account {private_key:"cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(),address:"mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),utxo_set:vec![], pending_transactions: Arc::new(RwLock::new(Vec::new())) }]
+    };
     let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
         logsender.clone(),
-        Wallet::new(node)
+        wallet
     )
     .map_err(GenericError::BroadcastingError)?;
 

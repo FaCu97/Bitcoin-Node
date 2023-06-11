@@ -5,7 +5,7 @@ use crate::{
     messages::{
         block_message::BlockMessage, get_data_message::GetDataMessage,
         headers_message::is_terminated, inventory::Inventory,
-    }, wallet::Wallet,
+    }, wallet::Wallet, transactions::transaction::Transaction,
 };
 use std::{
     error::Error,
@@ -68,6 +68,7 @@ impl BlockBroadcasting {
         let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<BroadcastingResult>> = vec![];
         let cant_nodos = get_amount_of_nodes(wallet.node.connected_nodes.clone())?;
+        let transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>> = Arc::new(RwLock::new(Vec::new()));
         for _ in 0..cant_nodos {
             let node = get_last_node(wallet.node.connected_nodes.clone())?;
             println!(
@@ -77,6 +78,7 @@ impl BlockBroadcasting {
             nodes_handle.push(listen_for_incoming_blocks_from_node(
                 log_sender.clone(),
                 wallet.clone(),
+                transactions_recieved.clone(),
                 node,
                 finish.clone(),
             ))
@@ -115,6 +117,7 @@ impl BlockBroadcasting {
 pub fn listen_for_incoming_blocks_from_node(
     log_sender: LogSender,
     wallet: Wallet,
+    transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>>,
     mut node: TcpStream,
     finish: Arc<RwLock<bool>>,
 ) -> JoinHandle<BroadcastingResult> {
@@ -126,6 +129,7 @@ pub fn listen_for_incoming_blocks_from_node(
             let new_headers = match listen_for_incoming_messages(
                 log_sender_clone.clone(),
                 wallet.clone(),
+                transactions_recieved.clone(),
                 &mut node,
                 Some(finish.clone()),
             ) {
