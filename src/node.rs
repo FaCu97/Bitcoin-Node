@@ -2,9 +2,8 @@ use std::{sync::{Arc, RwLock}, net::TcpStream};
 
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
-
-    transactions::{pubkey, transaction::Transaction, tx_out::TxOut},
-    user::User,
+    transactions::transaction::Transaction,
+    utxo_tuple::UtxoTuple,
 };
 #[derive(Debug, Clone)]
 
@@ -12,7 +11,7 @@ pub struct Node {
     pub connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
     pub headers: Arc<RwLock<Vec<BlockHeader>>>,
     pub block_chain: Arc<RwLock<Vec<Block>>>,
-    pub utxo_set: Vec<TxOut>,
+    pub utxo_set: Vec<UtxoTuple>,
 }
 
 impl Node {
@@ -35,21 +34,17 @@ impl Node {
     }
 
     /// funcion que cargara las utxos asociadas a la respectiva cuenta
-    pub fn utxos_referenced_to_account(&self, adress: String) -> Vec<TxOut> {
-        let mut utxo_set: Vec<TxOut> = Vec::new();
+    pub fn utxos_referenced_to_account(&self, address: &str) -> Vec<UtxoTuple> {
+        let mut account_utxo_set: Vec<UtxoTuple> = Vec::new();
         for utxo in &self.utxo_set {
-            match utxo.get_adress() {
-                Ok(value) => {
-                    if value == adress {
-                        utxo_set.push(utxo.clone());
-                    }
-                }
-                Err(_) => {
-                    continue;
-                }
-            }
+            let aux_utxo = utxo.referenced_utxos(address);
+            let utxo_to_push = match aux_utxo {
+                Some(value) => value,
+                None => continue,
+            };
+            account_utxo_set.push(utxo_to_push);
         }
-        utxo_set
+        account_utxo_set
     } /*
       pub fn make_transaction(
           &mut self,
@@ -75,17 +70,14 @@ impl Node {
 }
 
 ///Funcion que se encarga de generar la lista de utxos
-fn generate_utxo_set(block_chain: &Arc<RwLock<Vec<Block>>>) -> Vec<TxOut> {
-    let mut list_of_utxos = Vec::new();
+fn generate_utxo_set(block_chain: &Arc<RwLock<Vec<Block>>>) -> Vec<UtxoTuple> {
+    let mut list_of_utxos: Vec<UtxoTuple> = Vec::new();
 
-    {
-        let block_chain_lock = block_chain.read().unwrap();
+    let block_chain_lock = block_chain.read().unwrap();
 
-        for block in block_chain_lock.iter() {
-            let utxos = block.give_me_utxos();
-            list_of_utxos.extend_from_slice(&utxos);
-        }
+    for block in block_chain_lock.iter() {
+        let utxos: Vec<UtxoTuple> = block.give_me_utxos();
+        list_of_utxos.extend_from_slice(&utxos);
     }
-
     list_of_utxos
 }

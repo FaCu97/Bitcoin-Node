@@ -1,3 +1,4 @@
+pub mod account;
 pub mod address_decoder;
 pub mod block_broadcasting;
 pub mod blocks;
@@ -12,5 +13,5 @@ pub mod messages;
 pub mod network;
 pub mod node;
 pub mod transactions;
-pub mod user;
+pub mod utxo_tuple;
 pub mod wallet;

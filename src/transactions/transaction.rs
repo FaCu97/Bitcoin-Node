@@ -1,10 +1,12 @@
+use std::error::Error;
+
 use bitcoin_hashes::{sha256d, Hash};
 
-use crate::compact_size_uint::CompactSizeUint;
+use crate::{account::Account, compact_size_uint::CompactSizeUint, utxo_tuple::UtxoTuple};
 
 use super::{tx_in::TxIn, tx_out::TxOut};
 
-type UtxoTuple = ([u8; 32], Vec<(TxOut, usize)>);
+/// Guarda el txid(hash de la transaccion) y el vector con los utxos (valor e indice)
 #[derive(Debug, PartialEq, Clone)]
 pub struct Transaction {
     pub version: i32,
@@ -115,11 +117,11 @@ impl Transaction {
             for tx_in in &self.tx_in {
                 // aca nos fijamos si alguna de nuestra inputs usa outputs anteriores
                 // si la usa debemos remover dicho elemento de la lista
-                if tx_in.is_same_hash(&list_utxos.0) {
+                if tx_in.is_same_hash(&list_utxos.hash) {
                     let mut position: usize = 0;
-                    while position < list_utxos.1.len() {
-                        if list_utxos.1[position].1 == tx_in.previous_index() {
-                            list_utxos.1.remove(position);
+                    while position < list_utxos.utxo_set.len() {
+                        if list_utxos.utxo_set[position].1 == tx_in.previous_index() {
+                            list_utxos.utxo_set.remove(position);
                         }
                         position += 1;
                     }
@@ -135,7 +137,16 @@ impl Transaction {
             let utxo_and_index = (utxo.clone(), position);
             utxos_and_index.push(utxo_and_index);
         }
-        container.push((hash, utxos_and_index));
+        let utxo_tuple = UtxoTuple::new(hash, utxos_and_index);
+        container.push(utxo_tuple);
+    }
+
+    pub fn generate_transaction_to(
+        account_sender: Account,
+        address_receiver: &str,
+        value: i64,
+    ) -> Result<(), Box<dyn Error>> {
+        Ok(())
     }
 }
 

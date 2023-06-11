@@ -8,28 +8,28 @@ use k256::sha2::Digest;
 use k256::sha2::Sha256;
 use secp256k1::SecretKey;
 
-use crate::node::Node;
-use crate::transactions::transaction::Transaction;
+use crate::utxo_tuple::UtxoTuple;
 const UNCOMPRESSED_WIF_LEN: usize = 51;
 #[derive(Debug, Clone)]
 
-pub struct User {
-    pub private_key: String,
+/// Guarda la address comprimida y la private key (comprimida o no)
+pub struct Account {
+    private_key: String,
     pub address: String,
-    pub pending_transactions: Vec<Transaction>,
+    utxo_set: Vec<UtxoTuple>,
 }
 
-impl User {
-    /// Recibe La address en formato comprimido
+impl Account {
+    /// Recibe la address en formato comprimido
     /// Y la WIF private key, ya sea en formato comprimido o no comprimido
-    pub fn login_user(wif_private_key: String, address: String) -> Result<User, Box<dyn Error>> {
+    pub fn new(wif_private_key: String, address: String) -> Result<Account, Box<dyn Error>> {
         let raw_private_key = Self::decode_wif_private_key(wif_private_key.as_str())?;
 
         Self::validate_address_private_key(&raw_private_key, &address)?;
-        Ok(User {
+        Ok(Account {
             private_key: wif_private_key,
             address,
-            pending_transactions: vec![],
+            utxo_set: Vec::new(),
         })
     }
 
@@ -86,7 +86,6 @@ impl User {
             Ok(decoded) => decoded,
             Err(err) => return Err(Box::new(std::io::Error::new(io::ErrorKind::Other, err))),
         };
-        //Err("Falló la decodificación del wif private key en base58."),
 
         let mut vector = vec![];
         if wif_private_key.len() == UNCOMPRESSED_WIF_LEN {
@@ -122,18 +121,49 @@ impl User {
         Ok(public_key.serialize())
     }
     pub fn get_private_key(&self) -> Result<[u8; 32], Box<dyn Error>> {
-        Ok(Self::decode_wif_private_key(self.private_key.as_str())?)
+        Self::decode_wif_private_key(self.private_key.as_str())
+    }
+    pub fn get_address(&self) -> &String {
+        &self.address
+    }
+    pub fn load_utxos(&mut self, utxos: Vec<UtxoTuple>) {
+        self.utxo_set.extend_from_slice(&utxos);
+    }
+    pub fn has_balance(&self, value: i64) -> bool {
+        let mut balance: i64 = 0;
+        for utxo in &self.utxo_set {
+            balance += utxo.balance();
+        }
+        balance > value
+    }
+
+    pub fn make_transaction(
+        &self,
+        address_receiver: &str,
+        amount: i64,
+    ) -> Result<(), Box<dyn Error>> {
+        if !self.has_balance(amount) {
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                format!(
+                    "El balance de la cuenta {} tiene menos de {} satoshis",
+                    self.address, amount,
+                ),
+            )));
+        }
+        //let transaction: Transaction::generate_transaction_to(address: &str, amount: i64)?;
+        // letTransaction::new(...)
+        Ok(())
     }
 }
 
 #[cfg(test)]
-
 mod test {
     use std::{error::Error, sync::{Arc, RwLock}};
 
     use hex;
 
-    use crate::user::User;
+    use crate::account::Account;
 
     fn string_to_32_bytes(input: &str) -> Result<[u8; 32], hex::FromHexError> {
         let bytes = hex::decode(input)?;
@@ -153,8 +183,8 @@ mod test {
         let address_expected: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
         let private_key: String =
             String::from("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR");
-        let user = User::login_user(private_key, address_expected);
-        assert!(user.is_ok());
+        let account_result = Account::new(private_key, address_expected);
+        assert!(account_result.is_ok());
     }
 
     #[test]
@@ -162,8 +192,8 @@ mod test {
         let address_expected: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
         let private_key: String =
             String::from("91dkDNCCaMp2f91sVQRGgdZRw1QY4aptaeZ4vxEvuG5PvZ9hftJ");
-        let user = User::login_user(private_key, address_expected);
-        assert!(user.is_ok());
+        let account_result = Account::new(private_key, address_expected);
+        assert!(account_result.is_ok());
     }
 
     #[test]
@@ -171,8 +201,8 @@ mod test {
         let address_expected: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
         let private_key: String =
             String::from("K1dkDNCCaMp2f91sVQRGgdZRw1QY4aptaeZ4vxEvuG5PvZ9hftJ");
-        let user = User::login_user(private_key, address_expected);
-        assert!(user.is_err());
+        let account_result = Account::new(private_key, address_expected);
+        assert!(account_result.is_err());
     }
 
     #[test]
@@ -185,7 +215,7 @@ mod test {
             string_to_32_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
                 .unwrap();
 
-        let private_key = User::decode_wif_private_key(wif)?;
+        let private_key = Account::decode_wif_private_key(wif)?;
 
         assert_eq!(private_key.to_vec(), expected_private_key_bytes);
         Ok(())
@@ -201,7 +231,7 @@ mod test {
             string_to_32_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
                 .unwrap();
 
-        let private_key = User::decode_wif_private_key(wif)?;
+        let private_key = Account::decode_wif_private_key(wif)?;
         assert_eq!(private_key.to_vec(), expected_private_key_bytes);
         Ok(())
     }
@@ -209,10 +239,10 @@ mod test {
     fn test_usuario_devuelve_clave_publica_comprimida_esperada() {
         let address = String::from("mpzx6iZ1WX8hLSeDRKdkLatXXPN1GDWVaF");
         let private_key = String::from("cQojsQ5fSonENC5EnrzzTAWSGX8PB4TBh6GunBxcCdGMJJiLULwZ");
-        let user = User {
+        let user = Account {
             private_key,
             address,
-            pending_transactions: vec![],
+            utxo_set: Vec::new(),
         };
         let expected_pubkey = string_to_33_bytes(
             "0345EC0AA86BAF64ED626EE86B4A76C12A92D5F6DD1C1D6E4658E26666153DAFA6",

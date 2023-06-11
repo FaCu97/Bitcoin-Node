@@ -14,7 +14,7 @@ use crate::{
         headers_message::{is_terminated, HeadersMessage},
         inventory::Inventory,
         message_header::{write_pong_message, HeaderMessage},
-    }, transactions::transaction::Transaction, user::User, wallet::Wallet,
+    }, transactions::transaction::Transaction, wallet::Wallet
 };
 
 /// Recives a node to listen from and a pointer to a bool to stop the cycle of listening in case this is false. Reads
@@ -73,7 +73,7 @@ pub fn listen_for_incoming_messages(
                 let tx = Transaction::unmarshalling(&payload_buffer_num, &mut 0)?;
                 //println!("TX:    {:?}\n", tx);
 
-                check_if_tx_involves_user_account(tx, wallet.account.clone());
+                //check_if_tx_involves_user_account(tx, wallet.accounts.clone());
             }
             _ => {
                 write_in_log(
@@ -131,9 +131,10 @@ fn ask_for_incoming_tx(
     Ok(())
 }
 
-
+/* 
 fn check_if_tx_involves_user_account(tx: Transaction, accounts: Vec<User>) {
     for tx_out in tx.tx_out.clone() {
         tx_out.involves_user_account(accounts.clone(), tx.clone());
     }
 }
+*/

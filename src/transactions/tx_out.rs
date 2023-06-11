@@ -1,4 +1,4 @@
-use crate::{compact_size_uint::CompactSizeUint, user::User};
+use crate::{compact_size_uint::CompactSizeUint, account::Account};
 
 use super::{pubkey::Pubkey, transaction::Transaction};
 #[derive(Debug, PartialEq, Clone)]
@@ -72,7 +72,8 @@ impl TxOut {
         self.pk_script.bytes()
     }
 
-    pub fn involves_user_account(&self, accounts: Vec<User>, tx: Transaction) {
+/* 
+    pub fn involves_user_account(&self, accounts: Vec<Account>, tx: Transaction) {
         for mut account in accounts {
             if !account.pending_transactions.contains(&tx) {
                 let tx_asociate_address = match self.get_adress() {
@@ -86,7 +87,7 @@ impl TxOut {
    
             }
         }
-    }
+    }*/
 }
 
 #[cfg(test)]

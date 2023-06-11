@@ -93,7 +93,7 @@ impl TxIn {
                 bytes.extend_from_slice(height)
             }
         }
-        bytes.extend_from_slice(&self.signature_script.get_bytes());
+        bytes.extend_from_slice(self.signature_script.get_bytes());
         let sequence_bytes: [u8; 4] = self.sequence.to_le_bytes();
         bytes.extend_from_slice(&sequence_bytes);
     }
