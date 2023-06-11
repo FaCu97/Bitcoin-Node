@@ -92,7 +92,6 @@ fn main() -> Result<(), GenericError> {
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
     let wallet = wallet::Wallet { account: vec![User{private_key: "cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(), address: "mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(), pending_transactions: vec![]}], node };
-
     let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
         logsender.clone(),
         wallet

@@ -133,7 +133,7 @@ fn ask_for_incoming_tx(
 
 
 fn check_if_tx_involves_user_account(tx: Transaction, accounts: Vec<User>) {
-    for tx_out in tx.tx_out {
-        tx_out.involves_user_account(&accounts);
+    for tx_out in tx.tx_out.clone() {
+        tx_out.involves_user_account(accounts.clone(), tx.clone());
     }
 }

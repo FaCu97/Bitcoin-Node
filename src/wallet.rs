@@ -1,3 +1,5 @@
+use std::sync::{RwLock, Arc};
+
 use crate::{node::Node, user::User, transactions::transaction::Transaction};
 #[derive(Debug, Clone)]
 pub struct Wallet {

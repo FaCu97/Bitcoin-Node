@@ -1,5 +1,7 @@
 use std::error::Error;
 use std::io;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 use bitcoin_hashes::{ripemd160, Hash};
 use k256::sha2::Digest;
@@ -9,7 +11,7 @@ use secp256k1::SecretKey;
 use crate::node::Node;
 use crate::transactions::transaction::Transaction;
 const UNCOMPRESSED_WIF_LEN: usize = 51;
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
 
 pub struct User {
     pub private_key: String,
@@ -127,7 +129,7 @@ impl User {
 #[cfg(test)]
 
 mod test {
-    use std::error::Error;
+    use std::{error::Error, sync::{Arc, RwLock}};
 
     use hex;
 
@@ -210,6 +212,7 @@ mod test {
         let user = User {
             private_key,
             address,
+            pending_transactions: vec![],
         };
         let expected_pubkey = string_to_33_bytes(
             "0345EC0AA86BAF64ED626EE86B4A76C12A92D5F6DD1C1D6E4658E26666153DAFA6",
