@@ -155,7 +155,9 @@ impl Block {
         }
         utxo_container
     }
-
+    /// Receives a pointer to the list of pending transactions and the list of confirmed transactions and in case the block
+    /// contains on transaction included in the list of pending transactions, notifies the user, and changes the element from the
+    /// pending transactions list to the confirmed transaction list. Returns error in case the RwLock cant be accessed
     pub fn contains_pending_tx(
         &self,
         pending_transactions: Arc<RwLock<Vec<Transaction>>>,

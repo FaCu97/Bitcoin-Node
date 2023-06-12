@@ -73,7 +73,10 @@ impl TxOut {
     pub fn get_pub_key(&self) -> &Vec<u8> {
         self.pk_script.bytes()
     }
-
+    /// Receives a list of accounts, a transaction and a pointer to the list of pending transactions
+    /// and for each account in the list checks if the tx out asociate address is the same as the account
+    /// address. If true, notifies the user and add the transaction to the list of pending transactions. Returns error
+    /// in case the RwLock cant be accessed
     pub fn involves_user_account(
         &self,
         accounts: Vec<Account>,

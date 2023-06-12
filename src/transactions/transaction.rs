@@ -145,7 +145,8 @@ impl Transaction {
         let utxo_tuple = UtxoTuple::new(hash, utxos_and_index);
         container.push(utxo_tuple);
     }
-
+    /// Receives a wallet and a pointer to the list of pending transactions and for each tx out
+    /// in the transaction, checks if the user account is involved in the transaction
     pub fn check_if_tx_involves_user_account(
         &self,
         wallet: Wallet,
