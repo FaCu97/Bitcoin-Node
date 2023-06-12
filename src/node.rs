@@ -1,11 +1,17 @@
-use std::sync::{Arc, RwLock};
+use std::{
+    net::TcpStream,
+    sync::{Arc, RwLock},
+};
 
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
 };
+#[derive(Debug, Clone)]
+
 pub struct Node {
+    pub connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
     pub headers: Arc<RwLock<Vec<BlockHeader>>>,
     pub block_chain: Arc<RwLock<Vec<Block>>>,
     pub utxo_set: Vec<UtxoTuple>,
@@ -13,11 +19,13 @@ pub struct Node {
 
 impl Node {
     pub fn new(
+        connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         block_chain: Arc<RwLock<Vec<Block>>>,
     ) -> Self {
         let utxo_set = generate_utxo_set(&block_chain);
         Node {
+            connected_nodes,
             headers,
             block_chain,
             utxo_set,

@@ -1,8 +1,13 @@
-use std::error::Error;
+use std::{
+    error::Error,
+    sync::{Arc, RwLock},
+};
 
 use bitcoin_hashes::{sha256d, Hash};
 
-use crate::{account::Account, compact_size_uint::CompactSizeUint, utxo_tuple::UtxoTuple};
+use crate::{
+    account::Account, compact_size_uint::CompactSizeUint, utxo_tuple::UtxoTuple, wallet::Wallet,
+};
 
 use super::{tx_in::TxIn, tx_out::TxOut};
 
@@ -139,6 +144,22 @@ impl Transaction {
         }
         let utxo_tuple = UtxoTuple::new(hash, utxos_and_index);
         container.push(utxo_tuple);
+    }
+    /// Receives a wallet and a pointer to the list of pending transactions and for each tx out
+    /// in the transaction, checks if the user account is involved in the transaction
+    pub fn check_if_tx_involves_user_account(
+        &self,
+        wallet: Wallet,
+        pending_transactions: Arc<RwLock<Vec<Transaction>>>,
+    ) -> Result<(), &'static str> {
+        for tx_out in self.tx_out.clone() {
+            tx_out.involves_user_account(
+                wallet.accounts.clone(),
+                self.clone(),
+                pending_transactions.clone(),
+            )?;
+        }
+        Ok(())
     }
 
     pub fn generate_transaction_to(

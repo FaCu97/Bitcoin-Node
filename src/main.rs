@@ -1,3 +1,4 @@
+use bitcoin::account::Account;
 use bitcoin::block_broadcasting::{BlockBroadcasting, BroadcastingError};
 use bitcoin::config::Config;
 use bitcoin::gtk::gtk::Gtk;
@@ -8,6 +9,7 @@ use bitcoin::logwriter::log_writer::{
 };
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
+use bitcoin::wallet::{self, Wallet};
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
@@ -86,17 +88,31 @@ fn main() -> Result<(), GenericError> {
         )?;
     let (headers, blocks) = headers_and_blocks;
 
-    let node = Node::new(headers.clone(), blocks.clone());
+    let node = Node::new(pointer_to_nodes, headers.clone(), blocks.clone());
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
-
-    let block_listener = BlockBroadcasting::listen_for_incoming_blocks(
-        logsender.clone(),
-        pointer_to_nodes,
-        headers,
-        blocks,
-    )
-    .map_err(GenericError::BroadcastingError)?;
+    //let wallet = wallet::Wallet { account: vec![User{private_key: "cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(), address: "mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(), pending_transactions: vec![]}], node };
+    let wallet = Wallet {
+        node,
+        current_account_index: 0,
+        //accounts: vec![Account {private_key:"cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(),address:"mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(),utxo_set:vec![], pending_transactions: Arc::new(RwLock::new(Vec::new())) }]
+        /*
+        accounts: vec![Account {
+            private_key: "cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(),
+            address: "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),
+            utxo_set: vec![],
+            pending_transactions: Arc::new(RwLock::new(Vec::new())),
+        }],
+        */
+        accounts: vec![Account {
+            private_key: "cSqmqW48wCeoUF8FCJvVsqUGwcvir27bKWCFj1MTFszFdn2Dduim".to_string(),
+            address: "mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi9".to_string(),
+            utxo_set: vec![],
+            pending_transactions: Arc::new(RwLock::new(Vec::new())),
+        }],
+    };
+    let block_listener = BlockBroadcasting::listen_for_incoming_blocks(logsender.clone(), wallet)
+        .map_err(GenericError::BroadcastingError)?;
 
     if let Err(err) = handle_input(block_listener) {
         println!("Error al leer la entrada por terminal. {}", err);

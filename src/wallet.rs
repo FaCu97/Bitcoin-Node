@@ -1,11 +1,12 @@
 use std::{error::Error, io};
 
 use crate::{account::Account, node::Node};
+#[derive(Debug, Clone)]
 
 pub struct Wallet {
-    node: Node,
-    current_account_index: usize,
-    accounts: Vec<Account>,
+    pub node: Node,
+    pub current_account_index: usize,
+    pub accounts: Vec<Account>,
 }
 
 impl Wallet {
@@ -64,7 +65,7 @@ mod test {
         let blocks = Arc::new(RwLock::new(Vec::new()));
         let headers = Arc::new(RwLock::new(Vec::new()));
 
-        let node = Node::new(headers, blocks);
+        let node = Node::new(Arc::new(RwLock::new(vec![])), headers, blocks);
         let mut wallet = Wallet::new(node);
         let account_addecd_result = wallet.add_account(private_key, address);
 

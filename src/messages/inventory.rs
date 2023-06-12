@@ -36,4 +36,7 @@ impl Inventory {
             hash: hash_bytes,
         }
     }
+    pub fn hash(&self) -> [u8; 32] {
+        self.hash
+    }
 }

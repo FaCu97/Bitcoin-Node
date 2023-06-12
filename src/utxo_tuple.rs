@@ -1,5 +1,5 @@
 use crate::transactions::tx_out::TxOut;
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UtxoTuple {
     pub hash: [u8; 32],
     pub utxo_set: Vec<(TxOut, usize)>,

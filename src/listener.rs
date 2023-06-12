@@ -15,14 +15,19 @@ use crate::{
         inventory::Inventory,
         message_header::{write_pong_message, HeaderMessage},
     },
+    transactions::transaction::Transaction,
+    wallet::Wallet,
 };
 
-/// Recives a node to listen from and a pointer to a bool to stop the cycle of listening in case this is false. Reads
+/// Receives a node to listen from and a pointer to a bool to stop the cycle of listening in case this is false. Reads
 /// header-payload until it founds a header representing an incoming headers message. In that case returns a Vec<BlockHeader>
 /// which contains the headers recieved from the node. In case that the message is not "headers" checks if it is a handleable
 /// message (ping, inv, tx) and handles it depending of the message.
 pub fn listen_for_incoming_messages(
     log_sender: LogSender,
+    wallet: Wallet,
+    transactions_received: Arc<RwLock<Vec<[u8; 32]>>>,
+    pending_transactions: Arc<RwLock<Vec<Transaction>>>,
     stream: &mut TcpStream,
     finish: Option<Arc<RwLock<bool>>>,
 ) -> Result<Vec<BlockHeader>, Box<dyn std::error::Error>> {
@@ -36,7 +41,9 @@ pub fn listen_for_incoming_messages(
         match &header.command_name {
             header_name if header_name.contains("inv") => {
                 let node = stream.try_clone()?;
-                if let Err(err) = handle_inv_message(node, payload_buffer_num) {
+                if let Err(err) =
+                    handle_inv_message(node, payload_buffer_num, transactions_received.clone())
+                {
                     write_in_log(
                         log_sender.error_log_sender.clone(),
                         format!(
@@ -69,8 +76,8 @@ pub fn listen_for_incoming_messages(
                     )
                     .as_str(),
                 );
-                //println!("{:?}\n", Transaction::unmarshalling(&payload_buffer_num, &mut 0));
-                //check_if_tx_involves_user();
+                let tx = Transaction::unmarshalling(&payload_buffer_num, &mut 0)?;
+                tx.check_if_tx_involves_user_account(wallet.clone(), pending_transactions.clone())?;
             }
             _ => {
                 write_in_log(
@@ -99,9 +106,13 @@ pub fn listen_for_incoming_messages(
     }
 }
 
-/// recieves a Node and the payload of the inv message and creates the invetories to ask for the incoming
+/// recieves a Node and the payload of the inv message and creates the inventories to ask for the incoming
 /// txs the node sent via inv. Returns error in case of failure or Ok(())
-fn handle_inv_message(stream: TcpStream, payload_bytes: Vec<u8>) -> Result<(), Box<dyn Error>> {
+fn handle_inv_message(
+    stream: TcpStream,
+    payload_bytes: Vec<u8>,
+    transactions_received: Arc<RwLock<Vec<[u8; 32]>>>,
+) -> Result<(), Box<dyn Error>> {
     let mut offset: usize = 0;
     let count = CompactSizeUint::unmarshalling(&payload_bytes, &mut offset)?;
     let mut inventories = vec![];
@@ -109,16 +120,27 @@ fn handle_inv_message(stream: TcpStream, payload_bytes: Vec<u8>) -> Result<(), B
         let mut inventory_bytes = vec![0; 36];
         inventory_bytes.copy_from_slice(&payload_bytes[offset..(offset + 36)]);
         let inv = Inventory::from_le_bytes(&inventory_bytes);
-        if inv.type_identifier == 1 {
+        if inv.type_identifier == 1
+            && !transactions_received
+                .read()
+                .map_err(|_| "Error al intentar leer el puntero a transacciones pendientes")?
+                .contains(&inv.hash())
+        {
+            transactions_received
+                .write()
+                .map_err(|_| "Error al intentar leer el puntero a transacciones recibidas")?
+                .push(inv.hash());
             inventories.push(inv);
         }
         offset += 36;
     }
-    ask_for_incoming_tx(stream, inventories).map_err(Box::new)?;
+    if !inventories.is_empty() {
+        ask_for_incoming_tx(stream, inventories).map_err(Box::new)?;
+    }
     Ok(())
 }
 
-/// Recieves the invetories with the tx and the node. Writes the getdata message to ask for the tx
+/// Receives the inventories with the tx and the node. Writes the getdata message to ask for the tx
 fn ask_for_incoming_tx(
     mut stream: TcpStream,
     inventories: Vec<Inventory>,

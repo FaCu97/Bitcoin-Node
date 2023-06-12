@@ -1,19 +1,24 @@
 use std::error::Error;
 use std::io;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 use bitcoin_hashes::{ripemd160, Hash};
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
 use secp256k1::SecretKey;
 
+use crate::transactions::transaction::Transaction;
 use crate::utxo_tuple::UtxoTuple;
 const UNCOMPRESSED_WIF_LEN: usize = 51;
+#[derive(Debug, Clone)]
 
 /// Guarda la address comprimida y la private key (comprimida o no)
 pub struct Account {
-    private_key: String,
+    pub private_key: String,
     pub address: String,
-    utxo_set: Vec<UtxoTuple>,
+    pub utxo_set: Vec<UtxoTuple>,
+    pub pending_transactions: Arc<RwLock<Vec<Transaction>>>,
 }
 
 impl Account {
@@ -27,6 +32,7 @@ impl Account {
             private_key: wif_private_key,
             address,
             utxo_set: Vec::new(),
+            pending_transactions: Arc::new(RwLock::new(Vec::new())),
         })
     }
 
@@ -156,7 +162,11 @@ impl Account {
 
 #[cfg(test)]
 mod test {
-    use std::error::Error;
+
+    use std::{
+        error::Error,
+        sync::{Arc, RwLock},
+    };
 
     use hex;
 
@@ -240,6 +250,7 @@ mod test {
             private_key,
             address,
             utxo_set: Vec::new(),
+            pending_transactions: Arc::new(RwLock::new(Vec::new())),
         };
         let expected_pubkey = string_to_33_bytes(
             "0345EC0AA86BAF64ED626EE86B4A76C12A92D5F6DD1C1D6E4658E26666153DAFA6",

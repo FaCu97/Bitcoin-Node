@@ -6,6 +6,8 @@ use crate::{
         block_message::BlockMessage, get_data_message::GetDataMessage,
         headers_message::is_terminated, inventory::Inventory,
     },
+    transactions::transaction::Transaction,
+    wallet::Wallet,
 };
 use std::{
     error::Error,
@@ -59,9 +61,7 @@ pub struct BlockBroadcasting {
 impl BlockBroadcasting {
     pub fn listen_for_incoming_blocks(
         log_sender: LogSender,
-        nodes: Arc<RwLock<Vec<TcpStream>>>,
-        headers: Arc<RwLock<Vec<BlockHeader>>>,
-        blocks: Arc<RwLock<Vec<Block>>>,
+        wallet: Wallet,
     ) -> Result<Self, BroadcastingError> {
         write_in_log(
             log_sender.info_log_sender.clone(),
@@ -69,18 +69,25 @@ impl BlockBroadcasting {
         );
         let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<BroadcastingResult>> = vec![];
-        let cant_nodos = get_amount_of_nodes(nodes.clone())?;
+        let cant_nodos = get_amount_of_nodes(wallet.node.connected_nodes.clone())?;
+        // lista de transacciones recibidas para no recibir las mismas de varios nodos
+        let transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>> = Arc::new(RwLock::new(Vec::new()));
+        let pending_transactions: Arc<RwLock<Vec<Transaction>>> = Arc::new(RwLock::new(Vec::new()));
+        let confirmed_transactions: Arc<RwLock<Vec<Transaction>>> =
+            Arc::new(RwLock::new(Vec::new()));
         for _ in 0..cant_nodos {
-            let node = get_last_node(nodes.clone())?;
+            let node = get_last_node(wallet.node.connected_nodes.clone())?;
             println!(
                 "Nodo -{:?}- Escuchando por nuevos bloques...\n",
                 node.peer_addr()
             );
             nodes_handle.push(listen_for_incoming_blocks_from_node(
                 log_sender.clone(),
+                wallet.clone(),
+                transactions_recieved.clone(),
+                pending_transactions.clone(),
+                confirmed_transactions.clone(),
                 node,
-                headers.clone(),
-                blocks.clone(),
                 finish.clone(),
             ))
         }
@@ -117,9 +124,11 @@ impl BlockBroadcasting {
 
 pub fn listen_for_incoming_blocks_from_node(
     log_sender: LogSender,
+    wallet: Wallet,
+    transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>>,
+    pending_transactions: Arc<RwLock<Vec<Transaction>>>,
+    confirmed_transactions: Arc<RwLock<Vec<Transaction>>>,
     mut node: TcpStream,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    blocks: Arc<RwLock<Vec<Block>>>,
     finish: Arc<RwLock<bool>>,
 ) -> JoinHandle<BroadcastingResult> {
     let log_sender_clone = log_sender.clone();
@@ -129,6 +138,9 @@ pub fn listen_for_incoming_blocks_from_node(
 
             let new_headers = match listen_for_incoming_messages(
                 log_sender_clone.clone(),
+                wallet.clone(),
+                transactions_recieved.clone(),
+                pending_transactions.clone(),
                 &mut node,
                 Some(finish.clone()),
             ) {
@@ -147,8 +159,9 @@ pub fn listen_for_incoming_blocks_from_node(
                 log_sender.clone(),
                 new_headers,
                 cloned_node,
-                headers.clone(),
-                blocks.clone(),
+                wallet.clone(),
+                pending_transactions.clone(),
+                confirmed_transactions.clone(),
             )?;
         }
         Ok(())
@@ -159,8 +172,9 @@ fn ask_for_new_blocks(
     log_sender: LogSender,
     new_headers: Vec<BlockHeader>,
     node: TcpStream,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    blocks: Arc<RwLock<Vec<Block>>>,
+    wallet: Wallet,
+    pending_transactions: Arc<RwLock<Vec<Transaction>>>,
+    confirmed_transactions: Arc<RwLock<Vec<Transaction>>>,
 ) -> BroadcastingResult {
     for header in new_headers {
         if !header.validate() {
@@ -170,7 +184,7 @@ fn ask_for_new_blocks(
             );
         } else {
             // se fija que el header que recibio no este ya incluido en la cadena de headers (con verificar los ultimos 10 alcanza)
-            let header_not_included = header_is_not_included(header, headers.clone())?;
+            let header_not_included = header_is_not_included(header, wallet.node.headers.clone())?;
             if header_not_included {
                 let cloned_node = node
                     .try_clone()
@@ -185,8 +199,9 @@ fn ask_for_new_blocks(
                 if let Err(BroadcastingError::CanNotRead(err)) = recieve_new_block(
                     log_sender.clone(),
                     cloned_node,
-                    blocks.clone(),
-                    headers.clone(),
+                    wallet.clone(),
+                    pending_transactions.clone(),
+                    confirmed_transactions.clone(),
                     header,
                 ) {
                     write_in_log(
@@ -209,8 +224,9 @@ fn ask_for_new_blocks(
 fn recieve_new_block(
     log_sender: LogSender,
     mut node: TcpStream,
-    blocks: Arc<RwLock<Vec<Block>>>,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    wallet: Wallet,
+    pending_transactions: Arc<RwLock<Vec<Transaction>>>,
+    confirmed_transactions: Arc<RwLock<Vec<Transaction>>>,
     header: BlockHeader,
 ) -> BroadcastingResult {
     let new_block: Block = match BlockMessage::read_from(log_sender.clone(), &mut node) {
@@ -219,15 +235,19 @@ fn recieve_new_block(
     };
     if new_block.validate().0 {
         //new_block.set_utxos(); // seteo utxos de las transacciones del bloque
-        let header_is_not_included_yet = header_is_not_included(header.clone(), headers.clone())?;
+        let header_is_not_included_yet =
+            header_is_not_included(header.clone(), wallet.node.headers.clone())?;
         if header_is_not_included_yet {
-            recieve_new_header(log_sender.clone(), header, headers)?;
-            blocks
+            recieve_new_header(log_sender.clone(), header, wallet.node.headers)?;
+            wallet
+                .node
+                .block_chain
                 .write()
                 .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-                .push(new_block);
+                .push(new_block.clone());
             println!("%%%%%%%% RECIBO NUEVO BLOQUE %%%%%%%\n");
             write_in_log(log_sender.info_log_sender, "NUEVO BLOQUE AGREGADO!");
+            new_block.contains_pending_tx(pending_transactions, confirmed_transactions)?;
         }
     } else {
         write_in_log(

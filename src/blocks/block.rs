@@ -1,8 +1,10 @@
+use std::sync::{Arc, RwLock};
+
 use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{
-    compact_size_uint::CompactSizeUint, transactions::transaction::Transaction,
-    utxo_tuple::UtxoTuple,
+    block_broadcasting::BroadcastingError, compact_size_uint::CompactSizeUint,
+    transactions::transaction::Transaction, utxo_tuple::UtxoTuple,
 };
 
 use super::block_header::BlockHeader;
@@ -152,6 +154,43 @@ impl Block {
             }
         }
         utxo_container
+    }
+    /// Receives a pointer to the list of pending transactions and the list of confirmed transactions and in case the block
+    /// contains on transaction included in the list of pending transactions, notifies the user, and changes the element from the
+    /// pending transactions list to the confirmed transaction list. Returns error in case the RwLock cant be accessed
+    pub fn contains_pending_tx(
+        &self,
+        pending_transactions: Arc<RwLock<Vec<Transaction>>>,
+        confirmed_transactions: Arc<RwLock<Vec<Transaction>>>,
+    ) -> Result<(), BroadcastingError> {
+        for tx in &self.txn {
+            if pending_transactions
+                .read()
+                .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+                .contains(tx)
+            {
+                println!(
+                    "%%%%%%%%% El bloque contiene la transaccion {:?} confirmada %%%%%%%%%%%",
+                    tx.hash()
+                );
+                let pending_transaction_index = pending_transactions
+                    .read()
+                    .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+                    .iter()
+                    .position(|pending_tx| pending_tx.hash() == tx.hash());
+                if let Some(pending_transaction_index) = pending_transaction_index {
+                    let confirmed_tx = pending_transactions
+                        .write()
+                        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+                        .remove(pending_transaction_index);
+                    confirmed_transactions
+                        .write()
+                        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
+                        .push(confirmed_tx);
+                }
+            }
+        }
+        Ok(())
     }
 }
 
