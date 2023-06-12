@@ -5,7 +5,9 @@ use std::{
 
 use bitcoin_hashes::{sha256d, Hash};
 
-use crate::{account::Account, compact_size_uint::CompactSizeUint, utxo_tuple::UtxoTuple, wallet::Wallet};
+use crate::{
+    account::Account, compact_size_uint::CompactSizeUint, utxo_tuple::UtxoTuple, wallet::Wallet,
+};
 
 use super::{tx_in::TxIn, tx_out::TxOut};
 

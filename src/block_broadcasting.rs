@@ -235,10 +235,13 @@ fn recieve_new_block(
     };
     if new_block.validate().0 {
         //new_block.set_utxos(); // seteo utxos de las transacciones del bloque
-        let header_is_not_included_yet = header_is_not_included(header.clone(), wallet.node.headers.clone())?;
+        let header_is_not_included_yet =
+            header_is_not_included(header.clone(), wallet.node.headers.clone())?;
         if header_is_not_included_yet {
             recieve_new_header(log_sender.clone(), header, wallet.node.headers)?;
-            wallet.node.block_chain
+            wallet
+                .node
+                .block_chain
                 .write()
                 .map_err(|err| BroadcastingError::LockError(err.to_string()))?
                 .push(new_block.clone());

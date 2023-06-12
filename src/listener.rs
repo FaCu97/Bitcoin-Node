@@ -77,10 +77,7 @@ pub fn listen_for_incoming_messages(
                     .as_str(),
                 );
                 let tx = Transaction::unmarshalling(&payload_buffer_num, &mut 0)?;
-                tx.check_if_tx_involves_user_account(
-                    wallet.clone(),
-                    pending_transactions.clone(),
-                )?;
+                tx.check_if_tx_involves_user_account(wallet.clone(), pending_transactions.clone())?;
             }
             _ => {
                 write_in_log(

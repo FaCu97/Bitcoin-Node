@@ -165,7 +165,7 @@ impl Block {
             if pending_transactions
                 .read()
                 .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-                .contains(&tx)
+                .contains(tx)
             {
                 println!(
                     "%%%%%%%%% El bloque contiene la transaccion {:?} confirmada %%%%%%%%%%%",

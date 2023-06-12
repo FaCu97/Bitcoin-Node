@@ -96,9 +96,17 @@ fn main() -> Result<(), GenericError> {
         node,
         current_account_index: 0,
         //accounts: vec![Account {private_key:"cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(),address:"mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(),utxo_set:vec![], pending_transactions: Arc::new(RwLock::new(Vec::new())) }]
+        /*
         accounts: vec![Account {
             private_key: "cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(),
             address: "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),
+            utxo_set: vec![],
+            pending_transactions: Arc::new(RwLock::new(Vec::new())),
+        }],
+        */
+        accounts: vec![Account {
+            private_key: "cSqmqW48wCeoUF8FCJvVsqUGwcvir27bKWCFj1MTFszFdn2Dduim".to_string(),
+            address: "mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi9".to_string(),
             utxo_set: vec![],
             pending_transactions: Arc::new(RwLock::new(Vec::new())),
         }],
