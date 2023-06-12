@@ -41,4 +41,13 @@ impl UtxoTuple {
         }
         balance
     }
+    pub fn utxos_to_spend(&self, value: i64, partial_amount: &mut i64) -> UtxoTuple {
+        let utxos_to_spend = Vec::new();
+        for tx_out in &self.utxo_set {
+            if *partial_amount > value {
+                break;
+            }
+        }
+        Self::new(self.hash, utxos_to_spend)
+    }
 }

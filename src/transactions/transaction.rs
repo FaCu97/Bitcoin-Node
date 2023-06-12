@@ -162,8 +162,7 @@ impl Transaction {
         Ok(())
     }
 
-    pub fn generate_transaction_to(
-        account_sender: Account,
+    pub fn generate_unsigned_transaction(
         address_receiver: &str,
         value: i64,
     ) -> Result<(), Box<dyn Error>> {

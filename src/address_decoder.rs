@@ -40,38 +40,6 @@ fn validate_address(address_decoded_bytes: &Vec<u8>) -> Result<(), Box<dyn Error
     }
     Ok(())
 }
-
-//      <Sig> <PubKey> OP_DUP OP_HASH160 <PubkeyHash> OP_EQUALVERIFY OP_CHECKSIG
-//
-// scriptPubKey: OP_DUP OP_HASH160 <bytes_to_push> <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
-// HEXA:         0x76   0xA9       <bytes_to_push> <pubKeyHash>  0x88            0xAC
-// Largo bytes:  1 + 1 + 1 + 20 + 1 + 1 = 25
-// Si una Tx es P2PKH el largo de su pk_script debe ser == 25
-
-// <pubKeyHash>: Son 20 bytes. Es el resultado de aplicar hash160 (sha256 + ripemd160 hash) a la publicKey comprimida SEC
-
-// scriptSig:   <length sig>     <sig>   <length pubKey>   <pubKey>
-// <pubKey> es la publicKey comprimida SEC (33bytes) del receptor de la tx
-// Largo bytes: 1 + 72 + 1 + 33 = 107
-
-/// Genera el pk_script de una transaccion P2PKH
-/// Recibe el <pubKeyHash> del receptor de la tx.
-pub fn generate_p2pkh_pk_script(public_key: &[u8]) -> Vec<u8> {
-    let mut pk_script: Vec<u8> = Vec::new();
-    pk_script.push(0x76); // OP_DUP  -> Pasar a constantes o enum
-    pk_script.push(0xA9);
-    pk_script.push(20); // <bytes_to_push>: Son 20 bytes
-
-    //   let pk = secp256k1::PublicKey::from_slice(public_key).unwrap();
-    //    let public_key_sha256_hash = Sha256::digest(public_key);
-    //    let public_key_hash160 = *ripemd160::Hash::hash(&public_key_sha256_hash).as_byte_array();
-
-    pk_script.extend_from_slice(public_key);
-    pk_script.push(0x88);
-    pk_script.push(0xAC);
-    pk_script
-}
-
 #[cfg(test)]
 
 mod test {
@@ -93,7 +61,6 @@ mod test {
         let public_key: secp256k1::PublicKey = secp256k1::PublicKey::from_secret_key(&secp, &key);
         //  se aplica RIPEMD160(SHA256(ECDSA(public_key)))
         let public_key_compressed = public_key.serialize();
-        // let pk_hex: String = public_key_hexa.encode_hex::<String>();
 
         // Aplica hash160
         let sha256_hash = Sha256::digest(public_key_compressed);

@@ -139,6 +139,23 @@ impl Account {
         }
         balance > value
     }
+    /// Devuelve un vector con las utxos a ser gastadas
+    fn get_utxos_for_amount(&self, value: i64) -> Vec<UtxoTuple> {
+        let mut utxos_to_spend = Vec::new();
+        let mut partial_amount: i64 = 0;
+        let mut position: usize = 0;
+        for utxo in &self.utxo_set {
+            if (partial_amount + utxo.balance()) < value {
+                partial_amount += utxo.balance();
+                utxos_to_spend.push(utxo);
+                &self.utxo_set.remove(position);
+            } else {
+                utxos_to_spend.push(utxo.utxos_to_spend(value, &mut partial_amount));
+            }
+            position += 1;
+        }
+        utxos_to_spend
+    }
 
     pub fn make_transaction(
         &self,
@@ -154,7 +171,10 @@ impl Account {
                 ),
             )));
         }
-        //let transaction: Transaction::generate_transaction_to(address: &str, amount: i64)?;
+
+        let transaction = Transaction::generate_unsigned_transaction(address_receiver, amount)?;
+        // self::sign_transaction(transaction);
+
         // letTransaction::new(...)
         Ok(())
     }
