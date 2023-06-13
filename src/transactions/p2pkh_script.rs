@@ -9,14 +9,15 @@
 
 // scriptSig:   <length sig>     <sig>   <length pubKey>   <pubKey>
 // <pubKey> es la publicKey comprimida SEC (33bytes) del receptor de la tx
-// Largo bytes: 1 + 72 + 1 + 33 = 107
+// Largo bytes: 1 + 70 + 1 + 33 = 105
 
 use bitcoin_hashes::{ripemd160, Hash};
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
 
 pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> bool {
-    let sig_script_pubkey = &sig_script[71..104];
+    let mut sig_script_pubkey: [u8; 33] = [0; 33];
+    sig_script_pubkey.copy_from_slice(&sig_script[72..105]);
 
     // 1) Chequeo que el primer comando sea OP_DUP (0x76)
     if (&p2pkh_script[0..1] != [0x76]) {
@@ -31,7 +32,6 @@ pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> bool {
     // 3) Aplica hash160 sobre el pubkey del sig_script
     let sha256_hash = Sha256::digest(sig_script_pubkey);
     let ripemd160_hash = *ripemd160::Hash::hash(&sha256_hash).as_byte_array();
-
     // 4) Chequeo que el siguiente comando sea OP_EQUALVERIFY (0x88)
     if (&p2pkh_script[23..24] != [0x88]) {
         return false;
@@ -70,10 +70,11 @@ mod test {
 
         let p2pkh_script = address_decoder::generate_p2pkh_pk_script(
             &address_decoder::get_pubkey_hash_from_address(&account.address)?,
-        );
+        )?;
+        let compressed_public_key = account.get_pubkey_compressed()?;
         let sig = SigScript::generate_sig_script(hash, account)?;
         let validation = p2pkh_script::validate(&p2pkh_script, sig.get_bytes());
-
+        println!("public key compressed: {:?}", compressed_public_key);
         println!(
             "pubkey_hash_from_address: {:?}",
             address_decoder::get_pubkey_hash_from_address(&address)?
