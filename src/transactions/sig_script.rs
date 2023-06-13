@@ -19,7 +19,7 @@ impl SigScript {
 
     /// Recibe el hash a firmar y la private key
     /// Devuelve el signature
-    pub fn generate_sig(hash: [u8; 32], private_key: [u8; 32]) -> Vec<u8> {
+    fn generate_sig(hash: [u8; 32], private_key: [u8; 32]) -> Vec<u8> {
         let signature = Signature::from_scalars(hash, private_key).unwrap();
         let bytes_signature = signature.to_der().to_bytes();
         bytes_signature.to_vec()
@@ -27,17 +27,17 @@ impl SigScript {
     ///funcion que devuelve el signature script con la clave publica comprimida
     pub fn generate_sig_script(
         hash_transaction: [u8; 32],
-        user: Account,
+        account: Account,
     ) -> Result<SigScript, Box<dyn Error>> {
         let mut sig_script_bytes: Vec<u8> = Vec::new();
-        let private_key = user.get_private_key()?;
+        let private_key = account.get_private_key()?;
         let sig = Self::generate_sig(hash_transaction, private_key);
         let lenght_sig = sig.len();
         // esto equivale al op inicial que indica el largo del campo sig
         sig_script_bytes.push(lenght_sig as u8);
         // se carga el campo sig
         sig_script_bytes.extend_from_slice(&sig);
-        let bytes_public_key = user.get_pubkey_compressed()?;
+        let bytes_public_key = account.get_pubkey_compressed()?;
         let lenght_pubkey = bytes_public_key.len();
         // se carga el largo de los bytes de la clave publica
         sig_script_bytes.push(lenght_pubkey as u8);
@@ -49,7 +49,6 @@ impl SigScript {
 }
 
 #[cfg(test)]
-
 mod test {
     use crate::transactions::sig_script::SigScript;
     #[test]
