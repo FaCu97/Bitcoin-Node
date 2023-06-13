@@ -5,7 +5,7 @@ use crate::{
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
         block_message::BlockMessage, get_data_message::{GetDataMessage, self},
-        headers_message::is_terminated, inventory::Inventory, message_header::HeaderMessage,
+        headers_message::is_terminated, inventory::Inventory, message_header::{HeaderMessage, get_checksum},
     },
     transactions::transaction::Transaction,
     wallet::Wallet, compact_size_uint::CompactSizeUint,
@@ -26,6 +26,7 @@ pub enum NodeMessageHandlerError {
     WriteNodeError(String),
     CanNotRead(String),
     ThreadChannelError(String),
+    UnmarshallingError(String),
 }
 
 impl fmt::Display for NodeMessageHandlerError {
@@ -44,6 +45,9 @@ impl fmt::Display for NodeMessageHandlerError {
             }
             NodeMessageHandlerError::ThreadChannelError(msg) => {
                 write!(f, "Can not send elements to channel Error: {}", msg)
+            }
+            NodeMessageHandlerError::UnmarshallingError(msg) => {
+                write!(f, "Can not unmarshall bytes Error: {}", msg)
             }
         }
     }
@@ -145,11 +149,10 @@ pub fn handle_messages_from_node(
                     handle_inv_message(tx.clone(), payload, transactions_recieved.clone())?;
                 }
                 "ping" => {
-                    handle_ping_message();
+                    handle_ping_message(tx.clone(), payload);
                 }
                 "tx" => {
-                    let tx = Transaction::unmarshalling(&payload_buffer_num, &mut 0)?;
-                    tx.check_if_tx_involves_user_account(wallet.clone(), pending_transactions.clone())?;
+                    handle_tx_message(log_sender.clone(), payload);
                 }
                 _ => {
                     // IGNORAR
@@ -160,6 +163,39 @@ pub fn handle_messages_from_node(
         Ok(())
     })
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -177,7 +213,7 @@ fn handle_inv_message(
     transactions_received: Arc<RwLock<Vec<[u8; 32]>>>,
 ) -> NodeMessageHandlerResult {
     let mut offset: usize = 0;
-    let count = CompactSizeUint::unmarshalling(payload, &mut offset).map_err(|err| NodeMessageHandlerError::CanNotRead(err.to_string()))?;
+    let count = CompactSizeUint::unmarshalling(payload, &mut offset).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;;
     let mut inventories = vec![];
     for _ in 0..count.decoded_value() as usize {
         let mut inventory_bytes = vec![0; 36];
@@ -214,10 +250,33 @@ fn ask_for_incoming_tx(
     Ok(())
 }
 
+/// Recibe un NodeSender y un payload y manda por el channel el pong message correspondiente para que se escriba por el nodo
+/// y quede respondido el ping. Devuelve Ok(()) en caso de que se pueda enviar bien por el channel o Error de channel en caso contrario
+pub fn handle_ping_message(
+    tx: NodeSender,
+    payload: &[u8],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let header = HeaderMessage {
+        start_string: [0x0b, 0x11, 0x09, 0x07],
+        command_name: "pong".to_string(),
+        payload_size: payload.len() as u32,
+        checksum: get_checksum(payload),
+    };
+    let header_bytes = HeaderMessage::to_le_bytes(&header);
+    let mut message: Vec<u8> = Vec::new();
+    message.extend_from_slice(&header_bytes);
+    message.extend(payload);
+    tx.send(message).map_err(|err| NodeMessageHandlerError::ThreadChannelError(err.to_string()))?;
+    Ok(())
+}
 
-
-
-
+/// Recibe un LogSender y el Payload del mensaje tx. Se fija si la tx involucra una cuenta de nuestra wallet. Devuelve Ok(()) 
+/// en caso de que se pueda leer bien el payload y recorrer las tx o error en caso contrario
+fn handle_tx_message(log_sender: LogSender, payload: &[u8]) -> NodeMessageHandlerResult {
+    let tx = Transaction::unmarshalling(&payload.to_vec(), &mut 0).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
+    //tx.check_if_tx_involves_user_account(wallet.clone(), pending_transactions.clone())?;
+    Ok(())
+}
 
 
 
