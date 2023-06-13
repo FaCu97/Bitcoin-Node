@@ -18,9 +18,34 @@ use k256::sha2::Sha256;
 pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> bool {
     let sig_script_pubkey = &sig_script[71..104];
 
-    // Aplica hash160
+    // 1) Chequeo que el primer comando sea OP_DUP (0x76)
+    if (&p2pkh_script[0..1] != [0x76]) {
+        return false;
+    }
+
+    // 2) Chequeo que el siguiente comando sea OP_HASH_160 (0xA9)
+    if (&p2pkh_script[1..2] != [0xA9]) {
+        return false;
+    }
+
+    // 3) Aplica hash160 sobre el pubkey del sig_script
     let sha256_hash = Sha256::digest(sig_script_pubkey);
     let ripemd160_hash = *ripemd160::Hash::hash(&sha256_hash).as_byte_array();
+
+    // 4) Chequeo que el siguiente comando sea OP_EQUALVERIFY (0x88)
+    if (&p2pkh_script[23..24] != [0x88]) {
+        return false;
+    }
+
+    // 5) Chequeo que los hash coincidan
+    if (&p2pkh_script[3..23] != ripemd160_hash) {
+        return false;
+    }
+
+    // 6) Chequeo que el siguiente comando sea OP_CHECKSIG (0xAC)
+    if (&p2pkh_script[24..25] != [0xAC]) {
+        return false;
+    }
 
     return true;
 }
@@ -37,17 +62,23 @@ mod test {
     #[test]
     fn test_p2pkh_script_se_valida_correctamente() -> Result<(), Box<dyn Error>> {
         let hash: [u8; 32] = [123; 32];
-        let signing_key: [u8; 32] = [14; 32];
 
         let address: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
         let private_key: String =
             String::from("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR");
-        let account = Account::new(private_key, address)?;
+        let account = Account::new(private_key, address.clone())?;
 
-        let p2pkh_script =
-            address_decoder::generate_p2pkh_pk_script(&account.get_pubkey_compressed()?);
+        let p2pkh_script = address_decoder::generate_p2pkh_pk_script(
+            &address_decoder::get_pubkey_hash_from_address(&account.address)?,
+        );
         let sig = SigScript::generate_sig_script(hash, account)?;
         let validation = p2pkh_script::validate(&p2pkh_script, sig.get_bytes());
+
+        println!(
+            "pubkey_hash_from_address: {:?}",
+            address_decoder::get_pubkey_hash_from_address(&address)?
+        );
+
         assert!(validation);
         Ok(())
     }
