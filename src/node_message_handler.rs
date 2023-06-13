@@ -5,7 +5,7 @@ use crate::{
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
         block_message::BlockMessage, get_data_message::{GetDataMessage, self},
-        headers_message::is_terminated, inventory::Inventory, message_header::{HeaderMessage, get_checksum},
+        headers_message::{is_terminated, HeadersMessage}, inventory::Inventory, message_header::{HeaderMessage, get_checksum}, payload,
     },
     transactions::transaction::Transaction,
     wallet::Wallet, compact_size_uint::CompactSizeUint,
@@ -137,13 +137,13 @@ pub fn handle_messages_from_node(
             let command_name = get_header_command_name_as_str(&header.command_name.as_str());
             match command_name {
                 "headers" => {
-                    handle_headers_message()
+                    handle_headers_message(log_sender.clone(), tx.clone(), payload, headers.clone())?;
                 }
                 "getdata" => {
                     handle_getdata_message()
                 }
                 "block" => {
-                    handle_block_message()
+                    handle_block_message();
                 }
                 "inv" => {
                     handle_inv_message(tx.clone(), payload, transactions_recieved.clone())?;
@@ -167,9 +167,32 @@ pub fn handle_messages_from_node(
 
 
 
+fn handle_headers_message(log_sender: LogSender, tx: NodeSender, payload: &[u8], headers: Arc<RwLock<Vec<BlockHeader>>>) -> NodeMessageHandlerResult {
+    let new_headers = HeadersMessage::unmarshalling(&payload.to_vec()).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;;
+    for header in new_headers {
+        if !header.validate() {
+            write_in_log(
+                log_sender.error_log_sender.clone(),
+                "Error en validacion de la proof of work de nuevo header",
+            );
+        } else {
+            // se fija que el header que recibio no este ya incluido en la cadena de headers (con verificar los ultimos 10 alcanza)
+            let header_not_included = header_is_not_included(header, headers.clone())?;
+            if header_not_included {
+                let get_data_message = GetDataMessage::new(vec![Inventory::new_block(header.hash())]);
+                let get_data_message_bytes = get_data_message.marshalling();
+                tx.send(get_data_message_bytes).map_err(|err| NodeMessageHandlerError::ThreadChannelError(err.to_string()))?;            
+            }
+        }
+    }
+    Ok(())
+}
 
 
-
+fn handle_block_message(log_sender: LogSender, payload: &[u8]) -> NodeMessageHandlerResult {
+    let block_message = BlockMessage::read_from(log_sender.clone(), &mut node)
+    Ok(())
+}
 
 
 
@@ -336,4 +359,27 @@ fn get_amount_of_nodes(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<usize, Node
         .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
         .len();
     Ok(amount_of_nodes)
+}
+
+
+
+/// Recibe un header y la lista de headers y se fija en los ulitmos 10 headers de la lista, si es que existen, que el header
+/// no este incluido ya. En caso de estar incluido devuelve false y en caso de nos estar incluido devuelve true. Devuelve error en caso de
+/// que no se pueda leer la lista de headers
+fn header_is_not_included(
+    header: BlockHeader,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+) -> Result<bool, NodeMessageHandlerError> {
+    let headers_guard = headers
+        .read()
+        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+    let start_index = headers_guard.len().saturating_sub(10);
+    let last_10_headers = &headers_guard[start_index..];
+    // Verificar si el header está en los ultimos 10 headers
+    for included_header in last_10_headers.iter() {
+        if *included_header == header {
+            return Ok(false);
+        }
+    }
+    Ok(true)
 }
