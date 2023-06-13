@@ -52,7 +52,7 @@ impl Error for BroadcastingError {}
 
 type BroadcastingResult = Result<(), BroadcastingError>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BlockBroadcasting {
     nodes_handle: Arc<Mutex<Vec<JoinHandle<BroadcastingResult>>>>,
     finish: Arc<RwLock<bool>>,
@@ -298,26 +298,7 @@ fn recieve_new_header(
     Ok(())
 }
 
-/// Recibe un Arc apuntando a un RwLock de un vector de TcpStreams y devuelve el ultimo nodo TcpStream del vector si es que
-/// hay, si no devuelve un error del tipo BroadcastingError
-fn get_last_node(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<TcpStream, BroadcastingError> {
-    let node = nodes
-        .try_write()
-        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-        .pop()
-        .ok_or("Error no hay mas nodos para descargar los headers!\n")
-        .map_err(|err| BroadcastingError::CanNotRead(err.to_string()))?;
-    Ok(node)
-}
 
-/// Recibe un Arc apuntando a un vector de TcpStream y devuelve el largo del vector
-fn get_amount_of_nodes(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<usize, BroadcastingError> {
-    let amount_of_nodes = nodes
-        .read()
-        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-        .len();
-    Ok(amount_of_nodes)
-}
 
 /// Recibe un header y la lista de headers y se fija en los ulitmos 10 headers de la lista, si es que existen, que el header
 /// no este incluido ya. En caso de estar incluido devuelve false y en caso de nos estar incluido devuelve true. Devuelve error en caso de

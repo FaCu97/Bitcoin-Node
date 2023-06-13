@@ -6,7 +6,7 @@ use std::{
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     transactions::transaction::Transaction,
-    utxo_tuple::UtxoTuple,
+    utxo_tuple::UtxoTuple, account::Account, node_message_handler::NodeMessageHandler,
 };
 #[derive(Debug, Clone)]
 
@@ -15,6 +15,8 @@ pub struct Node {
     pub headers: Arc<RwLock<Vec<BlockHeader>>>,
     pub block_chain: Arc<RwLock<Vec<Block>>>,
     pub utxo_set: Vec<UtxoTuple>,
+    pub accounts: Option<Arc<RwLock<Vec<Account>>>>,
+    pub peers_handler: NodeMessageHandler,
 }
 
 impl Node {
@@ -29,6 +31,7 @@ impl Node {
             headers,
             block_chain,
             utxo_set,
+            accounts: None,
         }
     }
     /// funcion para validar un bloque

@@ -15,3 +15,4 @@ pub mod node;
 pub mod transactions;
 pub mod utxo_tuple;
 pub mod wallet;
+pub mod node_message_handler;
