@@ -10,14 +10,13 @@ pub struct Wallet {
 }
 
 impl Wallet {
-    pub fn new(node: Node, accounts: Vec<Account>) -> Wallet {
-        let pointer_to_accounts = Arc::new(RwLock::new(accounts));
+    pub fn new(node: Node) -> Wallet {
         let mut wallet = Wallet {
             node,
             current_account_index: 0,
-            accounts: pointer_to_accounts.clone(),
+            accounts: Arc::new(RwLock::new(Vec::new())),
         };
-        wallet.node.set_accounts(pointer_to_accounts);
+        wallet.node.set_accounts(wallet.accounts.clone());
         wallet
     }
 
