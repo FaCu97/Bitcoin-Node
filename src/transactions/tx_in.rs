@@ -26,6 +26,19 @@ impl TxIn {
             sequence,
         }
     }
+    pub fn incomplete_txin(previous_output: Outpoint) -> TxIn {
+        let script_bytes: CompactSizeUint = CompactSizeUint::new(0);
+        let height: Option<Vec<u8>> = None;
+        let signature_script: SigScript = SigScript::new(vec![]);
+        let sequence: u32 = 0xffffffff;
+        Self::new(
+            previous_output,
+            script_bytes,
+            height,
+            signature_script,
+            sequence,
+        )
+    }
     /// recibe un vector de byes que contiene un txin y un offset indicando la posicion donde empieza el txin
     /// devuelve un txin completando los campos con lo que esta en los bytes en caso de que todo este bien
     /// y un string indicando el error cuando algo falla. tambien actualiza el offset

@@ -140,25 +140,37 @@ impl Account {
         balance > value
     }
     /// Devuelve un vector con las utxos a ser gastadas
-    fn get_utxos_for_amount(&self, value: i64) -> Vec<UtxoTuple> {
+    fn get_utxos_for_amount(&mut self, value: i64) -> Vec<UtxoTuple> {
         let mut utxos_to_spend = Vec::new();
         let mut partial_amount: i64 = 0;
         let mut position: usize = 0;
-        for utxo in &self.utxo_set {
-            if (partial_amount + utxo.balance()) < value {
-                partial_amount += utxo.balance();
-                utxos_to_spend.push(utxo);
-                &self.utxo_set.remove(position);
+        let lenght: usize = self.utxo_set.len();
+        while position < lenght {
+            if (partial_amount + self.utxo_set[position].balance()) < value {
+                partial_amount += self.utxo_set[position].balance();
+                utxos_to_spend.push(self.utxo_set[position].clone());
+                // No corresponde removerlas mientras la tx no está confirmada
+                // self.remove_utxo(position);
             } else {
-                utxos_to_spend.push(utxo.utxos_to_spend(value, &mut partial_amount));
+                utxos_to_spend
+                    .push(self.utxo_set[position].utxos_to_spend(value, &mut partial_amount));
             }
             position += 1;
         }
         utxos_to_spend
     }
 
+    fn remove_utxo(&mut self, position: usize) {
+        self.utxo_set.remove(position);
+    }
+
+    fn add_transaction(&self, transaction: Transaction) {
+        let mut aux = self.pending_transactions.write().unwrap();
+        aux.push(transaction);
+    }
+
     pub fn make_transaction(
-        &self,
+        &mut self,
         address_receiver: &str,
         amount: i64,
     ) -> Result<(), Box<dyn Error>> {
@@ -171,8 +183,11 @@ impl Account {
                 ),
             )));
         }
-
-        let transaction = Transaction::generate_unsigned_transaction(address_receiver, amount)?;
+        // sabemos que tenemos monto para realizar la transaccion , ahora debemos obtener las utxos
+        // que utilizaremos para gastar
+        let utxos_to_spend: Vec<UtxoTuple> = self.get_utxos_for_amount(amount);
+        let transaction =
+            Transaction::generate_unsigned_transaction(address_receiver, amount, &utxos_to_spend)?;
         // self::sign_transaction(transaction);
 
         // letTransaction::new(...)

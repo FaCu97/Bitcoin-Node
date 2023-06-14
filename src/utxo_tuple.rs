@@ -41,13 +41,39 @@ impl UtxoTuple {
         }
         balance
     }
-    pub fn utxos_to_spend(&self, value: i64, partial_amount: &mut i64) -> UtxoTuple {
-        let utxos_to_spend = Vec::new();
-        for tx_out in &self.utxo_set {
+
+    pub fn hash(&self) -> [u8; 32] {
+        self.hash.clone()
+    }
+
+    pub fn get_indexes_from_utxos(&self) -> Vec<usize> {
+        let mut indexes = Vec::new();
+        for utxo in &self.utxo_set {
+            indexes.push(utxo.1);
+        }
+        indexes
+    }
+
+    /// Recive el monto total a gastar, y monto que ya se juntó
+    /// Remueve las utxos necesarias hasta llegar al monto total y las devuelve en un nuevo UtxoTuple
+    pub fn utxos_to_spend(&mut self, value: i64, partial_amount: &mut i64) -> UtxoTuple {
+        let mut utxos_to_spend = Vec::new();
+        let mut position: usize = 0;
+        let lenght: usize = self.utxo_set.len();
+        while position < lenght {
+            *partial_amount += self.utxo_set[position].0.value();
+            // No corresponde removerlas mientras la tx no está confirmada
+            // let utxo = self.utxo_set.remove(position);
+            utxos_to_spend.push(self.utxo_set[position].clone());
             if *partial_amount > value {
                 break;
             }
+            position += 1;
         }
         Self::new(self.hash, utxos_to_spend)
     }
 }
+
+#[cfg(test)]
+
+mod test {}

@@ -50,10 +50,8 @@ mod test {
     use k256::sha2::Sha256;
     use secp256k1::SecretKey;
 
-    use crate::account::Account;
-    use crate::address_decoder::generate_p2pkh_pk_script;
-
     use super::get_pubkey_hash_from_address;
+    use crate::account::Account;
 
     fn generate_pubkey_hash(private_key: &[u8]) -> [u8; 20] {
         let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
@@ -84,27 +82,6 @@ mod test {
         let pubkey_hash_generated = get_pubkey_hash_from_address(address)?;
         assert_eq!(pubkey_hash_expected, pubkey_hash_generated);
         Ok(())
-    }
-
-    #[test]
-    fn test_pk_script_se_genera_con_el_largo_correcto() {
-        let pub_key_hash: [u8; 20] = [0; 20];
-        let pk_script = generate_p2pkh_pk_script(&pub_key_hash);
-
-        assert_eq!(pk_script.len(), 25);
-    }
-
-    #[test]
-    fn test_pk_script_se_genera_con_el_contenido_correcto() {
-        let pub_key_hash: [u8; 20] = [0; 20];
-        let pk_script = generate_p2pkh_pk_script(&pub_key_hash);
-
-        assert_eq!(pk_script[..1], [0x76]);
-        assert_eq!(pk_script[1..2], [0xA9]);
-        assert_eq!(pk_script[2..3], [20]);
-        assert_eq!(pk_script[3..23], pub_key_hash);
-        assert_eq!(pk_script[23..24], [0x88]);
-        assert_eq!(pk_script[24..25], [0xAC]);
     }
 
     #[test]

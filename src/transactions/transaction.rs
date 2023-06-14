@@ -165,7 +165,13 @@ impl Transaction {
     pub fn generate_unsigned_transaction(
         address_receiver: &str,
         value: i64,
+        utxos_to_spend: &Vec<UtxoTuple>,
     ) -> Result<(), Box<dyn Error>> {
+        let mut tx_in: Vec<TxIn> = Vec::new();
+        for utxo in utxos_to_spend {
+            let hash = utxo.hash();
+            //for tx_out in utxo.
+        }
         Ok(())
     }
 }
