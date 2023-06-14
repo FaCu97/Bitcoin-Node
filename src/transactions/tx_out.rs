@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use crate::{account::Account, compact_size_uint::CompactSizeUint};
 
-use super::{pubkey::Pubkey, transaction::Transaction};
+use super::{script::pubkey::Pubkey, transaction::Transaction};
 #[derive(Debug, PartialEq, Clone)]
 pub struct TxOut {
     value: i64,                       // Number of satoshis to spend
