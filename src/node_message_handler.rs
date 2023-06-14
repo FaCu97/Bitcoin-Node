@@ -1,19 +1,18 @@
 
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
-    listener::listen_for_incoming_messages,
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
-        block_message::BlockMessage, get_data_message::{GetDataMessage, self},
-        headers_message::{is_terminated, HeadersMessage}, inventory::Inventory, message_header::{HeaderMessage, get_checksum}, payload,
+        block_message::BlockMessage, get_data_message::GetDataMessage,
+        headers_message::{is_terminated, HeadersMessage}, inventory::Inventory, message_header::{HeaderMessage, get_checksum},
     },
     transactions::transaction::Transaction,
-    wallet::Wallet, compact_size_uint::CompactSizeUint,
+    compact_size_uint::CompactSizeUint,
 };
 use std::{
     error::Error,
     fmt,
-    net::{TcpStream, SocketAddr},
+    net::TcpStream,
     sync::{Arc, Mutex, RwLock, mpsc::{Receiver, channel, Sender}},
     thread::{self, JoinHandle}, io::{Write, Read},
 };
@@ -165,7 +164,10 @@ pub fn handle_messages_from_node(
             if let Ok(message) = rx.try_recv() {
                 write_message_in_node(&mut node, &message)?
             }
-            let (header, payload) = read_header_and_payload(&mut node)?;
+            let (header, payload) = match read_header_and_payload(&mut node) {
+                Ok((header, payload)) => (header, payload),
+                Err(_) => {break;}                
+            };
             let command_name = get_header_command_name_as_str(&header.command_name.as_str());
             match command_name {
                 "headers" => {
@@ -187,11 +189,14 @@ pub fn handle_messages_from_node(
                     handle_tx_message(log_sender.clone(), &payload)?;
                 }
                 _ => {
-                    write_in_log(log_sender.messege_log_sender.clone(), format!("IGNORADO -- Recibo: {} -- Nodo: {:?}", command_name, node.peer_addr()).as_str());   
+                    write_in_log(log_sender.messege_log_sender.clone(), format!("IGNORADO -- Recibo: {} -- Nodo: {:?}", header.command_name, node.peer_addr()).as_str());   
+                    println!("{}\n", command_name);
                     continue;
                 }
             }
-            write_in_log(log_sender.messege_log_sender.clone(), format!("Recibo correctamente: {:?} -- Nodo: {:?}", command_name, node.peer_addr()).as_str());   
+            if command_name != "inv" {
+                write_in_log(log_sender.messege_log_sender.clone(), format!("Recibo correctamente: {} -- Nodo: {:?}", command_name, node.peer_addr()).as_str());   
+            }
         
         }
 
@@ -402,10 +407,9 @@ fn get_header_command_name_as_str(command: &str) -> &str {
 /// Recibe algo que implemente el trait Write y un vector de bytes que representa un mensaje. Lo escribe y devuevle
 /// Ok(()) en caso de que se escriba exitosamente o un error especifico de escritura en caso contrarios
 pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessageHandlerResult {
-    println!("RECIBI LA TRANSACCION, LA VOY A MANDAR POR EL NODO!\n");
     node.write_all(message).map_err(|err| NodeMessageHandlerError::WriteNodeError(err.to_string()))?;
     node.flush().map_err(|err| NodeMessageHandlerError::WriteNodeError(err.to_string()))?;
-    println!("TRANSACCION ENVIADA CORRECTAMENTE!\n");
+    println!("Escribo correctamente un mensaje!\n");
     Ok(())
 }
 
