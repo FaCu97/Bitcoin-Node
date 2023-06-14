@@ -1,6 +1,6 @@
 use crate::compact_size_uint::CompactSizeUint;
 
-use super::{outpoint::Outpoint, sig_script::SigScript};
+use super::{outpoint::Outpoint, script::sig_script::SigScript};
 #[derive(Debug, PartialEq, Clone)]
 pub struct TxIn {
     previous_output: Outpoint,
@@ -133,7 +133,7 @@ mod test {
     use super::TxIn;
     use crate::{
         compact_size_uint::CompactSizeUint,
-        transactions::{outpoint::Outpoint, sig_script::SigScript},
+        transactions::{outpoint::Outpoint, script::sig_script::SigScript},
     };
 
     fn simular_flujo_de_datos(

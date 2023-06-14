@@ -1,5 +1,5 @@
 use crate::address_decoder;
-use crate::transactions::sig_script::SigScript;
+use crate::transactions::script::sig_script::SigScript;
 use std::error::Error;
 use std::io;
 
@@ -90,7 +90,7 @@ mod test {
     use crate::{
         account::Account,
         address_decoder,
-        transactions::{
+        transactions::script::{
             p2pkh_script::{self, generate_p2pkh_pk_script},
             sig_script::SigScript,
         },

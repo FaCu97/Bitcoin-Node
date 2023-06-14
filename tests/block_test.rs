@@ -2,7 +2,7 @@ use bitcoin::{
     blocks::{block::Block, block_header::BlockHeader},
     compact_size_uint::CompactSizeUint,
     transactions::{
-        outpoint::Outpoint, sig_script::SigScript, transaction::Transaction, tx_in::TxIn,
+        outpoint::Outpoint, script::sig_script::SigScript, transaction::Transaction, tx_in::TxIn,
         tx_out::TxOut,
     },
 };

@@ -177,7 +177,8 @@ mod test {
     use super::Transaction;
     use crate::{
         compact_size_uint::CompactSizeUint,
-        transactions::{outpoint::Outpoint, sig_script::SigScript, tx_in::TxIn, tx_out::TxOut},
+        transactions::script::sig_script::SigScript,
+        transactions::{outpoint::Outpoint, tx_in::TxIn, tx_out::TxOut},
     };
     use bitcoin_hashes::{sha256d, Hash};
 
