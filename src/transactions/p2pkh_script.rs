@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use bitcoin_hashes::{ripemd160, Hash};
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
@@ -6,7 +8,11 @@ use crate::transactions::sig_script::SigScript;
 
 /// Recibe el p2pkh_script y el sig_script.
 /// Realiza la validación y devuelve true o false
-pub fn validate(hash: &[u8], p2pkh_script: &[u8], sig_script: &[u8]) -> bool {
+pub fn validate(
+    hash: &[u8],
+    p2pkh_script: &[u8],
+    sig_script: &[u8],
+) -> Result<bool, Box<dyn Error>> {
     // scriptSig:   <length sig>     <sig>   <length pubKey>   <pubKey>
     // <pubKey> es la publicKey comprimida SEC (33bytes) del receptor de la tx
     // Largo bytes: 1 + 70 + 1 + 33 = 105
@@ -15,12 +21,12 @@ pub fn validate(hash: &[u8], p2pkh_script: &[u8], sig_script: &[u8]) -> bool {
 
     // 1) Chequeo que el primer comando sea OP_DUP (0x76)
     if p2pkh_script[0..1] != [0x76] {
-        return false;
+        return Ok(false);
     }
 
     // 2) Chequeo que el siguiente comando sea OP_HASH_160 (0xA9)
     if p2pkh_script[1..2] != [0xA9] {
-        return false;
+        return Ok(false);
     }
 
     // 3) Aplica hash160 sobre el pubkey del sig_script
@@ -28,23 +34,23 @@ pub fn validate(hash: &[u8], p2pkh_script: &[u8], sig_script: &[u8]) -> bool {
     let ripemd160_hash = *ripemd160::Hash::hash(&sha256_hash).as_byte_array();
     // 4) Chequeo que el siguiente comando sea OP_EQUALVERIFY (0x88)
     if p2pkh_script[23..24] != [0x88] {
-        return false;
+        return Ok(false);
     }
 
     // 5) Chequeo que los hash coincidan
     if p2pkh_script[3..23] != ripemd160_hash {
-        return false;
+        return Ok(false);
     }
 
     // 6) Chequeo que el siguiente comando sea OP_CHECKSIG (0xAC)
     if p2pkh_script[24..25] != [0xAC] {
-        return false;
+        return Ok(false);
     }
 
-    if !SigScript::verify_sig(hash, &sig_script[1..71], &sig_script[72..105]) {
-        return false;
+    if !SigScript::verify_sig(hash, &sig_script[1..71], &sig_script[72..105])? {
+        return Ok(false);
     }
-    true
+    Ok(true)
 }
 
 #[cfg(test)]
@@ -69,7 +75,7 @@ mod test {
             &address_decoder::get_pubkey_hash_from_address(&account.address)?,
         )?;
         let sig = SigScript::generate_sig_script(hash, account)?;
-        let validation = p2pkh_script::validate(&hash, &p2pkh_script, sig.get_bytes());
+        let validation = p2pkh_script::validate(&hash, &p2pkh_script, sig.get_bytes())?;
 
         assert!(validation);
         Ok(())

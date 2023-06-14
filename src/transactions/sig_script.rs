@@ -21,13 +21,13 @@ impl SigScript {
 
     /// Recibe el hash a firmar y la private key
     /// Devuelve el signature
-    fn generate_sig(hash: [u8; 32], private_key: [u8; 32]) -> Vec<u8> {
+    fn generate_sig(hash: [u8; 32], private_key: [u8; 32]) -> Result<Vec<u8>, Box<dyn Error>> {
         // Signing
-        let secret_key = elliptic_curve::SecretKey::from_bytes((&private_key).into()).unwrap();
+        let secret_key = elliptic_curve::SecretKey::from_bytes((&private_key).into())?;
         let signing_key = ecdsa::SigningKey::from(secret_key);
         let signature: ecdsa::Signature = signing_key.sign(&hash);
         let signature_bytes: Vec<u8> = signature.to_der().to_vec();
-        signature_bytes
+        Ok(signature_bytes)
     }
 
     ///funcion que devuelve el signature script con la clave publica comprimida
@@ -37,7 +37,7 @@ impl SigScript {
     ) -> Result<SigScript, Box<dyn Error>> {
         let mut sig_script_bytes: Vec<u8> = Vec::new();
         let private_key = account.get_private_key()?;
-        let sig = Self::generate_sig(hash_transaction, private_key);
+        let sig = Self::generate_sig(hash_transaction, private_key)?;
         let lenght_sig = sig.len();
         // esto equivale al op inicial que indica el largo del campo sig
         sig_script_bytes.push(lenght_sig as u8);
@@ -55,11 +55,15 @@ impl SigScript {
 
     /// Recive el hash, signature y public key.
     /// Devuelve true o false dependiendo si el signature es correcto.
-    pub fn verify_sig(hash: &[u8], signature_bytes: &[u8], public_key: &[u8]) -> bool {
+    pub fn verify_sig(
+        hash: &[u8],
+        signature_bytes: &[u8],
+        public_key: &[u8],
+    ) -> Result<bool, Box<dyn Error>> {
         // Verifying
-        let verifying_key = ecdsa::VerifyingKey::from_sec1_bytes(public_key).unwrap();
-        let signature = ecdsa::Signature::from_der(signature_bytes).unwrap();
-        verifying_key.verify(hash, &signature).is_ok()
+        let verifying_key = ecdsa::VerifyingKey::from_sec1_bytes(public_key)?;
+        let signature = ecdsa::Signature::from_der(signature_bytes)?;
+        Ok(verifying_key.verify(hash, &signature).is_ok())
     }
 }
 #[cfg(test)]
@@ -68,12 +72,13 @@ mod test {
 
     use crate::{account::Account, transactions::sig_script::SigScript};
     #[test]
-    fn test_el_largo_del_script_sig_es_70_bytes() {
+    fn test_el_largo_del_script_sig_es_70_bytes() -> Result<(), Box<dyn Error>> {
         let hash: [u8; 32] = [123; 32];
         let signing_key: [u8; 32] = [14; 32];
 
-        let sig = SigScript::generate_sig(hash, signing_key);
-        assert_eq!(sig.len(), 70)
+        let sig = SigScript::generate_sig(hash, signing_key)?;
+        assert_eq!(sig.len(), 70);
+        Ok(())
     }
 
     #[test]
@@ -83,12 +88,12 @@ mod test {
         let private_key: String =
             String::from("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR");
         let account = Account::new(private_key, address_expected)?;
-        let sig = SigScript::generate_sig(hash.clone(), account.get_private_key()?);
+        let sig = SigScript::generate_sig(hash.clone(), account.get_private_key()?)?;
         assert!(SigScript::verify_sig(
             &hash,
             &sig,
             &account.get_pubkey_compressed()?
-        ));
+        )?);
         Ok(())
     }
 }

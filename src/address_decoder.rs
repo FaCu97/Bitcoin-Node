@@ -68,10 +68,6 @@ pub fn generate_p2pkh_pk_script(pubkey_hash: &[u8]) -> Result<Vec<u8>, Box<dyn E
     pk_script.push(0xA9);
     pk_script.push(20); // <bytes_to_push>: Son 20 bytes
 
-    //   let pk = secp256k1::PublicKey::from_slice(public_key).unwrap();
-    //    let public_key_sha256_hash = Sha256::digest(public_key);
-    //    let public_key_hash160 = *ripemd160::Hash::hash(&public_key_sha256_hash).as_byte_array();
-
     pk_script.extend_from_slice(pubkey_hash);
     pk_script.push(0x88);
     pk_script.push(0xAC);
