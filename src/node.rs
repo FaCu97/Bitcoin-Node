@@ -6,7 +6,7 @@ use std::{
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     transactions::transaction::Transaction,
-    utxo_tuple::UtxoTuple, account::Account, handler::node_message_handler::{NodeMessageHandler, NodeMessageHandlerError}, logwriter::log_writer::LogSender,
+    utxo_tuple::UtxoTuple, account::Account, handler::node_message_handler::{NodeMessageHandler, NodeMessageHandlerError}, logwriter::log_writer::LogSender, messages::inventory::{inv_mershalling, Inventory},
 };
 #[derive(Debug, Clone)]
 
@@ -85,8 +85,11 @@ impl Node {
 
     /// recibe un vector de bytes que representa a la raw format transaction para se enviada por
     /// la red a todos los nodos conectados
-    pub fn broadcast_tx(&self, raw_tx: Vec<u8>) -> Result<(), NodeMessageHandlerError> {
-        self.peers_handler.broadcast_to_nodes(raw_tx)
+    pub fn broadcast_tx(&self, raw_tx: [u8; 32]) -> Result<(), NodeMessageHandlerError> {
+        let mut inventories = vec![];
+        inventories.push(Inventory::new_tx(raw_tx));
+        let inv_message_bytes = inv_mershalling(inventories);
+        self.peers_handler.broadcast_to_nodes(inv_message_bytes)
     }
 
     pub fn set_accounts(&mut self, accounts: Arc<RwLock<Vec<Account>>>) {
