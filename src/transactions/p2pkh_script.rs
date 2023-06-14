@@ -15,6 +15,8 @@ use bitcoin_hashes::{ripemd160, Hash};
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
 
+/// Recibe el p2pkh_script y el sig_script.
+/// Realiza la validación y devuelve true o false
 pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> bool {
     let mut sig_script_pubkey: [u8; 33] = [0; 33];
     sig_script_pubkey.copy_from_slice(&sig_script[72..105]);
@@ -66,19 +68,13 @@ mod test {
         let address: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
         let private_key: String =
             String::from("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR");
-        let account = Account::new(private_key, address.clone())?;
+        let account = Account::new(private_key, address)?;
 
         let p2pkh_script = address_decoder::generate_p2pkh_pk_script(
             &address_decoder::get_pubkey_hash_from_address(&account.address)?,
         )?;
-        let compressed_public_key = account.get_pubkey_compressed()?;
         let sig = SigScript::generate_sig_script(hash, account)?;
         let validation = p2pkh_script::validate(&p2pkh_script, sig.get_bytes());
-        println!("public key compressed: {:?}", compressed_public_key);
-        println!(
-            "pubkey_hash_from_address: {:?}",
-            address_decoder::get_pubkey_hash_from_address(&address)?
-        );
 
         assert!(validation);
         Ok(())
