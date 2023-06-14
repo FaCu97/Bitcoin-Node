@@ -69,7 +69,7 @@ pub struct NodeMessageHandler {
 
 
 impl NodeMessageHandler {
-    pub fn handler_init(
+    pub fn new(
         log_sender: LogSender,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         blocks: Arc<RwLock<Vec<Block>>>,
@@ -111,6 +111,39 @@ impl NodeMessageHandler {
             finish,
         })
     }
+
+    pub fn broadcast_to_nodes(&self, message: Vec<u8>) -> NodeMessageHandlerResult {
+        for node_sender in &self.nodes_sender {
+            node_sender.send(message.clone()).map_err(|err| NodeMessageHandlerError::ThreadChannelError(err.to_string()))?;
+        }
+        Ok(())
+    }
+
+    pub fn finish(&self) -> NodeMessageHandlerResult {
+        *self
+            .finish
+            .write()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))? = true;
+        let cant_nodos = self
+            .nodes_handle
+            .lock()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .len();
+        for _ in 0..cant_nodos {
+            self.nodes_handle
+                .lock()
+                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                .pop()
+                .ok_or("Error no hay mas nodos para descargar los headers!\n")
+                .map_err(|err| NodeMessageHandlerError::CanNotRead(err.to_string()))?
+                .join()
+                .map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))??;
+        }
+        for node_sender in self.nodes_sender {
+            drop(node_sender);
+        }
+        Ok(())
+    }
 }
 
 
@@ -140,10 +173,10 @@ pub fn handle_messages_from_node(
                     handle_headers_message(log_sender.clone(), tx.clone(), payload, headers.clone())?;
                 }
                 "getdata" => {
-                    handle_getdata_message()
+                    //handle_getdata_message()
                 }
                 "block" => {
-                    handle_block_message();
+                    handle_block_message(log_sender.clone(), payload, headers.clone(), blocks.clone())?;
                 }
                 "inv" => {
                     handle_inv_message(tx.clone(), payload, transactions_recieved.clone())?;
@@ -168,7 +201,7 @@ pub fn handle_messages_from_node(
 
 
 fn handle_headers_message(log_sender: LogSender, tx: NodeSender, payload: &[u8], headers: Arc<RwLock<Vec<BlockHeader>>>) -> NodeMessageHandlerResult {
-    let new_headers = HeadersMessage::unmarshalling(&payload.to_vec()).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;;
+    let new_headers = HeadersMessage::unmarshalling(&payload.to_vec()).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
     for header in new_headers {
         if !header.validate() {
             write_in_log(
@@ -189,12 +222,57 @@ fn handle_headers_message(log_sender: LogSender, tx: NodeSender, payload: &[u8],
 }
 
 
-fn handle_block_message(log_sender: LogSender, payload: &[u8]) -> NodeMessageHandlerResult {
-    let block_message = BlockMessage::read_from(log_sender.clone(), &mut node)
+fn handle_block_message(log_sender: LogSender, payload: &[u8], headers: Arc<RwLock<Vec<BlockHeader>>>, blocks: Arc<RwLock<Vec<Block>>>) -> NodeMessageHandlerResult {
+    let new_block = BlockMessage::unmarshalling(&payload.to_vec()).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
+    if new_block.validate().0 {
+        let header_is_not_included_yet = header_is_not_included(new_block.block_header, headers.clone())?;
+        if header_is_not_included_yet {
+            include_new_header(log_sender.clone(), new_block.block_header, headers)?;
+            include_new_block(log_sender, new_block, blocks)?;
+            // todo: new_block.contains_pending_tx(pending_transactions, confirmed_transactions)?;
+        }
+    } else {
+        write_in_log(
+            log_sender.error_log_sender,
+            "NUEVO BLOQUE ES INVALIDO, NO LO AGREGO!",
+        );
+    }
     Ok(())
 }
 
 
+
+fn include_new_block(
+    log_sender: LogSender,
+    block: Block,
+    blocks: Arc<RwLock<Vec<Block>>>,
+) -> NodeMessageHandlerResult {
+    blocks
+    .write()
+    .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+    .push(block.clone());
+    println!("%%%%%%%% RECIBO NUEVO BLOQUE %%%%%%%\n");
+    write_in_log(log_sender.info_log_sender, "NUEVO BLOQUE AGREGADO!");
+    Ok(())
+}
+
+/// Recibe un header a agregar a la cadena de headers y el Arc apuntando a la cadena de headers y lo agrega
+/// Devuelve Ok(()) en caso de poder agregarlo correctamente o error del tipo NodeHandlerError en caso de no poder
+fn include_new_header(
+    log_sender: LogSender,
+    header: BlockHeader,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+) -> NodeMessageHandlerResult {
+    headers
+        .write()
+        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+        .push(header);
+    write_in_log(
+        log_sender.info_log_sender,
+        "Recibo un nuevo header, lo agrego a la cadena de headers!",
+    );
+    Ok(())
+}
 
 
 
@@ -236,7 +314,7 @@ fn handle_inv_message(
     transactions_received: Arc<RwLock<Vec<[u8; 32]>>>,
 ) -> NodeMessageHandlerResult {
     let mut offset: usize = 0;
-    let count = CompactSizeUint::unmarshalling(payload, &mut offset).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;;
+    let count = CompactSizeUint::unmarshalling(payload, &mut offset).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
     let mut inventories = vec![];
     for _ in 0..count.decoded_value() as usize {
         let mut inventory_bytes = vec![0; 36];
@@ -297,7 +375,7 @@ pub fn handle_ping_message(
 /// en caso de que se pueda leer bien el payload y recorrer las tx o error en caso contrario
 fn handle_tx_message(log_sender: LogSender, payload: &[u8]) -> NodeMessageHandlerResult {
     let tx = Transaction::unmarshalling(&payload.to_vec(), &mut 0).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
-    //tx.check_if_tx_involves_user_account(wallet.clone(), pending_transactions.clone())?;
+    // todo: tx.check_if_tx_involves_user_account(wallet.clone(), pending_transactions.clone())?;
     Ok(())
 }
 

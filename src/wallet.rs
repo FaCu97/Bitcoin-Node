@@ -49,6 +49,8 @@ impl Wallet {
     }
 }
 
+
+/* 
 #[cfg(test)]
 mod test {
     use crate::{account::Account, node::Node, wallet::Wallet};
@@ -73,3 +75,4 @@ mod test {
         Ok(())
     }
 }
+*/

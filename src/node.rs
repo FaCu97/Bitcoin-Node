@@ -6,7 +6,7 @@ use std::{
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     transactions::transaction::Transaction,
-    utxo_tuple::UtxoTuple, account::Account, node_message_handler::NodeMessageHandler,
+    utxo_tuple::UtxoTuple, account::Account, node_message_handler::NodeMessageHandler, logwriter::log_writer::LogSender,
 };
 #[derive(Debug, Clone)]
 
@@ -21,17 +21,20 @@ pub struct Node {
 
 impl Node {
     pub fn new(
+        log_sender: LogSender,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         block_chain: Arc<RwLock<Vec<Block>>>,
     ) -> Self {
         let utxo_set = generate_utxo_set(&block_chain);
+        let peers_handler = NodeMessageHandler::new(log_sender, headers.clone(), block_chain.clone(), connected_nodes.clone()).unwrap();
         Node {
             connected_nodes,
             headers,
             block_chain,
             utxo_set,
             accounts: None,
+            peers_handler,
         }
     }
     /// funcion para validar un bloque
