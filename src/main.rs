@@ -88,10 +88,11 @@ fn main() -> Result<(), GenericError> {
         )?;
     let (headers, blocks) = headers_and_blocks;
 
-    let node = Node::new(pointer_to_nodes, headers.clone(), blocks.clone());
+    let node = Node::new(logsender.clone(), pointer_to_nodes, headers.clone(), blocks.clone());
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
     //let wallet = wallet::Wallet { account: vec![User{private_key: "cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(), address: "mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(), pending_transactions: vec![]}], node };
+    /* 
     let wallet = Wallet {
         node,
         current_account_index: 0,
@@ -111,10 +112,9 @@ fn main() -> Result<(), GenericError> {
             pending_transactions: Arc::new(RwLock::new(Vec::new())),
         }],
     };
-    let block_listener = BlockBroadcasting::listen_for_incoming_blocks(logsender.clone(), wallet)
-        .map_err(GenericError::BroadcastingError)?;
+    */
 
-    if let Err(err) = handle_input(block_listener) {
+    if let Err(err) = handle_input(node) {
         println!("Error al leer la entrada por terminal. {}", err);
     }
 
@@ -151,7 +151,7 @@ fn main() -> Result<(), GenericError> {
     Ok(())
 }
 
-fn handle_input(block_listener: BlockBroadcasting) -> Result<(), GenericError> {
+fn handle_input(node: Node) -> Result<(), GenericError> {
     loop {
         let mut input = String::new();
 
@@ -159,8 +159,8 @@ fn handle_input(block_listener: BlockBroadcasting) -> Result<(), GenericError> {
             Ok(_) => {
                 let command = input.trim();
                 if command == "exit" {
-                    block_listener
-                        .finish()
+                    node
+                        .shutdown_node()
                         .map_err(GenericError::BroadcastingError)?;
                     break;
                 }

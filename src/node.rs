@@ -6,7 +6,7 @@ use std::{
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     transactions::transaction::Transaction,
-    utxo_tuple::UtxoTuple, account::Account, node_message_handler::NodeMessageHandler, logwriter::log_writer::LogSender,
+    utxo_tuple::UtxoTuple, account::Account, node_message_handler::{NodeMessageHandler, NodeMessageHandlerError}, logwriter::log_writer::LogSender,
 };
 #[derive(Debug, Clone)]
 
@@ -54,7 +54,13 @@ impl Node {
             account_utxo_set.push(utxo_to_push);
         }
         account_utxo_set
-    } /*
+    } 
+    
+    pub fn shutdown_node(&self) -> Result<(), NodeMessageHandlerError> {
+        self.peers_handler.finish()
+    }
+    
+    /*
       pub fn make_transaction(
           &mut self,
           adress_receiver: &str,

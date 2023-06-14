@@ -13,7 +13,7 @@ use crate::{
 use std::{
     error::Error,
     fmt,
-    net::TcpStream,
+    net::{TcpStream, SocketAddr},
     sync::{Arc, Mutex, RwLock, mpsc::{Receiver, channel, Sender}},
     thread::{self, JoinHandle}, io::{Write, Read},
 };
@@ -188,14 +188,20 @@ pub fn handle_messages_from_node(
                     handle_tx_message(log_sender.clone(), payload);
                 }
                 _ => {
-                    // IGNORAR
+                    write_in_log(log_sender.messege_log_sender, format!("IGNORADO -- Recibo: {} -- Nodo: {:?}", command_name, node.peer_addr()).as_str());   
+                    continue;
                 }
             }
+            write_in_log(log_sender.messege_log_sender, format!("Recibo correctamente: {:?} -- Nodo: {:?}", command_name, node.peer_addr()).as_str());   
+        
         }
+
 
         Ok(())
     })
 }
+
+
 
 
 
