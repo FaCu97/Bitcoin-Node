@@ -113,7 +113,7 @@ pub fn handle_ping_message(
 
 /// Recibe un LogSender y el Payload del mensaje tx. Se fija si la tx involucra una cuenta de nuestra wallet. Devuelve Ok(()) 
 /// en caso de que se pueda leer bien el payload y recorrer las tx o error en caso contrario
-pub fn handle_tx_message(log_sender: LogSender, payload: &[u8], accounts: Vec<Account>) -> NodeMessageHandlerResult {
+pub fn handle_tx_message(log_sender: LogSender, payload: &[u8], accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>) -> NodeMessageHandlerResult {
     let tx = Transaction::unmarshalling(&payload.to_vec(), &mut 0).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
     tx.check_if_tx_involves_user_account(accounts)?;
     Ok(())

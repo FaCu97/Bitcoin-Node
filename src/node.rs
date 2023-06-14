@@ -15,7 +15,7 @@ pub struct Node {
     pub headers: Arc<RwLock<Vec<BlockHeader>>>,
     pub block_chain: Arc<RwLock<Vec<Block>>>,
     pub utxo_set: Vec<UtxoTuple>,
-    pub accounts: Option<Arc<RwLock<Vec<Account>>>>,
+    pub accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     pub peers_handler: NodeMessageHandler,
 }
 
@@ -27,13 +27,14 @@ impl Node {
         block_chain: Arc<RwLock<Vec<Block>>>,
     ) -> Result<Self, NodeMessageHandlerError> {
         let utxo_set = generate_utxo_set(&block_chain);
-        let peers_handler = NodeMessageHandler::new(log_sender, headers.clone(), block_chain.clone(), connected_nodes.clone(), Vec::new())?;
+        let pointer_to_accounts_in_node = Arc::new(RwLock::new(Arc::new(RwLock::new(vec![]))));
+        let peers_handler = NodeMessageHandler::new(log_sender, headers.clone(), block_chain.clone(), connected_nodes.clone(), pointer_to_accounts_in_node.clone())?;
         Ok(Node {
             connected_nodes,
             headers,
             block_chain,
             utxo_set,
-            accounts: None,
+            accounts: pointer_to_accounts_in_node,
             peers_handler,
         })
     }
@@ -93,7 +94,7 @@ impl Node {
     }
 
     pub fn set_accounts(&mut self, accounts: Arc<RwLock<Vec<Account>>>) {
-        self.accounts = Some(accounts);
+        *self.accounts.write().unwrap() = accounts;
     }
 }
 

@@ -79,7 +79,7 @@ impl NodeMessageHandler {
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         blocks: Arc<RwLock<Vec<Block>>>,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
-        accounts: Vec<Account>
+        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     ) -> Result<Self, NodeMessageHandlerError> {
         write_in_log(
             log_sender.info_log_sender.clone(),
@@ -173,7 +173,7 @@ pub fn handle_messages_from_node(
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     blocks: Arc<RwLock<Vec<Block>>>,
     transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>>,
-    accounts: Vec<Account>,
+    accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     mut node: TcpStream,
     finish: Option<Arc<RwLock<bool>>>,
 ) -> JoinHandle<NodeMessageHandlerResult> {

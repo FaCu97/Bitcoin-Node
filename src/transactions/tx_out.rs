@@ -79,10 +79,10 @@ impl TxOut {
     /// in case the RwLock cant be accessed
     pub fn involves_user_account(
         &self,
-        accounts: Vec<Account>,
+        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         tx: Transaction,
     ) -> Result<(), NodeMessageHandlerError> {
-        for account in accounts {
+        for account in &*accounts.read().unwrap().read().unwrap() {
             if !account
                 .pending_transactions
                 .read()

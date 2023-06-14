@@ -151,7 +151,7 @@ impl Transaction {
     /// in the transaction, checks if the user account is involved in the transaction
     pub fn check_if_tx_involves_user_account(
         &self,
-        accounts: Vec<Account>,
+        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     ) -> Result<(), NodeMessageHandlerError> {
         for tx_out in self.tx_out.clone() {
             tx_out.involves_user_account(

@@ -92,6 +92,9 @@ fn main() -> Result<(), GenericError> {
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
     //let wallet = wallet::Wallet { account: vec![User{private_key: "cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(), address: "mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(), pending_transactions: vec![]}], node };
+    let mut wallet = Wallet::new(node.clone());
+    wallet.add_account("cSqmqW48wCeoUF8FCJvVsqUGwcvir27bKWCFj1MTFszFdn2Dduim".to_string(), "mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi9".to_string());
+    wallet.add_account("cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(), "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string());
     /* 
     let wallet = Wallet {
         node,
@@ -113,6 +116,7 @@ fn main() -> Result<(), GenericError> {
         }],
     };
     */
+    
 
     if let Err(err) = handle_input(node) {
         println!("Error al leer la entrada por terminal. {}", err);
