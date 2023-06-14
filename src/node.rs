@@ -83,6 +83,8 @@ impl Node {
         block.merkle_proof_of_inclusion(transaction.hash(), vector_hash)
     }
 
+    /// recibe un vector de bytes que representa a la raw format transaction para se enviada por
+    /// la red a todos los nodos conectados
     pub fn broadcast_tx(&self, raw_tx: Vec<u8>) -> Result<(), NodeMessageHandlerError> {
         self.peers_handler.broadcast_to_nodes(raw_tx)
     }
