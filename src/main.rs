@@ -1,5 +1,4 @@
 use bitcoin::account::Account;
-use bitcoin::block_broadcasting::{BlockBroadcasting, BroadcastingError};
 use bitcoin::config::Config;
 use bitcoin::gtk::gtk::Gtk;
 use bitcoin::handshake::{HandShakeError, Handshake};
@@ -9,6 +8,7 @@ use bitcoin::logwriter::log_writer::{
 };
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
+use bitcoin::node_message_handler::NodeMessageHandlerError;
 use bitcoin::wallet::{self, Wallet};
 use std::error::Error;
 use std::sync::{Arc, RwLock};
@@ -21,7 +21,7 @@ pub enum GenericError {
     ConfigError(Box<dyn Error>),
     ConnectionToDnsError(ConnectionToDnsError),
     LoggingError(LoggingError),
-    BroadcastingError(BroadcastingError),
+    NodeHandlerError(NodeMessageHandlerError),
 }
 
 impl fmt::Display for GenericError {
@@ -34,7 +34,7 @@ impl fmt::Display for GenericError {
                 write!(f, "CONNECTION TO DNS ERROR: {}", msg)
             }
             GenericError::LoggingError(msg) => write!(f, "LOGGING ERROR: {}", msg),
-            GenericError::BroadcastingError(msg) => write!(f, "BLOCK BROADCASTING ERROR: {}", msg),
+            GenericError::NodeHandlerError(msg) => write!(f, "NODE MESSAGE LISTENER AND WRITER ERROR: {}", msg),
         }
     }
 }
@@ -161,7 +161,7 @@ fn handle_input(node: Node) -> Result<(), GenericError> {
                 if command == "exit" {
                     node
                         .shutdown_node()
-                        .map_err(GenericError::BroadcastingError)?;
+                        .map_err(GenericError::NodeHandlerError)?;
                     break;
                 }
             }

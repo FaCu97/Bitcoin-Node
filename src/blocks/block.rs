@@ -3,7 +3,7 @@ use std::sync::{Arc, RwLock};
 use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{
-    block_broadcasting::BroadcastingError, compact_size_uint::CompactSizeUint,
+    compact_size_uint::CompactSizeUint,
     transactions::transaction::Transaction, utxo_tuple::UtxoTuple,
 };
 
@@ -155,6 +155,8 @@ impl Block {
         }
         utxo_container
     }
+
+    /* 
     /// Receives a pointer to the list of pending transactions and the list of confirmed transactions and in case the block
     /// contains on transaction included in the list of pending transactions, notifies the user, and changes the element from the
     /// pending transactions list to the confirmed transaction list. Returns error in case the RwLock cant be accessed
@@ -192,6 +194,7 @@ impl Block {
         }
         Ok(())
     }
+    */
 }
 
 #[cfg(test)]

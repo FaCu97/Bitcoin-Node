@@ -82,7 +82,7 @@ impl NodeMessageHandler {
         let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<NodeMessageHandlerResult>> = vec![];
         let cant_nodos = get_amount_of_nodes(connected_nodes.clone())?;
-        let nodes_sender = vec![];
+        let mut nodes_sender = vec![];
         // lista de transacciones recibidas para no recibir las mismas de varios nodos
         let transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>> = Arc::new(RwLock::new(Vec::new()));
         for _ in 0..cant_nodos {
@@ -139,7 +139,7 @@ impl NodeMessageHandler {
                 .join()
                 .map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))??;
         }
-        for node_sender in self.nodes_sender {
+        for node_sender in &self.nodes_sender {
             drop(node_sender);
         }
         Ok(())
@@ -159,7 +159,6 @@ pub fn handle_messages_from_node(
     mut node: TcpStream,
     finish: Option<Arc<RwLock<bool>>>,
 ) -> JoinHandle<NodeMessageHandlerResult> {
-    let log_sender_clone = log_sender.clone();
     thread::spawn(move || -> NodeMessageHandlerResult {
         while !is_terminated(finish.clone()) {
             // veo si mandaron algo para escribir
@@ -170,29 +169,29 @@ pub fn handle_messages_from_node(
             let command_name = get_header_command_name_as_str(&header.command_name.as_str());
             match command_name {
                 "headers" => {
-                    handle_headers_message(log_sender.clone(), tx.clone(), payload, headers.clone())?;
+                    handle_headers_message(log_sender.clone(), tx.clone(), &payload, headers.clone())?;
                 }
                 "getdata" => {
                     //handle_getdata_message()
                 }
                 "block" => {
-                    handle_block_message(log_sender.clone(), payload, headers.clone(), blocks.clone())?;
+                    handle_block_message(log_sender.clone(), &payload, headers.clone(), blocks.clone())?;
                 }
                 "inv" => {
-                    handle_inv_message(tx.clone(), payload, transactions_recieved.clone())?;
+                    handle_inv_message(tx.clone(), &payload, transactions_recieved.clone())?;
                 }
                 "ping" => {
-                    handle_ping_message(tx.clone(), payload);
+                    handle_ping_message(tx.clone(), &payload)?;
                 }
                 "tx" => {
-                    handle_tx_message(log_sender.clone(), payload);
+                    handle_tx_message(log_sender.clone(), &payload)?;
                 }
                 _ => {
-                    write_in_log(log_sender.messege_log_sender, format!("IGNORADO -- Recibo: {} -- Nodo: {:?}", command_name, node.peer_addr()).as_str());   
+                    write_in_log(log_sender.messege_log_sender.clone(), format!("IGNORADO -- Recibo: {} -- Nodo: {:?}", command_name, node.peer_addr()).as_str());   
                     continue;
                 }
             }
-            write_in_log(log_sender.messege_log_sender, format!("Recibo correctamente: {:?} -- Nodo: {:?}", command_name, node.peer_addr()).as_str());   
+            write_in_log(log_sender.messege_log_sender.clone(), format!("Recibo correctamente: {:?} -- Nodo: {:?}", command_name, node.peer_addr()).as_str());   
         
         }
 
@@ -362,7 +361,7 @@ fn ask_for_incoming_tx(
 pub fn handle_ping_message(
     tx: NodeSender,
     payload: &[u8],
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> NodeMessageHandlerResult {
     let header = HeaderMessage {
         start_string: [0x0b, 0x11, 0x09, 0x07],
         command_name: "pong".to_string(),
@@ -413,14 +412,14 @@ pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessag
 
 /// Recibe algo que implemente el trait Read y lee el header y el payload del header y devuelve una tupla de un Struct
 /// Header y un vector de bytes que representa al payload. En caso de error al leer, devuelve un Error especifico de lectura
-pub fn read_header_and_payload(node: &mut dyn Read) -> Result<(HeaderMessage, &[u8]), NodeMessageHandlerError> {
+pub fn read_header_and_payload(node: &mut dyn Read) -> Result<(HeaderMessage, Vec<u8>), NodeMessageHandlerError> {
     let mut buffer_num = [0; 24];
     node.read_exact(&mut buffer_num).map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
-    let mut header = HeaderMessage::from_le_bytes(buffer_num).map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
+    let header = HeaderMessage::from_le_bytes(buffer_num).map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
     let payload_size = header.payload_size as usize;
     let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
     node.read_exact(&mut payload_buffer_num).map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
-    Ok((header, &payload_buffer_num))
+    Ok((header, payload_buffer_num))
 }
 
 
