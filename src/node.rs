@@ -6,7 +6,7 @@ use std::{
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     transactions::transaction::Transaction,
-    utxo_tuple::UtxoTuple, account::Account, node_message_handler::{NodeMessageHandler, NodeMessageHandlerError}, logwriter::log_writer::LogSender,
+    utxo_tuple::UtxoTuple, account::Account, handler::node_message_handler::{NodeMessageHandler, NodeMessageHandlerError}, logwriter::log_writer::LogSender,
 };
 #[derive(Debug, Clone)]
 

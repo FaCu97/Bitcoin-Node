@@ -8,7 +8,7 @@ use bitcoin::logwriter::log_writer::{
 };
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
-use bitcoin::node_message_handler::NodeMessageHandlerError;
+use bitcoin::handler::node_message_handler::NodeMessageHandlerError;
 use bitcoin::wallet::{self, Wallet};
 use std::error::Error;
 use std::sync::{Arc, RwLock};
