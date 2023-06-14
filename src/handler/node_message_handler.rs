@@ -58,6 +58,8 @@ type NodeSender = Sender<Vec<u8>>;
 type NodeReceiver = Receiver<Vec<u8>>;
 
 #[derive(Debug, Clone)]
+/// Struct para controlar todos los nodos conectados al nuestro. Escucha permanentemente
+/// a estos y decide que hacer con los mensajes que llegan y con los que tiene que escribir
 pub struct NodeMessageHandler {
     nodes_handle: Arc<Mutex<Vec<JoinHandle<NodeMessageHandlerResult>>>>,
     nodes_sender: Vec<NodeSender>,
@@ -67,6 +69,11 @@ pub struct NodeMessageHandler {
 
 
 impl NodeMessageHandler {
+    /// Recibe la informacion que tiene el nodo (headers, bloques y nodos conectados)
+    /// y se encarga de crear un thread por cada nodo y lo deja esuchando mensajes
+    /// y handleandolos de forma oportuna. Si ocurre algun error devuelve un Error del enum
+    /// NodeMessageHandlerError y en caso contrario devuelve el nuevo struct
+    /// NodeMessageHandler con sus respectivos campos
     pub fn new(
         log_sender: LogSender,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
@@ -110,6 +117,9 @@ impl NodeMessageHandler {
         })
     }
 
+    /// Recibe un vector de bytes que representa un mensaje serializado y se lo manda a cada canal que esta esperando para escribir en un nodo
+    /// De esta manera se broadcastea a todos los nodos conectados el mensaje.
+    /// Devuelve Ok(()) en caso exitoso o un error ThreadChannelError en caso contrario
     pub fn broadcast_to_nodes(&self, message: Vec<u8>) -> NodeMessageHandlerResult {
         for node_sender in &self.nodes_sender {
             node_sender.send(message.clone()).map_err(|err| NodeMessageHandlerError::ThreadChannelError(err.to_string()))?;
@@ -117,6 +127,10 @@ impl NodeMessageHandler {
         Ok(())
     }
 
+    /// Se encarga de actualizar el valor del puntero finish que corta los ciclos de los nodos que estan siendo esuchados.
+    /// le hace el join a cada uno de los threads por cada nodo que estaba siendo escuchado.
+    /// A cada extremo del channel para escribir en los nodos les hace drop() para que se cierre el channel.
+    /// Devuelve Ok(()) en caso de salir todo bien o Error especifico en caso contrario
     pub fn finish(&self) -> NodeMessageHandlerResult {
         *self
             .finish
@@ -146,7 +160,10 @@ impl NodeMessageHandler {
 
 
 
-
+/// Funcion encargada de crear un thread para un nodo especifico y se encarga de realizar el loop que escucha
+/// por nuevos mensajes del nodo. En caso de ser necesario tambien escribe al nodo mensajes que le llegan por el channel.
+/// El puntero finish define cuando el programa termina y por lo tanto el ciclo de esta funcion. Devuelve el JoinHanfle del thread
+/// con lo que devuelve el loop. Ok(()) en caso de salir todo bien o NodeHandlerError en caso de algun error
 pub fn handle_messages_from_node(
     log_sender: LogSender,
     tx: NodeSender,
@@ -163,6 +180,7 @@ pub fn handle_messages_from_node(
             if let Ok(message) = rx.try_recv() {
                 write_message_in_node(&mut node, &message)?
             }
+            //leo header y payload
             let (header, payload) = match read_header_and_payload(&mut node) {
                 Ok((header, payload)) => (header, payload),
                 Err(_) => {break;}                
@@ -259,4 +277,19 @@ fn get_amount_of_nodes(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<usize, Node
 }
 
 
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn get_header_command_name_as_str_returns_correct_headers_command_name() {
+        let header_command_name = "headers\0\0\0\0\0";
+        assert_eq!(get_header_command_name_as_str(header_command_name), "headers");
+    }
+    #[test]
+    fn get_header_command_name_as_str_returns_correct_tx_command_name() {
+        let header_command_name = "tx\0\0\0\0\0\0\0\0\0\0";
+        assert_eq!(get_header_command_name_as_str(header_command_name), "tx");
+    }
+
+}
 

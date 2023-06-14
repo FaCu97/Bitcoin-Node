@@ -14,6 +14,8 @@ type NodeSender = Sender<Vec<u8>>;
 ***************************************************************************
 */
 
+/// Deserializa el payload del mensaje headers y en caso de ser validos se fijan si no estan incluidos en la cadena de headers. En caso
+/// de no estarlo, manda por el channel que escribe en el nodo el mensaje getData con el bloque a pedir
 pub fn handle_headers_message(log_sender: LogSender, tx: NodeSender, payload: &[u8], headers: Arc<RwLock<Vec<BlockHeader>>>) -> NodeMessageHandlerResult {
     let new_headers = HeadersMessage::unmarshalling(&payload.to_vec()).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
     for header in new_headers {
@@ -35,6 +37,8 @@ pub fn handle_headers_message(log_sender: LogSender, tx: NodeSender, payload: &[
     Ok(())
 }
 
+/// Deserializa el payload del mensaje blocks y en caso de que el bloque es valido y todavia no este incluido, agrega el header a la cadena de headers
+/// y el bloque a la cadena de bloques. Se fija si alguna transaccion del bloque involucra a alguna de las cuentas del programa.
 pub fn handle_block_message(log_sender: LogSender, payload: &[u8], headers: Arc<RwLock<Vec<BlockHeader>>>, blocks: Arc<RwLock<Vec<Block>>>) -> NodeMessageHandlerResult {
     let new_block = BlockMessage::unmarshalling(&payload.to_vec()).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
     if new_block.validate().0 {
