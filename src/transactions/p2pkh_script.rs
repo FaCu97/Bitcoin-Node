@@ -15,6 +15,8 @@ use bitcoin_hashes::{ripemd160, Hash};
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
 
+use crate::transactions::sig_script::SigScript;
+
 /// Recibe el p2pkh_script y el sig_script.
 /// Realiza la validación y devuelve true o false
 pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> bool {
@@ -48,7 +50,9 @@ pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> bool {
     if p2pkh_script[24..25] != [0xAC] {
         return false;
     }
-
+    //   if !SigScript::verify_sig() {
+    //       return false;
+    //   }
     true
 }
 
