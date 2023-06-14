@@ -39,14 +39,14 @@ pub fn handle_headers_message(log_sender: LogSender, tx: NodeSender, payload: &[
 
 /// Deserializa el payload del mensaje blocks y en caso de que el bloque es valido y todavia no este incluido, agrega el header a la cadena de headers
 /// y el bloque a la cadena de bloques. Se fija si alguna transaccion del bloque involucra a alguna de las cuentas del programa.
-pub fn handle_block_message(log_sender: LogSender, payload: &[u8], headers: Arc<RwLock<Vec<BlockHeader>>>, blocks: Arc<RwLock<Vec<Block>>>) -> NodeMessageHandlerResult {
+pub fn handle_block_message(log_sender: LogSender, payload: &[u8], headers: Arc<RwLock<Vec<BlockHeader>>>, blocks: Arc<RwLock<Vec<Block>>>, accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>) -> NodeMessageHandlerResult {
     let new_block = BlockMessage::unmarshalling(&payload.to_vec()).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
     if new_block.validate().0 {
         let header_is_not_included_yet = header_is_not_included(new_block.block_header, headers.clone())?;
         if header_is_not_included_yet {
             include_new_header(log_sender.clone(), new_block.block_header, headers)?;
             include_new_block(log_sender, new_block, blocks)?;
-            // todo: new_block.contains_pending_tx(pending_transactions, confirmed_transactions)?;
+            //new_block.contains_pending_tx(accounts)?;
         }
     } else {
         write_in_log(
@@ -115,7 +115,7 @@ pub fn handle_ping_message(
 /// en caso de que se pueda leer bien el payload y recorrer las tx o error en caso contrario
 pub fn handle_tx_message(log_sender: LogSender, payload: &[u8], accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>) -> NodeMessageHandlerResult {
     let tx = Transaction::unmarshalling(&payload.to_vec(), &mut 0).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
-    tx.check_if_tx_involves_user_account(accounts)?;
+    tx.check_if_tx_involves_user_account(log_sender, accounts)?;
     Ok(())
 }
 

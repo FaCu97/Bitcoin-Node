@@ -1,8 +1,10 @@
+use std::sync::{RwLock, Arc};
+
 use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{
     compact_size_uint::CompactSizeUint,
-    transactions::transaction::Transaction, utxo_tuple::UtxoTuple,
+    transactions::transaction::Transaction, utxo_tuple::UtxoTuple, account::Account, handler::node_message_handler::NodeMessageHandlerError,
 };
 
 use super::block_header::BlockHeader;
@@ -155,14 +157,10 @@ impl Block {
     }
 
     /* 
-    /// Receives a pointer to the list of pending transactions and the list of confirmed transactions and in case the block
-    /// contains on transaction included in the list of pending transactions, notifies the user, and changes the element from the
-    /// pending transactions list to the confirmed transaction list. Returns error in case the RwLock cant be accessed
     pub fn contains_pending_tx(
         &self,
-        pending_transactions: Arc<RwLock<Vec<Transaction>>>,
-        confirmed_transactions: Arc<RwLock<Vec<Transaction>>>,
-    ) -> Result<(), BroadcastingError> {
+        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
+    ) -> Result<(), NodeMessageHandlerError> {
         for tx in &self.txn {
             if pending_transactions
                 .read()
@@ -193,6 +191,7 @@ impl Block {
         Ok(())
     }
     */
+    
 }
 
 #[cfg(test)]

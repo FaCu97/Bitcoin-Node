@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use crate::{account::Account, compact_size_uint::CompactSizeUint, handler::node_message_handler::NodeMessageHandlerError};
+use crate::{account::Account, compact_size_uint::CompactSizeUint, handler::node_message_handler::NodeMessageHandlerError, logwriter::log_writer::{LogSender, write_in_log}};
 
 use super::{pubkey::Pubkey, transaction::Transaction};
 #[derive(Debug, PartialEq, Clone)]
@@ -79,6 +79,7 @@ impl TxOut {
     /// in case the RwLock cant be accessed
     pub fn involves_user_account(
         &self,
+        log_sender: LogSender,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         tx: Transaction,
     ) -> Result<(), NodeMessageHandlerError> {
@@ -94,7 +95,8 @@ impl TxOut {
                     Err(e) => e.to_string(),
                 };
                 if tx_asociate_address == account.address {
-                    println!("%%%%%%%%%%% TRANSACCION INVOLUCRA AL USUARIO {:?}, AUN NO SE ENCUENTRA EN UN BLOQUE (PENDING) %%%%%%%%%%%%", account.address);
+                    write_in_log(log_sender.info_log_sender.clone(), format!("Transaccion pendiente {:?} -- ivolucra al usuario {:?}", tx.hex_hash(), account.address).as_str());
+                    println!("%%%%%%%%%%% TRANSACCION {:?} INVOLUCRA AL USUARIO {:?}, AUN NO SE ENCUENTRA EN UN BLOQUE (PENDING) %%%%%%%%%%%%", tx.hex_hash(), account.address);
                     account.pending_transactions.write().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?.push(tx.clone());
                 }
             }

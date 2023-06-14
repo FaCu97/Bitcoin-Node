@@ -27,7 +27,7 @@ impl Wallet {
         amount: i64,
     ) -> Result<(), Box<dyn Error>> {
         let transaction = account.make_transaction(address_receiver, amount)?;
-        // self.node.broadcast_transaction()?;
+        //self.node.broadcast_tx(transaction.hash()?;
         Ok(())
     }
 

@@ -197,7 +197,7 @@ pub fn handle_messages_from_node(
                     //handle_getdata_message()
                 }
                 "block" => {
-                    handle_block_message(log_sender.clone(), &payload, headers.clone(), blocks.clone())?;
+                    handle_block_message(log_sender.clone(), &payload, headers.clone(), blocks.clone(), accounts.clone())?;
                 }
                 "inv" => {
                     handle_inv_message(tx.clone(), &payload, transactions_recieved.clone())?;

@@ -6,7 +6,7 @@ use std::{
 use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{
-    account::Account, compact_size_uint::CompactSizeUint, utxo_tuple::UtxoTuple, wallet::Wallet, handler::node_message_handler::NodeMessageHandlerError,
+    account::Account, compact_size_uint::CompactSizeUint, utxo_tuple::UtxoTuple, wallet::Wallet, handler::node_message_handler::NodeMessageHandlerError, logwriter::log_writer::LogSender,
 };
 
 use super::{tx_in::TxIn, tx_out::TxOut};
@@ -146,15 +146,26 @@ impl Transaction {
         container.push(utxo_tuple);
     }
 
+    pub fn hex_hash(&self) -> String {
+        let hash_as_bytes = self.hash();
+        let hex_hash = hash_as_bytes
+            .iter()
+            .map(|byte| format!("{:02x}", byte))
+            .collect();
+        hex_hash
+    }
+
     
     /// Receives a wallet and a pointer to the list of pending transactions and for each tx out
     /// in the transaction, checks if the user account is involved in the transaction
     pub fn check_if_tx_involves_user_account(
         &self,
+        log_sender: LogSender,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     ) -> Result<(), NodeMessageHandlerError> {
         for tx_out in self.tx_out.clone() {
             tx_out.involves_user_account(
+                log_sender.clone(),
                 accounts.clone(),
                 self.clone(),
             )?;
