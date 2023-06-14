@@ -1,5 +1,7 @@
 use crate::compact_size_uint::CompactSizeUint;
 
+use super::message_header::HeaderMessage;
+
 #[derive(Debug, Clone)]
 pub struct Inventory {
     pub type_identifier: u32,
@@ -44,7 +46,16 @@ impl Inventory {
 }
 
 
-pub fn inv_message_bytes(inventories: Vec<Inventory>) -> Vec<u8> {
+pub fn inv_mershalling(inventories: Vec<Inventory>) -> Vec<u8> {
     let count = CompactSizeUint::new(inventories.len() as u128);
-    
+    let mut inv_payload = vec![];
+    inv_payload.extend_from_slice(&count.marshalling());
+    for inventory in inventories {
+        inv_payload.extend(inventory.to_le_bytes());
+    }
+    let header = HeaderMessage::new("inv".to_string(), Some(&inv_payload));
+    let mut inv_message = vec![];
+    inv_message.extend_from_slice(&header.to_le_bytes());
+    inv_message.extend_from_slice(&inv_payload);
+    inv_message
 }
