@@ -82,6 +82,14 @@ impl Node {
     ) -> bool {
         block.merkle_proof_of_inclusion(transaction.hash(), vector_hash)
     }
+
+    pub fn broadcast_tx(&self, raw_tx: Vec<u8>) -> Result<(), NodeMessageHandlerError> {
+        self.peers_handler.broadcast_to_nodes(raw_tx)
+    }
+
+    pub fn set_accounts(&mut self, accounts: Arc<RwLock<Vec<Account>>>) {
+        self.accounts = Some(accounts);
+    }
 }
 
 ///Funcion que se encarga de generar la lista de utxos
