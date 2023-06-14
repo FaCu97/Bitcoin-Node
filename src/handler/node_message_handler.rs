@@ -82,7 +82,7 @@ impl NodeMessageHandler {
     ) -> Result<Self, NodeMessageHandlerError> {
         write_in_log(
             log_sender.info_log_sender.clone(),
-            "Empiezo a escuchar por nuevos bloques",
+            "Empiezo a escuchar por nuevos bloques y transaccciones",
         );
         let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<NodeMessageHandlerResult>> = vec![];
@@ -207,7 +207,6 @@ pub fn handle_messages_from_node(
                 }
                 _ => {
                     write_in_log(log_sender.messege_log_sender.clone(), format!("IGNORADO -- Recibo: {} -- Nodo: {:?}", header.command_name, node.peer_addr()).as_str());   
-                    println!("{}\n", command_name);
                     continue;
                 }
             }
@@ -237,7 +236,6 @@ fn get_header_command_name_as_str(command: &str) -> &str {
 pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessageHandlerResult {
     node.write_all(message).map_err(|err| NodeMessageHandlerError::WriteNodeError(err.to_string()))?;
     node.flush().map_err(|err| NodeMessageHandlerError::WriteNodeError(err.to_string()))?;
-    println!("Escribo correctamente un mensaje!\n");
     Ok(())
 }
 
