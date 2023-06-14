@@ -56,7 +56,7 @@ impl Node {
         }
         account_utxo_set
     } 
-    
+    /// Se encarga de llamar a la funcion finish() del peers_handler del nodo
     pub fn shutdown_node(&self) -> Result<(), NodeMessageHandlerError> {
         self.peers_handler.finish()
     }
@@ -93,6 +93,8 @@ impl Node {
         self.peers_handler.broadcast_to_nodes(inv_message_bytes)
     }
 
+    /// Actualiza lo que apunta el puntero de accounts a otro puntero que es pasado por parametro
+    /// de esta manera el puntero queda apuntando a un puntero con un vector de cuentas que es apuntado por la wallet
     pub fn set_accounts(&mut self, accounts: Arc<RwLock<Vec<Account>>>) -> Result<(), NodeMessageHandlerError> {
         *self.accounts.write().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))? = accounts;
         Ok(())

@@ -146,6 +146,8 @@ impl Transaction {
         container.push(utxo_tuple);
     }
 
+    /// Devuelve un string que representa el hash de la transaccion en hexadecimal y en el formato
+    /// que se usa en la pagina https://blockstream.info/testnet/ para mostrar transacciones
     pub fn hex_hash(&self) -> String {
         let hash_as_bytes = self.hash();
         let inverted_hash: [u8; 32] = {
@@ -162,9 +164,8 @@ impl Transaction {
         hex_hash
     }
 
-    
-    /// Receives a wallet and a pointer to the list of pending transactions and for each tx out
-    /// in the transaction, checks if the user account is involved in the transaction
+    /// Recibe un puntero a un puntero con las cuentas de la wallet y se fija si alguna tx_out tiene una address
+    /// igual que alguna de la wallet. Devuelve Ok(()) en caso de no ocurrir ningun error o Error especifico en caso contrario
     pub fn check_if_tx_involves_user_account(
         &self,
         log_sender: LogSender,

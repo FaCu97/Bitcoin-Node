@@ -73,10 +73,10 @@ impl TxOut {
     pub fn get_pub_key(&self) -> &Vec<u8> {
         self.pk_script.bytes()
     }
-    /// Receives a list of accounts, a transaction and a pointer to the list of pending transactions
-    /// and for each account in the list checks if the tx out asociate address is the same as the account
-    /// address. If true, notifies the user and add the transaction to the list of pending transactions. Returns error
-    /// in case the RwLock cant be accessed
+    
+    /// Recibe un puntero a un puntero que apunta a las cuentas de la wallet y una transaccion y se fija si el address de la tx_out
+    /// es igual a algun address de la wallet. Si encunetra una coincidencia agrega la transaccion al vector de pending_transactions de la cuenta. En caso exitoso
+    /// devuelve Ok(()) y en caso de algun error devuevle el error especifico 
     pub fn involves_user_account(
         &self,
         log_sender: LogSender,
