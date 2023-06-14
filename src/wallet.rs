@@ -1,4 +1,4 @@
-use std::{error::Error, io};
+use std::{error::Error, sync::{RwLock, Arc}};
 
 use crate::{account::Account, node::Node};
 #[derive(Debug, Clone)]
@@ -6,16 +6,19 @@ use crate::{account::Account, node::Node};
 pub struct Wallet {
     pub node: Node,
     pub current_account_index: usize,
-    pub accounts: Vec<Account>,
+    pub accounts: Arc<RwLock<Vec<Account>>>,
 }
 
 impl Wallet {
-    pub fn new(node: Node) -> Wallet {
-        Wallet {
+    pub fn new(node: Node, accounts: Vec<Account>) -> Wallet {
+        let pointer_to_accounts = Arc::new(RwLock::new(accounts));
+        let mut wallet = Wallet {
             node,
             current_account_index: 0,
-            accounts: vec![],
-        }
+            accounts: pointer_to_accounts.clone(),
+        };
+        wallet.node.set_accounts(pointer_to_accounts);
+        wallet
     }
 
     pub fn make_transaction(
@@ -38,7 +41,7 @@ impl Wallet {
     ) -> Result<(), Box<dyn Error>> {
         let mut account = Account::new(wif_private_key, address)?;
         self.load_data(&mut account);
-        self.accounts.push(account);
+        self.accounts.write().unwrap().push(account);
         Ok(())
     }
     /// Funcion que se encarga de cargar los respectivos utxos asociados a la cuenta
