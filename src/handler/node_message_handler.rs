@@ -3,11 +3,8 @@ use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
-        block_message::BlockMessage, get_data_message::GetDataMessage,
-        headers_message::{is_terminated, HeadersMessage}, inventory::Inventory, message_header::{HeaderMessage, get_checksum},
+        headers_message::is_terminated, message_header::HeaderMessage,
     },
-    transactions::transaction::Transaction,
-    compact_size_uint::CompactSizeUint,
 };
 use std::{
     error::Error,

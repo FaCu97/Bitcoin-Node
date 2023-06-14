@@ -1,5 +1,3 @@
-use std::sync::{Arc, RwLock};
-
 use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{
