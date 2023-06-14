@@ -41,53 +41,17 @@ fn validate_address(address_decoded_bytes: &Vec<u8>) -> Result<(), Box<dyn Error
     Ok(())
 }
 
-//      <Sig> <PubKey> OP_DUP OP_HASH160 <PubkeyHash> OP_EQUALVERIFY OP_CHECKSIG
-//
-// scriptPubKey: OP_DUP OP_HASH160 <bytes_to_push> <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
-// HEXA:         0x76   0xA9       <bytes_to_push> <pubKeyHash>  0x88            0xAC
-// Largo bytes:  1 + 1 + 1 + 20 + 1 + 1 = 25
-// Si una Tx es P2PKH el largo de su pk_script debe ser == 25
-
-// <pubKeyHash>: Son 20 bytes. Es el resultado de aplicar hash160 (sha256 + ripemd160 hash) a la publicKey comprimida SEC
-
-// scriptSig:   <length sig>     <sig>   <length pubKey>   <pubKey>
-// <pubKey> es la publicKey comprimida SEC (33bytes) del receptor de la tx
-// Largo bytes: 1 + 72 + 1 + 33 = 107
-
-/// Genera el pk_script de una transaccion P2PKH
-/// Recibe el <pubKeyHash> del receptor de la tx.
-pub fn generate_p2pkh_pk_script(pubkey_hash: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
-    if pubkey_hash.len() != 20 {
-        return Err(Box::new(std::io::Error::new(
-            io::ErrorKind::Other,
-            "El pubKey hash recibido es inválido. No tiene el largo correcto",
-        )));
-    }
-    let mut pk_script: Vec<u8> = Vec::new();
-    pk_script.push(0x76); // OP_DUP  -> Pasar a constantes o enum
-    pk_script.push(0xA9);
-    pk_script.push(20); // <bytes_to_push>: Son 20 bytes
-
-    pk_script.extend_from_slice(pubkey_hash);
-    pk_script.push(0x88);
-    pk_script.push(0xAC);
-    Ok(pk_script)
-}
-
 #[cfg(test)]
 
 mod test {
     use std::error::Error;
 
+    use super::get_pubkey_hash_from_address;
+    use crate::account::Account;
     use bitcoin_hashes::{ripemd160, Hash};
     use k256::sha2::Digest;
     use k256::sha2::Sha256;
     use secp256k1::SecretKey;
-
-    use crate::account::Account;
-    use crate::address_decoder::generate_p2pkh_pk_script;
-
-    use super::get_pubkey_hash_from_address;
 
     fn generate_pubkey_hash(private_key: &[u8]) -> [u8; 20] {
         let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
@@ -122,29 +86,6 @@ mod test {
     }
 
     #[test]
-    fn test_pk_script_se_genera_con_el_largo_correcto() -> Result<(), Box<dyn Error>> {
-        let pub_key_hash: [u8; 20] = [0; 20];
-        let pk_script = generate_p2pkh_pk_script(&pub_key_hash)?;
-
-        assert_eq!(pk_script.len(), 25);
-        Ok(())
-    }
-
-    #[test]
-    fn test_pk_script_se_genera_con_el_contenido_correcto() -> Result<(), Box<dyn Error>> {
-        let pub_key_hash: [u8; 20] = [0; 20];
-        let pk_script = generate_p2pkh_pk_script(&pub_key_hash)?;
-
-        assert_eq!(pk_script[..1], [0x76]);
-        assert_eq!(pk_script[1..2], [0xA9]);
-        assert_eq!(pk_script[2..3], [20]);
-        assert_eq!(pk_script[3..23], pub_key_hash);
-        assert_eq!(pk_script[23..24], [0x88]);
-        assert_eq!(pk_script[24..25], [0xAC]);
-        Ok(())
-    }
-
-    #[test]
     fn test_pub_key_hash_se_genera_con_el_largo_correcto() -> Result<(), Box<dyn Error>> {
         let address = "mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV";
         let pub_key_hash = get_pubkey_hash_from_address(address)?;
@@ -160,18 +101,4 @@ mod test {
         assert!(pub_key_hash_result.is_err());
         Ok(())
     }
-    /* todo:
-    #[test]
-    fn test_pub_key_hash_se_genera_correctamente() -> Result<(), Box<dyn Error>> {
-        let address = "mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV";
-
-        let pub_key_hash = get_pubkey_hash_from_address(address)?;
-        let private_key = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
-        // se puede crear esta funcion para testearlo. Seguramente haga falta también para validar el script.
-        let pub_key_hash_expected = get_pub_key_hash_from_private_key();
-
-        assert_eq!(pub_key_hash, [0x76]);
-        Ok(())
-    }
-    */
 }
