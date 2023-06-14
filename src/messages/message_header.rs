@@ -26,7 +26,7 @@ impl HeaderMessage {
 
     /// Dado el nombre del comando y un Option que si es None representa que el comando 
     /// no tiene payload o un Vec<u8> representando al payload del mensaje devuelve el HeaderMessage de ese mensaje
-    pub fn new(command_name: String, payload: Option<Vec<u8>>) -> Self {
+    pub fn new(command_name: String, payload: Option<&[u8]>) -> Self {
         match payload {
             None => {
                 HeaderMessage {
@@ -41,7 +41,7 @@ impl HeaderMessage {
                     start_string: START_STRING_TESTNET,
                     command_name,
                     payload_size: payload.len() as u32,
-                    checksum: get_checksum(&payload),
+                    checksum: get_checksum(payload),
                 }
             },     
         } 
@@ -170,12 +170,7 @@ fn read_payload(stream: &mut dyn Read, header: &HeaderMessage) -> io::Result<Vec
 /// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje verack segun
 /// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error
 pub fn write_verack_message(stream: &mut dyn Write) -> Result<(), Box<dyn std::error::Error>> {
-    let header = HeaderMessage {
-        start_string: [0x0b, 0x11, 0x09, 0x07],
-        command_name: "verack".to_string(),
-        payload_size: 0,
-        checksum: [0x5d, 0xf6, 0xe0, 0xe2], // checksum de payload vacio
-    };
+    let header = HeaderMessage::new("verack".to_string(),None);
     header.write_to(stream)?;
     Ok(())
 }
@@ -188,12 +183,7 @@ pub fn write_pong_message(
     payload: &[u8],
 ) -> Result<(), Box<dyn std::error::Error>> {
     let checksum = get_checksum(payload);
-    let header = HeaderMessage {
-        start_string: [0x0b, 0x11, 0x09, 0x07],
-        command_name: "pong".to_string(),
-        payload_size: payload.len() as u32,
-        checksum,
-    };
+    let header = HeaderMessage::new("pong".to_string(), Some(payload));
     let header_bytes = HeaderMessage::to_le_bytes(&header);
     let mut message: Vec<u8> = Vec::new();
     message.extend_from_slice(&header_bytes);
@@ -206,12 +196,7 @@ pub fn write_pong_message(
 /// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje sendheaders segun
 /// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error
 pub fn write_sendheaders_message(stream: &mut dyn Write) -> Result<(), Box<dyn std::error::Error>> {
-    let header = HeaderMessage {
-        start_string: [0x0b, 0x11, 0x09, 0x07],
-        command_name: "sendheaders".to_string(),
-        payload_size: 0,
-        checksum: [0x5d, 0xf6, 0xe0, 0xe2], // checksum de payload vacio
-    };
+    let header = HeaderMessage::new("sendheaders".to_string(), None);
     header.write_to(stream)?;
     Ok(())
 }

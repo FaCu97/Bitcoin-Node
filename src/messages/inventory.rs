@@ -1,3 +1,5 @@
+use crate::compact_size_uint::CompactSizeUint;
+
 #[derive(Debug, Clone)]
 pub struct Inventory {
     pub type_identifier: u32,
@@ -39,4 +41,10 @@ impl Inventory {
     pub fn hash(&self) -> [u8; 32] {
         self.hash
     }
+}
+
+
+pub fn inv_message_bytes(inventories: Vec<Inventory>) -> Vec<u8> {
+    let count = CompactSizeUint::new(inventories.len() as u128);
+    
 }
