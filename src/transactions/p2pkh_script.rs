@@ -1,16 +1,3 @@
-//      <Sig> <PubKey> OP_DUP OP_HASH160 <PubkeyHash> OP_EQUALVERIFY OP_CHECKSIG
-//
-// scriptPubKey: OP_DUP OP_HASH160 <bytes_to_push> <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
-// HEXA:         0x76   0xA9       <bytes_to_push> <pubKeyHash>  0x88            0xAC
-// Largo bytes:  1 + 1 + 1 + 20 + 1 + 1 = 25
-// Si una Tx es P2PKH el largo de su pk_script debe ser == 25
-
-// <pubKeyHash>: Son 20 bytes. Es el resultado de aplicar hash160 (sha256 + ripemd160 hash) a la publicKey comprimida SEC
-
-// scriptSig:   <length sig>     <sig>   <length pubKey>   <pubKey>
-// <pubKey> es la publicKey comprimida SEC (33bytes) del receptor de la tx
-// Largo bytes: 1 + 70 + 1 + 33 = 105
-
 use bitcoin_hashes::{ripemd160, Hash};
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
@@ -19,7 +6,10 @@ use crate::transactions::sig_script::SigScript;
 
 /// Recibe el p2pkh_script y el sig_script.
 /// Realiza la validación y devuelve true o false
-pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> bool {
+pub fn validate(hash: &[u8], p2pkh_script: &[u8], sig_script: &[u8]) -> bool {
+    // scriptSig:   <length sig>     <sig>   <length pubKey>   <pubKey>
+    // <pubKey> es la publicKey comprimida SEC (33bytes) del receptor de la tx
+    // Largo bytes: 1 + 70 + 1 + 33 = 105
     let mut sig_script_pubkey: [u8; 33] = [0; 33];
     sig_script_pubkey.copy_from_slice(&sig_script[72..105]);
 
@@ -50,9 +40,10 @@ pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> bool {
     if p2pkh_script[24..25] != [0xAC] {
         return false;
     }
-    //   if !SigScript::verify_sig() {
-    //       return false;
-    //   }
+
+    if !SigScript::verify_sig(hash, &sig_script[1..71], &sig_script[72..105]) {
+        return false;
+    }
     true
 }
 
@@ -78,7 +69,7 @@ mod test {
             &address_decoder::get_pubkey_hash_from_address(&account.address)?,
         )?;
         let sig = SigScript::generate_sig_script(hash, account)?;
-        let validation = p2pkh_script::validate(&p2pkh_script, sig.get_bytes());
+        let validation = p2pkh_script::validate(&hash, &p2pkh_script, sig.get_bytes());
 
         assert!(validation);
         Ok(())

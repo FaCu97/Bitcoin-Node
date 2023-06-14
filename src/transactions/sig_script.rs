@@ -66,11 +66,11 @@ impl SigScript {
 
     /// Recive el hash, signature y public key.
     /// Devuelve true o false dependiendo si el signature es correcto.
-    pub fn verify_sig(hash: [u8; 32], signature_bytes: &[u8], public_key: &[u8]) -> bool {
+    pub fn verify_sig(hash: &[u8], signature_bytes: &[u8], public_key: &[u8]) -> bool {
         // Verifying
         let verifying_key = ecdsa::VerifyingKey::from_sec1_bytes(public_key).unwrap();
         let signature = ecdsa::Signature::from_der(signature_bytes).unwrap();
-        let verified = verifying_key.verify(&hash, &signature).is_ok();
+        let verified = verifying_key.verify(hash, &signature).is_ok();
 
         verified
     }
@@ -98,7 +98,7 @@ mod test {
         let account = Account::new(private_key, address_expected)?;
         let sig = SigScript::generate_sig(hash.clone(), account.get_private_key()?);
         assert!(SigScript::verify_sig(
-            hash,
+            &hash,
             &sig,
             &account.get_pubkey_compressed()?
         ));
