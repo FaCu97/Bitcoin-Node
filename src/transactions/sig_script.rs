@@ -1,20 +1,9 @@
 use crate::account::Account;
 use k256::ecdsa;
-use k256::ecdsa::Signature;
-use k256::ecdsa::SigningKey;
-use k256::ecdsa::VerifyingKey;
 use k256::elliptic_curve;
-use k256::elliptic_curve::scalar::Scalar;
-use k256::elliptic_curve::sec1::FromEncodedPoint;
-use k256::elliptic_curve::sec1::ToEncodedPoint;
-use k256::elliptic_curve::AffinePoint;
-use k256::schnorr::signature;
 use k256::schnorr::signature::SignatureEncoding;
 use k256::schnorr::signature::Signer;
 use k256::schnorr::signature::Verifier;
-use k256::EncodedPoint;
-use k256::ProjectivePoint;
-use std::convert::TryInto;
 use std::error::Error;
 #[derive(Debug, PartialEq, Clone)]
 pub struct SigScript {
@@ -70,9 +59,7 @@ impl SigScript {
         // Verifying
         let verifying_key = ecdsa::VerifyingKey::from_sec1_bytes(public_key).unwrap();
         let signature = ecdsa::Signature::from_der(signature_bytes).unwrap();
-        let verified = verifying_key.verify(hash, &signature).is_ok();
-
-        verified
+        verifying_key.verify(hash, &signature).is_ok()
     }
 }
 #[cfg(test)]
