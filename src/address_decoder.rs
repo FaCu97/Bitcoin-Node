@@ -56,20 +56,22 @@ fn validate_address(address_decoded_bytes: &Vec<u8>) -> Result<(), Box<dyn Error
 
 /// Genera el pk_script de una transaccion P2PKH
 /// Recibe el <pubKeyHash> del receptor de la tx.
-pub fn generate_p2pkh_pk_script(public_key: &[u8]) -> Vec<u8> {
+pub fn generate_p2pkh_pk_script(pubkey_hash: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    if pubkey_hash.len() != 20 {
+        return Err(Box::new(std::io::Error::new(
+            io::ErrorKind::Other,
+            "El pubKey hash recibido es inválido. No tiene el largo correcto",
+        )));
+    }
     let mut pk_script: Vec<u8> = Vec::new();
     pk_script.push(0x76); // OP_DUP  -> Pasar a constantes o enum
     pk_script.push(0xA9);
     pk_script.push(20); // <bytes_to_push>: Son 20 bytes
 
-    //   let pk = secp256k1::PublicKey::from_slice(public_key).unwrap();
-    //    let public_key_sha256_hash = Sha256::digest(public_key);
-    //    let public_key_hash160 = *ripemd160::Hash::hash(&public_key_sha256_hash).as_byte_array();
-
-    pk_script.extend_from_slice(public_key);
+    pk_script.extend_from_slice(pubkey_hash);
     pk_script.push(0x88);
     pk_script.push(0xAC);
-    pk_script
+    Ok(pk_script)
 }
 
 #[cfg(test)]
@@ -120,17 +122,18 @@ mod test {
     }
 
     #[test]
-    fn test_pk_script_se_genera_con_el_largo_correcto() {
+    fn test_pk_script_se_genera_con_el_largo_correcto() -> Result<(), Box<dyn Error>> {
         let pub_key_hash: [u8; 20] = [0; 20];
-        let pk_script = generate_p2pkh_pk_script(&pub_key_hash);
+        let pk_script = generate_p2pkh_pk_script(&pub_key_hash)?;
 
         assert_eq!(pk_script.len(), 25);
+        Ok(())
     }
 
     #[test]
-    fn test_pk_script_se_genera_con_el_contenido_correcto() {
+    fn test_pk_script_se_genera_con_el_contenido_correcto() -> Result<(), Box<dyn Error>> {
         let pub_key_hash: [u8; 20] = [0; 20];
-        let pk_script = generate_p2pkh_pk_script(&pub_key_hash);
+        let pk_script = generate_p2pkh_pk_script(&pub_key_hash)?;
 
         assert_eq!(pk_script[..1], [0x76]);
         assert_eq!(pk_script[1..2], [0xA9]);
@@ -138,6 +141,7 @@ mod test {
         assert_eq!(pk_script[3..23], pub_key_hash);
         assert_eq!(pk_script[23..24], [0x88]);
         assert_eq!(pk_script[24..25], [0xAC]);
+        Ok(())
     }
 
     #[test]
