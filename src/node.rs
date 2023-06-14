@@ -25,17 +25,17 @@ impl Node {
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         block_chain: Arc<RwLock<Vec<Block>>>,
-    ) -> Self {
+    ) -> Result<Self, NodeMessageHandlerError> {
         let utxo_set = generate_utxo_set(&block_chain);
-        let peers_handler = NodeMessageHandler::new(log_sender, headers.clone(), block_chain.clone(), connected_nodes.clone()).unwrap();
-        Node {
+        let peers_handler = NodeMessageHandler::new(log_sender, headers.clone(), block_chain.clone(), connected_nodes.clone(), Vec::new())?;
+        Ok(Node {
             connected_nodes,
             headers,
             block_chain,
             utxo_set,
             accounts: None,
             peers_handler,
-        }
+        })
     }
     /// funcion para validar un bloque
     pub fn block_validation(block: Block) -> (bool, &'static str) {

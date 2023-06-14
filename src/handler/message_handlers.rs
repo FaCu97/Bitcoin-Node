@@ -1,6 +1,6 @@
 use std::sync::{RwLock, Arc, mpsc::Sender};
 
-use crate::{logwriter::log_writer::{LogSender, write_in_log}, messages::{headers_message::HeadersMessage, get_data_message::GetDataMessage, inventory::Inventory, block_message::BlockMessage, message_header::{HeaderMessage, get_checksum}}, blocks::{block_header::BlockHeader, block::Block}, compact_size_uint::CompactSizeUint, transactions::transaction::Transaction};
+use crate::{logwriter::log_writer::{LogSender, write_in_log}, messages::{headers_message::HeadersMessage, get_data_message::GetDataMessage, inventory::Inventory, block_message::BlockMessage, message_header::{HeaderMessage, get_checksum}}, blocks::{block_header::BlockHeader, block::Block}, compact_size_uint::CompactSizeUint, transactions::transaction::Transaction, account::Account};
 
 use super::node_message_handler::NodeMessageHandlerError;
 
@@ -113,9 +113,9 @@ pub fn handle_ping_message(
 
 /// Recibe un LogSender y el Payload del mensaje tx. Se fija si la tx involucra una cuenta de nuestra wallet. Devuelve Ok(()) 
 /// en caso de que se pueda leer bien el payload y recorrer las tx o error en caso contrario
-pub fn handle_tx_message(log_sender: LogSender, payload: &[u8]) -> NodeMessageHandlerResult {
+pub fn handle_tx_message(log_sender: LogSender, payload: &[u8], accounts: Vec<Account>) -> NodeMessageHandlerResult {
     let tx = Transaction::unmarshalling(&payload.to_vec(), &mut 0).map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
-    // todo: tx.check_if_tx_involves_user_account(wallet.clone(), pending_transactions.clone())?;
+    tx.check_if_tx_involves_user_account(accounts)?;
     Ok(())
 }
 

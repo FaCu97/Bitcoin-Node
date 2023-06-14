@@ -4,7 +4,7 @@ use crate::{
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
         headers_message::is_terminated, message_header::HeaderMessage,
-    },
+    }, account::Account,
 };
 use std::{
     error::Error,
@@ -79,6 +79,7 @@ impl NodeMessageHandler {
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         blocks: Arc<RwLock<Vec<Block>>>,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
+        accounts: Vec<Account>
     ) -> Result<Self, NodeMessageHandlerError> {
         write_in_log(
             log_sender.info_log_sender.clone(),
@@ -105,6 +106,7 @@ impl NodeMessageHandler {
                 headers.clone(),
                 blocks.clone(),
                 transactions_recieved.clone(),
+                accounts.clone(),
                 node,
                 Some(finish.clone()),
             ))
@@ -171,6 +173,7 @@ pub fn handle_messages_from_node(
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     blocks: Arc<RwLock<Vec<Block>>>,
     transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>>,
+    accounts: Vec<Account>,
     mut node: TcpStream,
     finish: Option<Arc<RwLock<bool>>>,
 ) -> JoinHandle<NodeMessageHandlerResult> {
@@ -203,7 +206,7 @@ pub fn handle_messages_from_node(
                     handle_ping_message(tx.clone(), &payload)?;
                 }
                 "tx" => {
-                    handle_tx_message(log_sender.clone(), &payload)?;
+                    handle_tx_message(log_sender.clone(), &payload, accounts.clone())?;
                 }
                 _ => {
                     write_in_log(log_sender.messege_log_sender.clone(), format!("IGNORADO -- Recibo: {} -- Nodo: {:?}", header.command_name, node.peer_addr()).as_str());   
