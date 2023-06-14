@@ -45,7 +45,9 @@ impl UtxoTuple {
     pub fn hash(&self) -> [u8; 32] {
         self.hash.clone()
     }
-
+    /// Funcion que se usa para la generacion de los txIn a la hora de crear una nueva transaccion
+    /// puede suceder que una transaccion tenga mas de un outpoint referenciando a las utxos de esa
+    /// transaccion por eso la necesidad de esta funcion
     pub fn get_indexes_from_utxos(&self) -> Vec<usize> {
         let mut indexes = Vec::new();
         for utxo in &self.utxo_set {

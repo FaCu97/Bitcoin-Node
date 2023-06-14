@@ -44,7 +44,7 @@ impl Pubkey {
         Ok(string)
     }
 
-    pub fn generate_pubkey(address: &str) -> Result<Pubkey, Box<dyn Error>> {
+    pub fn generate_pubkey(address: &str) -> Result<Vec<u8>, Box<dyn Error>> {
         let pubkey_hash = get_pubkey_hash_from_address(address)?;
         let mut pk_script: Vec<u8> = Vec::new();
         pk_script.push(0x76); // OP_DUP  -> Pasar a constantes o enum
@@ -53,6 +53,10 @@ impl Pubkey {
         pk_script.extend_from_slice(&pubkey_hash);
         pk_script.push(0x88);
         pk_script.push(0xAC);
-        Ok(Pubkey { bytes: pk_script })
+        Ok(pk_script)
+    }
+
+    pub fn len(&self) -> u128 {
+        self.bytes.len() as u128
     }
 }

@@ -1,3 +1,4 @@
+use chrono::prelude::*;
 use std::{
     error::Error,
     sync::{Arc, RwLock},
@@ -9,7 +10,7 @@ use crate::{
     account::Account, compact_size_uint::CompactSizeUint, utxo_tuple::UtxoTuple, wallet::Wallet,
 };
 
-use super::{tx_in::TxIn, tx_out::TxOut};
+use super::{outpoint::Outpoint, pubkey::Pubkey, tx_in::TxIn, tx_out::TxOut};
 
 /// Guarda el txid(hash de la transaccion) y el vector con los utxos (valor e indice)
 #[derive(Debug, PartialEq, Clone)]
@@ -166,13 +167,39 @@ impl Transaction {
         address_receiver: &str,
         value: i64,
         utxos_to_spend: &Vec<UtxoTuple>,
-    ) -> Result<(), Box<dyn Error>> {
-        let mut tx_in: Vec<TxIn> = Vec::new();
+    ) -> Result<Transaction, Box<dyn Error>> {
+        let mut tx_ins: Vec<TxIn> = Vec::new();
+
+        // en esta parte se generan los tx_in de donde obtenemos los satoshis para ser
+        // gastados ,¡ojo! pueden ser mas de uno.
         for utxo in utxos_to_spend {
-            let hash = utxo.hash();
-            //for tx_out in utxo.
+            let tx_id: [u8; 32] = utxo.hash();
+            let indexes: Vec<usize> = utxo.get_indexes_from_utxos();
+            for index in indexes {
+                let previous_output: Outpoint = Outpoint::new(tx_id, index as u32);
+                let tx_in: TxIn = TxIn::incomplete_txin(previous_output);
+                tx_ins.push(tx_in);
+            }
         }
-        Ok(())
+        // esta variable indica la cantidad de txIn creados en los pasos anteriores
+        let txin_count: CompactSizeUint = CompactSizeUint::new(tx_ins.len() as u128);
+        // este vector contiene los outputs de nuestra transaccion
+        let mut tx_outs: Vec<TxOut> = Vec::new();
+        // creacion del pubkey_script
+        let pk_script: Vec<u8> = Pubkey::generate_pubkey(address_receiver)?;
+        let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(pk_script.len() as u128);
+        // creacion del txOut(utxo) referenciado al address que nos enviaron
+        let utxo_to_send = TxOut::new(value, pk_script_bytes, pk_script);
+        tx_outs.push(utxo_to_send);
+        let txout_count = CompactSizeUint::new(tx_outs.len() as u128);
+        // numero de version quizas esto deberia ir dentro del .conf
+        let version = 0x00000002;
+        // current date contiene la fecha actual
+        let current_date: DateTime<Local> = Local::now();
+        let lock_time: u32 = current_date.timestamp() as u32;
+        let incomplete_transaction =
+            Transaction::new(version, txin_count, tx_ins, txout_count, tx_outs, lock_time);
+        Ok(incomplete_transaction)
     }
 }
 
