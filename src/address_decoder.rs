@@ -1,8 +1,45 @@
-use std::error::Error;
-use std::io;
-
+use bitcoin_hashes::{ripemd160, Hash};
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
+use secp256k1::SecretKey;
+use std::error::Error;
+use std::io;
+const UNCOMPRESSED_WIF_LEN: usize = 51;
+
+/// Recibe la private key en bytes.
+/// Devuelve la address comprimida
+pub fn generate_address(private_key: &[u8]) -> Result<String, Box<dyn Error>> {
+    // se aplica el algoritmo de ECDSA a la clave privada , luego
+    // a la clave publica
+    let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
+    let key = SecretKey::from_slice(private_key)?;
+    let public_key: secp256k1::PublicKey = secp256k1::PublicKey::from_secret_key(&secp, &key);
+    let public_key_bytes_compressed = public_key.serialize();
+
+    // Se aplica RIPEMD160(SHA256(ECDSA(public_key)))
+    let ripemd160_hash = hash_160(&public_key_bytes_compressed);
+
+    // Añadir el byte de versión (0x00) al comienzo del hash RIPEMD-160
+    let mut extended_hash = vec![0x6f];
+    extended_hash.extend_from_slice(&ripemd160_hash);
+
+    // Calcular el checksum (doble hash SHA-256) del hash extendido
+    let checksum = Sha256::digest(Sha256::digest(&extended_hash));
+
+    // Añadir los primeros 4 bytes del checksum al final del hash extendido
+    extended_hash.extend_from_slice(&checksum[..4]);
+
+    // Codificar el hash extendido en Base58
+    let encoded: bs58::encode::EncodeBuilder<&Vec<u8>> = bs58::encode(&extended_hash);
+    Ok(encoded.into_string())
+}
+
+/// Recibe el public key comprimido (33 bytes)
+/// Aplica RIPEMD160(SHA256(ECDSA(public_key)))
+pub fn hash_160(public_key_bytes_compressed: &[u8]) -> [u8; 20] {
+    let sha256_hash = Sha256::digest(public_key_bytes_compressed);
+    *ripemd160::Hash::hash(&sha256_hash).as_byte_array()
+}
 
 /// Recibe la address comprimida
 /// Devuelve el PubkeyHash
@@ -19,6 +56,16 @@ pub fn get_pubkey_hash_from_address(address: &str) -> Result<[u8; 20], Box<dyn E
     pubkey_hash.copy_from_slice(&address_decoded_bytes[1..(lenght_bytes - 4)]);
 
     Ok(pubkey_hash)
+}
+
+/// Devuelve la clave publica comprimida (33 bytes) a partir de la privada
+
+pub fn get_pubkey_compressed(private_key: &str) -> Result<[u8; 33], Box<dyn Error>> {
+    let private_key = decode_wif_private_key(private_key)?;
+    let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
+    let key: SecretKey = SecretKey::from_slice(&private_key).unwrap();
+    let public_key: secp256k1::PublicKey = secp256k1::PublicKey::from_secret_key(&secp, &key);
+    Ok(public_key.serialize())
 }
 
 /// Recibe una bitcoin address decodificada.
@@ -41,30 +88,120 @@ fn validate_address(address_decoded_bytes: &Vec<u8>) -> Result<(), Box<dyn Error
     Ok(())
 }
 
+/// Recibe una private key en bytes y una address comprimida.
+/// Devuelve true o false dependiendo si se corresponden entre si o no.
+pub fn validate_address_private_key(
+    private_key: &[u8],
+    address: &String,
+) -> Result<(), Box<dyn Error>> {
+    if !generate_address(private_key)?.eq(address) {
+        return Err(Box::new(std::io::Error::new(
+            io::ErrorKind::Other,
+            "La private key ingresada no se corresponde con la address",
+        )));
+    }
+    Ok(())
+}
+
+/// Recibe la WIF private key, ya sea en formato comprimido o no comprimido.
+/// Devuelve la private key en bytes
+pub fn decode_wif_private_key(wif_private_key: &str) -> Result<[u8; 32], Box<dyn Error>> {
+    // Decodificar la clave privada en formato WIF
+    let decoded_result = bs58::decode(wif_private_key).into_vec();
+    let decoded = match decoded_result {
+        Ok(decoded) => decoded,
+        Err(err) => return Err(Box::new(std::io::Error::new(io::ErrorKind::Other, err))),
+    };
+
+    let mut vector = vec![];
+    if wif_private_key.len() == UNCOMPRESSED_WIF_LEN {
+        vector.extend_from_slice(&decoded[1..&decoded.len() - 4]);
+    } else {
+        vector.extend_from_slice(&decoded[1..&decoded.len() - 5]);
+    }
+
+    if vector.len() != 32 {
+        return Err(Box::new(std::io::Error::new(
+            io::ErrorKind::Other,
+            "No se pudo decodificar la WIF private key.",
+        )));
+    }
+
+    // Obtener la clave privada de 32 bytes
+    let mut private_key_bytes = [0u8; 32];
+    private_key_bytes.copy_from_slice(&vector);
+
+    Ok(private_key_bytes)
+}
+
 #[cfg(test)]
 
 mod test {
     use std::error::Error;
 
     use super::get_pubkey_hash_from_address;
-    use crate::account::Account;
-    use bitcoin_hashes::{ripemd160, Hash};
-    use k256::sha2::Digest;
-    use k256::sha2::Sha256;
+    use crate::address_decoder::decode_wif_private_key;
+    use crate::address_decoder::generate_address;
     use secp256k1::SecretKey;
 
+    /// Genera el pubkey hash a partir de la private key
     fn generate_pubkey_hash(private_key: &[u8]) -> [u8; 20] {
         let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
         let key: SecretKey = SecretKey::from_slice(private_key).unwrap();
         let public_key: secp256k1::PublicKey = secp256k1::PublicKey::from_secret_key(&secp, &key);
         //  se aplica RIPEMD160(SHA256(ECDSA(public_key)))
         let public_key_compressed = public_key.serialize();
-        // let pk_hex: String = public_key_hexa.encode_hex::<String>();
 
         // Aplica hash160
-        let sha256_hash = Sha256::digest(public_key_compressed);
-        let ripemd160_hash = *ripemd160::Hash::hash(&sha256_hash).as_byte_array();
-        ripemd160_hash
+        super::hash_160(&public_key_compressed)
+    }
+
+    fn string_to_32_bytes(input: &str) -> Result<[u8; 32], hex::FromHexError> {
+        let bytes = hex::decode(input)?;
+        let mut result = [0; 32];
+        result.copy_from_slice(&bytes[..32]);
+        Ok(result)
+    }
+
+    #[test]
+    fn test_decoding_wif_compressed_genera_correctamente_el_private_key(
+    ) -> Result<(), Box<dyn Error>> {
+        // WIF COMPRESSED
+        let wif = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
+        // PRIVATE KEY FROM HEX FORMAT
+        let expected_private_key_bytes =
+            string_to_32_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
+                .unwrap();
+
+        let private_key = decode_wif_private_key(wif)?;
+
+        assert_eq!(private_key.to_vec(), expected_private_key_bytes);
+        Ok(())
+    }
+
+    #[test]
+    fn test_decoding_wif_uncompressed_genera_correctamente_el_private_key(
+    ) -> Result<(), Box<dyn Error>> {
+        // WIF UNCOMPRESSED
+        let wif = "91dkDNCCaMp2f91sVQRGgdZRw1QY4aptaeZ4vxEvuG5PvZ9hftJ";
+        // PRIVATE KEY FROM HEX FORMAT
+        let expected_private_key_bytes =
+            string_to_32_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
+                .unwrap();
+
+        let private_key = decode_wif_private_key(wif)?;
+        assert_eq!(private_key.to_vec(), expected_private_key_bytes);
+        Ok(())
+    }
+
+    #[test]
+    fn test_address_se_genera_correctamente() -> Result<(), Box<dyn Error>> {
+        let expected_address: &str = "mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV";
+        let private_key_wif: &str = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
+        let private_key_bytes = decode_wif_private_key(private_key_wif)?;
+        let address = generate_address(&private_key_bytes)?;
+        assert_eq!(expected_address, address);
+        Ok(())
     }
 
     #[test]
@@ -75,10 +212,10 @@ mod test {
     }
 
     #[test]
-    fn test_decodificacion_de_adress_genera_pubkey_esperado() -> Result<(), Box<dyn Error>> {
+    fn test_decodificacion_de_address_genera_pubkey_esperado() -> Result<(), Box<dyn Error>> {
         let address: &str = "mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV";
         let private_key: &str = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
-        let private_key_bytes = Account::decode_wif_private_key(private_key)?;
+        let private_key_bytes = decode_wif_private_key(private_key)?;
         let pubkey_hash_expected = generate_pubkey_hash(&private_key_bytes);
         let pubkey_hash_generated = get_pubkey_hash_from_address(address)?;
         assert_eq!(pubkey_hash_expected, pubkey_hash_generated);

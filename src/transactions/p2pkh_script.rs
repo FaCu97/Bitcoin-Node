@@ -1,11 +1,7 @@
+use crate::address_decoder;
+use crate::transactions::sig_script::SigScript;
 use std::error::Error;
 use std::io;
-
-use bitcoin_hashes::{ripemd160, Hash};
-use k256::sha2::Digest;
-use k256::sha2::Sha256;
-
-use crate::transactions::sig_script::SigScript;
 
 //      <Sig> <PubKey> OP_DUP OP_HASH160 <PubkeyHash> OP_EQUALVERIFY OP_CHECKSIG
 //
@@ -64,8 +60,8 @@ pub fn validate(
     }
 
     // 3) Aplica hash160 sobre el pubkey del sig_script
-    let sha256_hash = Sha256::digest(sig_script_pubkey);
-    let ripemd160_hash = *ripemd160::Hash::hash(&sha256_hash).as_byte_array();
+    let ripemd160_hash = address_decoder::hash_160(&sig_script_pubkey);
+
     // 4) Chequeo que el siguiente comando sea OP_EQUALVERIFY (0x88)
     if p2pkh_script[23..24] != [0x88] {
         return Ok(false);
