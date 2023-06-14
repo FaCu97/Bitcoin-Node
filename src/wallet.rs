@@ -17,6 +17,7 @@ impl Wallet {
             accounts: Arc::new(RwLock::new(Vec::new())),
         };
         wallet.node.set_accounts(wallet.accounts.clone());
+        println!("accounts added to node!\n");
         wallet
     }
 

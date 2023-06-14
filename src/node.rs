@@ -26,7 +26,7 @@ impl Node {
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         block_chain: Arc<RwLock<Vec<Block>>>,
     ) -> Result<Self, NodeMessageHandlerError> {
-        let utxo_set = generate_utxo_set(&block_chain);
+        let utxo_set = generate_utxo_set(&block_chain)?;
         let pointer_to_accounts_in_node = Arc::new(RwLock::new(Arc::new(RwLock::new(vec![]))));
         let peers_handler = NodeMessageHandler::new(log_sender, headers.clone(), block_chain.clone(), connected_nodes.clone(), pointer_to_accounts_in_node.clone())?;
         Ok(Node {
@@ -93,20 +93,21 @@ impl Node {
         self.peers_handler.broadcast_to_nodes(inv_message_bytes)
     }
 
-    pub fn set_accounts(&mut self, accounts: Arc<RwLock<Vec<Account>>>) {
-        *self.accounts.write().unwrap() = accounts;
+    pub fn set_accounts(&mut self, accounts: Arc<RwLock<Vec<Account>>>) -> Result<(), NodeMessageHandlerError> {
+        *self.accounts.write().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))? = accounts;
+        Ok(())
     }
 }
 
 ///Funcion que se encarga de generar la lista de utxos
-fn generate_utxo_set(block_chain: &Arc<RwLock<Vec<Block>>>) -> Vec<UtxoTuple> {
+fn generate_utxo_set(block_chain: &Arc<RwLock<Vec<Block>>>) -> Result<Vec<UtxoTuple>, NodeMessageHandlerError> {
     let mut list_of_utxos: Vec<UtxoTuple> = Vec::new();
 
-    let block_chain_lock = block_chain.read().unwrap();
+    let block_chain_lock = block_chain.read().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
 
     for block in block_chain_lock.iter() {
         let utxos: Vec<UtxoTuple> = block.give_me_utxos();
         list_of_utxos.extend_from_slice(&utxos);
     }
-    list_of_utxos
+    Ok(list_of_utxos)
 }

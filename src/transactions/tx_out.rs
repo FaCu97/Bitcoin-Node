@@ -83,7 +83,7 @@ impl TxOut {
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         tx: Transaction,
     ) -> Result<(), NodeMessageHandlerError> {
-        for account in &*accounts.read().unwrap().read().unwrap() {
+        for account in &*accounts.read().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?.read().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))? {
             if !account
                 .pending_transactions
                 .read()

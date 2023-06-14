@@ -19,6 +19,7 @@ pub struct Account {
     pub address: String,
     pub utxo_set: Vec<UtxoTuple>,
     pub pending_transactions: Arc<RwLock<Vec<Transaction>>>,
+    pub confirmed_transactions: Arc<RwLock<Vec<Transaction>>>,
 }
 
 impl Account {
@@ -33,6 +34,7 @@ impl Account {
             address,
             utxo_set: Vec::new(),
             pending_transactions: Arc::new(RwLock::new(Vec::new())),
+            confirmed_transactions: Arc::new(RwLock::new(Vec::new())),
         })
     }
 
@@ -251,6 +253,7 @@ mod test {
             address,
             utxo_set: Vec::new(),
             pending_transactions: Arc::new(RwLock::new(Vec::new())),
+            confirmed_transactions: Arc::new(RwLock::new(Vec::new()))
         };
         let expected_pubkey = string_to_33_bytes(
             "0345EC0AA86BAF64ED626EE86B4A76C12A92D5F6DD1C1D6E4658E26666153DAFA6",

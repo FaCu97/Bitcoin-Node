@@ -45,8 +45,8 @@ pub fn handle_block_message(log_sender: LogSender, payload: &[u8], headers: Arc<
         let header_is_not_included_yet = header_is_not_included(new_block.block_header, headers.clone())?;
         if header_is_not_included_yet {
             include_new_header(log_sender.clone(), new_block.block_header, headers)?;
-            include_new_block(log_sender, new_block, blocks)?;
-            //new_block.contains_pending_tx(accounts)?;
+            include_new_block(log_sender.clone(), new_block.clone(), blocks)?;
+            new_block.contains_pending_tx(log_sender, accounts)?;
         }
     } else {
         write_in_log(
