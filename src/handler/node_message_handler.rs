@@ -186,8 +186,9 @@ pub fn handle_messages_from_node(
                 write_message_in_node(&mut node, &message)?
             }
             //leo header y payload
-            let header = read_header(&mut node)?;
-            let payload = read_payload(&mut node, header.payload_size as usize)?;
+            let header = read_header(&mut node, finish.clone())?;
+            let payload = read_payload(&mut node, header.payload_size as usize, finish.clone())?;
+            if is_terminated(finish.clone()) {break;}
             let command_name = get_header_command_name_as_str(header.command_name.as_str());
             match command_name {
                 "headers" => {
@@ -275,9 +276,9 @@ pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessag
     Ok(())
 }
 
-fn read_header(node: &mut dyn Read) -> Result<HeaderMessage, NodeMessageHandlerError> {
+fn read_header(node: &mut dyn Read, finish: Option<Arc<RwLock<bool>>>) -> Result<HeaderMessage, NodeMessageHandlerError> {
     let mut buffer_num = [0; 24];
-    loop {
+    while !is_terminated(finish.clone()) {
         match node.read_exact(&mut buffer_num) {
             Ok(_) => break, // Lectura exitosa, salimos del bucle
             Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => continue, // No hay suficientes datos disponibles, continuar esperando
@@ -288,9 +289,9 @@ fn read_header(node: &mut dyn Read) -> Result<HeaderMessage, NodeMessageHandlerE
         .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))
 }
 
-fn read_payload(node: &mut dyn Read, size: usize) -> Result<Vec<u8>, NodeMessageHandlerError> {
+fn read_payload(node: &mut dyn Read, size: usize, finish: Option<Arc<RwLock<bool>>>) -> Result<Vec<u8>, NodeMessageHandlerError> {
     let mut payload_buffer_num: Vec<u8> = vec![0; size];
-    loop {
+    while !is_terminated(finish.clone()) {
         match node.read_exact(&mut payload_buffer_num) {
             Ok(_) => break, // Lectura exitosa, salimos del bucle
             Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => continue, // No hay suficientes datos disponibles, continuar esperando
@@ -300,22 +301,7 @@ fn read_payload(node: &mut dyn Read, size: usize) -> Result<Vec<u8>, NodeMessage
     Ok(payload_buffer_num)
 }
 
-/* 
-fn read_header(node: &mut dyn Read) -> Result<HeaderMessage, NodeMessageHandlerError> {
-    let mut buffer_num = [0; 24];
-    node.read_exact(&mut buffer_num)
-        .map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
-    HeaderMessage::from_le_bytes(buffer_num)
-        .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))
-}
 
-fn read_payload(node: &mut dyn Read, size: usize) -> Result<Vec<u8>, NodeMessageHandlerError> {
-    let mut payload_buffer_num: Vec<u8> = vec![0; size];
-    node.read_exact(&mut payload_buffer_num)
-        .map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
-    Ok(payload_buffer_num)
-}
-*/
 
 /// Recibe un Arc apuntando a un RwLock de un vector de TcpStreams y devuelve el ultimo nodo TcpStream del vector si es que
 /// hay, si no devuelve un error del tipo BroadcastingError
