@@ -186,12 +186,8 @@ pub fn handle_messages_from_node(
                 write_message_in_node(&mut node, &message)?
             }
             //leo header y payload
-            let (header, payload) = match read_header_and_payload(&mut node) {
-                Ok((header, payload)) => (header, payload),
-                Err(_) => {
-                    break;
-                }
-            };
+            let header = read_header(&mut node)?;
+            let payload = read_payload(&mut node, header.payload_size as usize)?;
             let command_name = get_header_command_name_as_str(header.command_name.as_str());
             match command_name {
                 "headers" => {
@@ -279,21 +275,22 @@ pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessag
     Ok(())
 }
 
-/// Recibe algo que implemente el trait Read y lee el header y el payload del header y devuelve una tupla de un Struct
-/// Header y un vector de bytes que representa al payload. En caso de error al leer, devuelve un Error especifico de lectura
-pub fn read_header_and_payload(
-    node: &mut dyn Read,
-) -> Result<(HeaderMessage, Vec<u8>), NodeMessageHandlerError> {
+
+
+
+fn read_header(node: &mut dyn Read) -> Result<HeaderMessage, NodeMessageHandlerError> {
     let mut buffer_num = [0; 24];
     node.read_exact(&mut buffer_num)
         .map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
-    let header = HeaderMessage::from_le_bytes(buffer_num)
-        .map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
-    let payload_size = header.payload_size as usize;
-    let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
+    HeaderMessage::from_le_bytes(buffer_num)
+        .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))
+}
+
+fn read_payload(node: &mut dyn Read, size: usize) -> Result<Vec<u8>, NodeMessageHandlerError> {
+    let mut payload_buffer_num: Vec<u8> = vec![0; size];
     node.read_exact(&mut payload_buffer_num)
         .map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
-    Ok((header, payload_buffer_num))
+    Ok(payload_buffer_num)
 }
 
 /// Recibe un Arc apuntando a un RwLock de un vector de TcpStreams y devuelve el ultimo nodo TcpStream del vector si es que
