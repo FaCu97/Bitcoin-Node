@@ -187,10 +187,10 @@ pub fn handle_messages_from_node(
             }
             //leo header y payload
             let header = read_header(&mut node, finish.clone())?;
-            let payload = read_payload(&mut node, header.payload_size as usize, finish.clone())?;
             if is_terminated(finish.clone()) {
                 break;
             }
+            let payload = read_payload(&mut node, header.payload_size as usize, finish.clone())?;
             let command_name = get_header_command_name_as_str(header.command_name.as_str());
             match command_name {
                 "headers" => {
@@ -289,6 +289,11 @@ fn read_header(
             Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => continue, // No hay suficientes datos disponibles, continuar esperando
             Err(err) => return Err(NodeMessageHandlerError::ReadNodeError(err.to_string())), // Error inesperado, devolverlo
         }
+    }
+    if is_terminated(finish.clone()) {
+        // devuelvo un header cualquiera para que no falle en la funcion en la que se llama a read_header 
+        // y de esta manera cortar bien el ciclo while
+        return Ok(HeaderMessage::new("none".to_string(), None))
     }
     HeaderMessage::from_le_bytes(buffer_num)
         .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))
