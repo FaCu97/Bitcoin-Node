@@ -7,7 +7,7 @@ use crate::{
 use std::{
     error::Error,
     fmt,
-    io::{Read, Write},
+    io::{Read, Write, self},
     net::TcpStream,
     sync::{
         mpsc::{channel, Receiver, Sender},
@@ -275,9 +275,32 @@ pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessag
     Ok(())
 }
 
+fn read_header(node: &mut dyn Read) -> Result<HeaderMessage, NodeMessageHandlerError> {
+    let mut buffer_num = [0; 24];
+    loop {
+        match node.read_exact(&mut buffer_num) {
+            Ok(_) => break, // Lectura exitosa, salimos del bucle
+            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => continue, // No hay suficientes datos disponibles, continuar esperando
+            Err(err) => return Err(NodeMessageHandlerError::ReadNodeError(err.to_string())), // Error inesperado, devolverlo
+        }
+    }
+    HeaderMessage::from_le_bytes(buffer_num)
+        .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))
+}
 
+fn read_payload(node: &mut dyn Read, size: usize) -> Result<Vec<u8>, NodeMessageHandlerError> {
+    let mut payload_buffer_num: Vec<u8> = vec![0; size];
+    loop {
+        match node.read_exact(&mut payload_buffer_num) {
+            Ok(_) => break, // Lectura exitosa, salimos del bucle
+            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => continue, // No hay suficientes datos disponibles, continuar esperando
+            Err(err) => return Err(NodeMessageHandlerError::ReadNodeError(err.to_string())), // Error inesperado, devolverlo
+        }
+    }
+    Ok(payload_buffer_num)
+}
 
-
+/* 
 fn read_header(node: &mut dyn Read) -> Result<HeaderMessage, NodeMessageHandlerError> {
     let mut buffer_num = [0; 24];
     node.read_exact(&mut buffer_num)
@@ -292,6 +315,7 @@ fn read_payload(node: &mut dyn Read, size: usize) -> Result<Vec<u8>, NodeMessage
         .map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
     Ok(payload_buffer_num)
 }
+*/
 
 /// Recibe un Arc apuntando a un RwLock de un vector de TcpStreams y devuelve el ultimo nodo TcpStream del vector si es que
 /// hay, si no devuelve un error del tipo BroadcastingError
