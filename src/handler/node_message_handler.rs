@@ -7,7 +7,7 @@ use crate::{
 use std::{
     error::Error,
     fmt,
-    io::{Read, Write, self},
+    io::{self, Read, Write},
     net::TcpStream,
     sync::{
         mpsc::{channel, Receiver, Sender},
@@ -188,7 +188,9 @@ pub fn handle_messages_from_node(
             //leo header y payload
             let header = read_header(&mut node, finish.clone())?;
             let payload = read_payload(&mut node, header.payload_size as usize, finish.clone())?;
-            if is_terminated(finish.clone()) {break;}
+            if is_terminated(finish.clone()) {
+                break;
+            }
             let command_name = get_header_command_name_as_str(header.command_name.as_str());
             match command_name {
                 "headers" => {
@@ -276,7 +278,10 @@ pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessag
     Ok(())
 }
 
-fn read_header(node: &mut dyn Read, finish: Option<Arc<RwLock<bool>>>) -> Result<HeaderMessage, NodeMessageHandlerError> {
+fn read_header(
+    node: &mut dyn Read,
+    finish: Option<Arc<RwLock<bool>>>,
+) -> Result<HeaderMessage, NodeMessageHandlerError> {
     let mut buffer_num = [0; 24];
     while !is_terminated(finish.clone()) {
         match node.read_exact(&mut buffer_num) {
@@ -289,7 +294,11 @@ fn read_header(node: &mut dyn Read, finish: Option<Arc<RwLock<bool>>>) -> Result
         .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))
 }
 
-fn read_payload(node: &mut dyn Read, size: usize, finish: Option<Arc<RwLock<bool>>>) -> Result<Vec<u8>, NodeMessageHandlerError> {
+fn read_payload(
+    node: &mut dyn Read,
+    size: usize,
+    finish: Option<Arc<RwLock<bool>>>,
+) -> Result<Vec<u8>, NodeMessageHandlerError> {
     let mut payload_buffer_num: Vec<u8> = vec![0; size];
     while !is_terminated(finish.clone()) {
         match node.read_exact(&mut payload_buffer_num) {
@@ -300,8 +309,6 @@ fn read_payload(node: &mut dyn Read, size: usize, finish: Option<Arc<RwLock<bool
     }
     Ok(payload_buffer_num)
 }
-
-
 
 /// Recibe un Arc apuntando a un RwLock de un vector de TcpStreams y devuelve el ultimo nodo TcpStream del vector si es que
 /// hay, si no devuelve un error del tipo BroadcastingError
