@@ -70,7 +70,7 @@ impl SigScript {
 mod test {
     use std::error::Error;
 
-    use crate::{account::Account, transactions::sig_script::SigScript};
+    use crate::{account::Account, transactions::script::sig_script::SigScript};
     #[test]
     fn test_el_largo_del_script_sig_es_70_bytes() -> Result<(), Box<dyn Error>> {
         let hash: [u8; 32] = [123; 32];

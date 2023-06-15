@@ -7,7 +7,7 @@ use crate::{
     logwriter::log_writer::{write_in_log, LogSender},
 };
 
-use super::{pubkey::Pubkey, transaction::Transaction};
+use super::{script::pubkey::Pubkey, transaction::Transaction};
 #[derive(Debug, PartialEq, Clone)]
 pub struct TxOut {
     value: i64,                       // Number of satoshis to spend

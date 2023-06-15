@@ -228,8 +228,8 @@ mod test {
         blocks::block_header::BlockHeader,
         compact_size_uint::CompactSizeUint,
         transactions::{
-            outpoint::Outpoint, sig_script::SigScript, transaction::Transaction, tx_in::TxIn,
-            tx_out::TxOut,
+            outpoint::Outpoint, script::sig_script::SigScript, transaction::Transaction,
+            tx_in::TxIn, tx_out::TxOut,
         },
     };
 
