@@ -57,6 +57,57 @@ pub fn handle_headers_message(
     Ok(())
 }
 
+
+/// Recibe un Sender de bytes, el payload del mensaje getdata recibido y un vector de cuentas de la wallet y deserializa el mensaje getdata que llega
+/// y por cada Inventory que pide si esta como pending_transaction en alguna de las cuentas de la wallet se le envia el mensaje tx con la transaccion pedida
+/// por el channel para ser escrita. Devuelve Ok(()) en caso exitoso o error de tipo NodeMessageHandlerError en caso contrarui
+pub fn handle_getdata_message(log_sender: LogSender, node_sender: NodeSender, payload: &[u8], accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>) -> Result<(), NodeMessageHandlerError> {
+    let mut offset: usize = 0;
+    let count = CompactSizeUint::unmarshalling(payload, &mut offset)
+        .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
+    for _ in 0..count.decoded_value() as usize {
+        let mut inventory_bytes = vec![0; 36];
+        inventory_bytes.copy_from_slice(&payload[offset..(offset + 36)]);
+        let inv = Inventory::from_le_bytes(&inventory_bytes);
+        if inv.type_identifier == 1 {
+            for account in &*accounts
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            {
+                for tx in &*account.pending_transactions.read().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))? {
+                    if tx.hash() == inv.hash {
+                        write_tx_message(log_sender.clone(), node_sender.clone(), tx)?;
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
+
+/// Recibe un NodeSender y una tx y se encarga de mandar por el channel el mensaje tx con la transaccion pasada por parametro
+/// para ser escrita al nodo conectado. Devuelve Ok(()) si salio todo bien NodeMessageHandlerError en caso contrario
+fn write_tx_message(log_sender: LogSender,node_sender: NodeSender, tx: &Transaction) -> Result<(), NodeMessageHandlerError> {
+    let mut tx_payload = vec![];
+    tx.marshalling(&mut tx_payload);
+    let header = HeaderMessage::new("tx".to_string(), Some(&tx_payload));
+    let mut tx_message = vec![];
+    tx_message.extend_from_slice(&header.to_le_bytes());
+    tx_message.extend_from_slice(&tx_payload);
+    node_sender.send(tx_message).map_err(|err| NodeMessageHandlerError::ThreadChannelError(err.to_string()))?;
+    write_in_log(log_sender.info_log_sender.clone(), format!("transaccion {:?} enviada", tx.hex_hash()).as_str());
+    Ok(())
+}
+
+
+
+
+
+
+
 /// Deserializa el payload del mensaje blocks y en caso de que el bloque es valido y todavia no este incluido, agrega el header a la cadena de headers
 /// y el bloque a la cadena de bloques. Se fija si alguna transaccion del bloque involucra a alguna de las cuentas del programa.
 pub fn handle_block_message(
