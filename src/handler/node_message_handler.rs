@@ -17,8 +17,8 @@ use std::{
 };
 
 use super::message_handlers::{
-    handle_block_message, handle_headers_message, handle_inv_message, handle_ping_message,
-    handle_tx_message, handle_getdata_message,
+    handle_block_message, handle_getdata_message, handle_headers_message, handle_inv_message,
+    handle_ping_message, handle_tx_message,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -203,7 +203,12 @@ pub fn handle_messages_from_node(
                     )?;
                 }
                 "getdata" => {
-                    handle_getdata_message(log_sender.clone(), tx.clone(), &payload, accounts.clone())?;
+                    handle_getdata_message(
+                        log_sender.clone(),
+                        tx.clone(),
+                        &payload,
+                        accounts.clone(),
+                    )?;
                 }
                 "block" => {
                     handle_block_message(
