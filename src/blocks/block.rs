@@ -1,10 +1,14 @@
-use std::sync::{RwLock, Arc};
+use std::sync::{Arc, RwLock};
 
 use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{
+    account::Account,
     compact_size_uint::CompactSizeUint,
-    transactions::transaction::Transaction, utxo_tuple::UtxoTuple, account::Account, handler::node_message_handler::NodeMessageHandlerError, logwriter::log_writer::{LogSender, write_in_log},
+    handler::node_message_handler::NodeMessageHandlerError,
+    logwriter::log_writer::{write_in_log, LogSender},
+    transactions::transaction::Transaction,
+    utxo_tuple::UtxoTuple,
 };
 
 use super::block_header::BlockHeader;
@@ -156,15 +160,20 @@ impl Block {
         utxo_container
     }
 
-    
     pub fn contains_pending_tx(
         &self,
         log_sender: LogSender,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     ) -> Result<(), NodeMessageHandlerError> {
         for tx in &self.txn {
-            for account in &*accounts.read().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?.read().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))? {
-                if account.pending_transactions
+            for account in &*accounts
+                .read()
+                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                .read()
+                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            {
+                if account
+                    .pending_transactions
                     .read()
                     .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
                     .contains(tx)
@@ -174,21 +183,32 @@ impl Block {
                         self.block_header.hash(),
                         tx.hex_hash()
                     );
-                    let pending_transaction_index = account.pending_transactions
+                    let pending_transaction_index = account
+                        .pending_transactions
                         .read()
                         .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
                         .iter()
                         .position(|pending_tx| pending_tx.hash() == tx.hash());
                     if let Some(pending_transaction_index) = pending_transaction_index {
-                        let confirmed_tx = account.pending_transactions
+                        let confirmed_tx = account
+                            .pending_transactions
                             .write()
                             .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
                             .remove(pending_transaction_index);
-                        account.confirmed_transactions
+                        account
+                            .confirmed_transactions
                             .write()
                             .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
                             .push(confirmed_tx.clone());
-                        write_in_log(log_sender.info_log_sender.clone(), format!("CUENTA: {:?}: SE CONFIRMA NUEVA TRANSACCION {:?} EN BLOQUE", account.address, confirmed_tx.hex_hash()).as_str());
+                        write_in_log(
+                            log_sender.info_log_sender.clone(),
+                            format!(
+                                "CUENTA: {:?}: SE CONFIRMA NUEVA TRANSACCION {:?} EN BLOQUE",
+                                account.address,
+                                confirmed_tx.hex_hash()
+                            )
+                            .as_str(),
+                        );
                     }
                 }
             }
@@ -196,8 +216,6 @@ impl Block {
 
         Ok(())
     }
-    
-    
 }
 
 #[cfg(test)]

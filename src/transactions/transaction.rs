@@ -6,7 +6,9 @@ use std::{
 use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{
-    account::Account, compact_size_uint::CompactSizeUint, utxo_tuple::UtxoTuple, wallet::Wallet, handler::node_message_handler::NodeMessageHandlerError, logwriter::log_writer::LogSender,
+    account::Account, compact_size_uint::CompactSizeUint,
+    handler::node_message_handler::NodeMessageHandlerError, logwriter::log_writer::LogSender,
+    utxo_tuple::UtxoTuple,
 };
 
 use super::{tx_in::TxIn, tx_out::TxOut};
@@ -172,15 +174,11 @@ impl Transaction {
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     ) -> Result<(), NodeMessageHandlerError> {
         for tx_out in self.tx_out.clone() {
-            tx_out.involves_user_account(
-                log_sender.clone(),
-                accounts.clone(),
-                self.clone(),
-            )?;
+            tx_out.involves_user_account(log_sender.clone(), accounts.clone(), self.clone())?;
         }
         Ok(())
     }
-    
+
     pub fn generate_transaction_to(
         account_sender: Account,
         address_receiver: &str,

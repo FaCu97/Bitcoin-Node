@@ -1,6 +1,9 @@
-use std::{error::Error, sync::{RwLock, Arc}};
+use std::{
+    error::Error,
+    sync::{Arc, RwLock},
+};
 
-use crate::{account::Account, node::Node};
+use crate::{account::Account, handler::node_message_handler::NodeMessageHandlerError, node::Node};
 #[derive(Debug, Clone)]
 
 pub struct Wallet {
@@ -10,15 +13,15 @@ pub struct Wallet {
 }
 
 impl Wallet {
-    pub fn new(node: Node) -> Wallet {
+    pub fn new(node: Node) -> Result<Self, NodeMessageHandlerError> {
         let mut wallet = Wallet {
             node,
             current_account_index: 0,
             accounts: Arc::new(RwLock::new(Vec::new())),
         };
-        wallet.node.set_accounts(wallet.accounts.clone());
+        wallet.node.set_accounts(wallet.accounts.clone())?;
         println!("accounts added to node!\n");
-        wallet
+        Ok(wallet)
     }
 
     pub fn make_transaction(
@@ -38,10 +41,14 @@ impl Wallet {
         &mut self,
         wif_private_key: String,
         address: String,
-    ) -> Result<(), Box<dyn Error>> {
-        let mut account = Account::new(wif_private_key, address)?;
+    ) -> Result<(), NodeMessageHandlerError> {
+        let mut account = Account::new(wif_private_key, address)
+            .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
         self.load_data(&mut account);
-        self.accounts.write().unwrap().push(account);
+        self.accounts
+            .write()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .push(account);
         Ok(())
     }
     /// Funcion que se encarga de cargar los respectivos utxos asociados a la cuenta
@@ -52,8 +59,7 @@ impl Wallet {
     }
 }
 
-
-/* 
+/*
 #[cfg(test)]
 mod test {
     use crate::{account::Account, node::Node, wallet::Wallet};

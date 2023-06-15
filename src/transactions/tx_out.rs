@@ -1,6 +1,11 @@
 use std::sync::{Arc, RwLock};
 
-use crate::{account::Account, compact_size_uint::CompactSizeUint, handler::node_message_handler::NodeMessageHandlerError, logwriter::log_writer::{LogSender, write_in_log}};
+use crate::{
+    account::Account,
+    compact_size_uint::CompactSizeUint,
+    handler::node_message_handler::NodeMessageHandlerError,
+    logwriter::log_writer::{write_in_log, LogSender},
+};
 
 use super::{pubkey::Pubkey, transaction::Transaction};
 #[derive(Debug, PartialEq, Clone)]
@@ -73,17 +78,22 @@ impl TxOut {
     pub fn get_pub_key(&self) -> &Vec<u8> {
         self.pk_script.bytes()
     }
-    
+
     /// Recibe un puntero a un puntero que apunta a las cuentas de la wallet y una transaccion y se fija si el address de la tx_out
     /// es igual a algun address de la wallet. Si encunetra una coincidencia agrega la transaccion al vector de pending_transactions de la cuenta. En caso exitoso
-    /// devuelve Ok(()) y en caso de algun error devuevle el error especifico 
+    /// devuelve Ok(()) y en caso de algun error devuevle el error especifico
     pub fn involves_user_account(
         &self,
         log_sender: LogSender,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         tx: Transaction,
     ) -> Result<(), NodeMessageHandlerError> {
-        for account in &*accounts.read().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?.read().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))? {
+        for account in &*accounts
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+        {
             if !account
                 .pending_transactions
                 .read()
@@ -95,9 +105,21 @@ impl TxOut {
                     Err(e) => e.to_string(),
                 };
                 if tx_asociate_address == account.address {
-                    write_in_log(log_sender.info_log_sender.clone(), format!("Transaccion pendiente {:?} -- ivolucra al usuario {:?}", tx.hex_hash(), account.address).as_str());
+                    write_in_log(
+                        log_sender.info_log_sender.clone(),
+                        format!(
+                            "Transaccion pendiente {:?} -- ivolucra al usuario {:?}",
+                            tx.hex_hash(),
+                            account.address
+                        )
+                        .as_str(),
+                    );
                     println!("%%%%%%%%%%% TRANSACCION {:?} INVOLUCRA AL USUARIO {:?}, AUN NO SE ENCUENTRA EN UN BLOQUE (PENDING) %%%%%%%%%%%%", tx.hex_hash(), account.address);
-                    account.pending_transactions.write().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?.push(tx.clone());
+                    account
+                        .pending_transactions
+                        .write()
+                        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                        .push(tx.clone());
                 }
             }
         }

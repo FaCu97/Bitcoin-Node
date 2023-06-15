@@ -1,20 +1,25 @@
-
 use crate::{
+    account::Account,
     blocks::{block::Block, block_header::BlockHeader},
     logwriter::log_writer::{write_in_log, LogSender},
-    messages::{
-        headers_message::is_terminated, message_header::HeaderMessage,
-    }, account::Account,
+    messages::{headers_message::is_terminated, message_header::HeaderMessage},
 };
 use std::{
     error::Error,
     fmt,
+    io::{Read, Write},
     net::TcpStream,
-    sync::{Arc, Mutex, RwLock, mpsc::{Receiver, channel, Sender}},
-    thread::{self, JoinHandle}, io::{Write, Read},
+    sync::{
+        mpsc::{channel, Receiver, Sender},
+        Arc, Mutex, RwLock,
+    },
+    thread::{self, JoinHandle},
 };
 
-use super::message_handlers::{handle_headers_message, handle_block_message, handle_inv_message, handle_ping_message, handle_tx_message};
+use super::message_handlers::{
+    handle_block_message, handle_headers_message, handle_inv_message, handle_ping_message,
+    handle_tx_message,
+};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum NodeMessageHandlerError {
@@ -30,7 +35,9 @@ pub enum NodeMessageHandlerError {
 impl fmt::Display for NodeMessageHandlerError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            NodeMessageHandlerError::ThreadJoinError(msg) => write!(f, "ThreadJoinError Error: {}", msg),
+            NodeMessageHandlerError::ThreadJoinError(msg) => {
+                write!(f, "ThreadJoinError Error: {}", msg)
+            }
             NodeMessageHandlerError::LockError(msg) => write!(f, "LockError Error: {}", msg),
             NodeMessageHandlerError::ReadNodeError(msg) => {
                 write!(f, "Can not read from socket Error: {}", msg)
@@ -56,6 +63,7 @@ impl Error for NodeMessageHandlerError {}
 type NodeMessageHandlerResult = Result<(), NodeMessageHandlerError>;
 type NodeSender = Sender<Vec<u8>>;
 type NodeReceiver = Receiver<Vec<u8>>;
+type NodeBlocksData = (Arc<RwLock<Vec<BlockHeader>>>, Arc<RwLock<Vec<Block>>>);
 
 #[derive(Debug, Clone)]
 /// Struct para controlar todos los nodos conectados al nuestro. Escucha permanentemente
@@ -65,8 +73,6 @@ pub struct NodeMessageHandler {
     nodes_sender: Vec<NodeSender>,
     finish: Arc<RwLock<bool>>,
 }
-
-
 
 impl NodeMessageHandler {
     /// Recibe la informacion que tiene el nodo (headers, bloques y nodos conectados)
@@ -101,10 +107,8 @@ impl NodeMessageHandler {
             );
             nodes_handle.push(handle_messages_from_node(
                 log_sender.clone(),
-                tx,
-                rx,
-                headers.clone(),
-                blocks.clone(),
+                (tx, rx),
+                (headers.clone(), blocks.clone()),
                 transactions_recieved.clone(),
                 accounts.clone(),
                 node,
@@ -124,7 +128,9 @@ impl NodeMessageHandler {
     /// Devuelve Ok(()) en caso exitoso o un error ThreadChannelError en caso contrario
     pub fn broadcast_to_nodes(&self, message: Vec<u8>) -> NodeMessageHandlerResult {
         for node_sender in &self.nodes_sender {
-            node_sender.send(message.clone()).map_err(|err| NodeMessageHandlerError::ThreadChannelError(err.to_string()))?;
+            node_sender
+                .send(message.clone())
+                .map_err(|err| NodeMessageHandlerError::ThreadChannelError(err.to_string()))?;
         }
         Ok(())
     }
@@ -153,14 +159,12 @@ impl NodeMessageHandler {
                 .join()
                 .map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))??;
         }
-        for node_sender in &self.nodes_sender {
+        for node_sender in self.nodes_sender.clone() {
             drop(node_sender);
         }
         Ok(())
     }
 }
-
-
 
 /// Funcion encargada de crear un thread para un nodo especifico y se encarga de realizar el loop que escucha
 /// por nuevos mensajes del nodo. En caso de ser necesario tambien escribe al nodo mensajes que le llegan por el channel.
@@ -168,10 +172,8 @@ impl NodeMessageHandler {
 /// con lo que devuelve el loop. Ok(()) en caso de salir todo bien o NodeHandlerError en caso de algun error
 pub fn handle_messages_from_node(
     log_sender: LogSender,
-    tx: NodeSender,
-    rx: NodeReceiver,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    blocks: Arc<RwLock<Vec<Block>>>,
+    (tx, rx): (NodeSender, NodeReceiver),
+    (headers, blocks): NodeBlocksData,
     transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>>,
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     mut node: TcpStream,
@@ -186,18 +188,31 @@ pub fn handle_messages_from_node(
             //leo header y payload
             let (header, payload) = match read_header_and_payload(&mut node) {
                 Ok((header, payload)) => (header, payload),
-                Err(_) => {break;}                
+                Err(_) => {
+                    break;
+                }
             };
-            let command_name = get_header_command_name_as_str(&header.command_name.as_str());
+            let command_name = get_header_command_name_as_str(header.command_name.as_str());
             match command_name {
                 "headers" => {
-                    handle_headers_message(log_sender.clone(), tx.clone(), &payload, headers.clone())?;
+                    handle_headers_message(
+                        log_sender.clone(),
+                        tx.clone(),
+                        &payload,
+                        headers.clone(),
+                    )?;
                 }
                 "getdata" => {
                     //handle_getdata_message()
                 }
                 "block" => {
-                    handle_block_message(log_sender.clone(), &payload, headers.clone(), blocks.clone(), accounts.clone())?;
+                    handle_block_message(
+                        log_sender.clone(),
+                        &payload,
+                        headers.clone(),
+                        blocks.clone(),
+                        accounts.clone(),
+                    )?;
                 }
                 "inv" => {
                     handle_inv_message(tx.clone(), &payload, transactions_recieved.clone())?;
@@ -209,19 +224,34 @@ pub fn handle_messages_from_node(
                     handle_tx_message(log_sender.clone(), &payload, accounts.clone())?;
                 }
                 _ => {
-                    write_in_log(log_sender.messege_log_sender.clone(), format!("IGNORADO -- Recibo: {} -- Nodo: {:?}", header.command_name, node.peer_addr()).as_str());   
+                    write_in_log(
+                        log_sender.messege_log_sender.clone(),
+                        format!(
+                            "IGNORADO -- Recibo: {} -- Nodo: {:?}",
+                            header.command_name,
+                            node.peer_addr()
+                        )
+                        .as_str(),
+                    );
                     continue;
                 }
             }
             if command_name != "inv" {
                 // no me interesa tener todos los inv en el log_message
-                write_in_log(log_sender.messege_log_sender.clone(), format!("Recibo correctamente: {} -- Nodo: {:?}", command_name, node.peer_addr()).as_str());   
+                write_in_log(
+                    log_sender.messege_log_sender.clone(),
+                    format!(
+                        "Recibo correctamente: {} -- Nodo: {:?}",
+                        command_name,
+                        node.peer_addr()
+                    )
+                    .as_str(),
+                );
             }
         }
         Ok(())
     })
 }
-
 
 /// Recibe un &str que representa el nombre de un comando de un header con su respectivo nombre
 /// y los \0 hasta completar los 12 bytes. Devuelve un &str con el nombre del mensaje y le quita los
@@ -237,24 +267,29 @@ fn get_header_command_name_as_str(command: &str) -> &str {
 /// Recibe algo que implemente el trait Write y un vector de bytes que representa un mensaje. Lo escribe y devuevle
 /// Ok(()) en caso de que se escriba exitosamente o un error especifico de escritura en caso contrarios
 pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessageHandlerResult {
-    node.write_all(message).map_err(|err| NodeMessageHandlerError::WriteNodeError(err.to_string()))?;
-    node.flush().map_err(|err| NodeMessageHandlerError::WriteNodeError(err.to_string()))?;
+    node.write_all(message)
+        .map_err(|err| NodeMessageHandlerError::WriteNodeError(err.to_string()))?;
+    node.flush()
+        .map_err(|err| NodeMessageHandlerError::WriteNodeError(err.to_string()))?;
     Ok(())
 }
 
-
 /// Recibe algo que implemente el trait Read y lee el header y el payload del header y devuelve una tupla de un Struct
 /// Header y un vector de bytes que representa al payload. En caso de error al leer, devuelve un Error especifico de lectura
-pub fn read_header_and_payload(node: &mut dyn Read) -> Result<(HeaderMessage, Vec<u8>), NodeMessageHandlerError> {
+pub fn read_header_and_payload(
+    node: &mut dyn Read,
+) -> Result<(HeaderMessage, Vec<u8>), NodeMessageHandlerError> {
     let mut buffer_num = [0; 24];
-    node.read_exact(&mut buffer_num).map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
-    let header = HeaderMessage::from_le_bytes(buffer_num).map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
+    node.read_exact(&mut buffer_num)
+        .map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
+    let header = HeaderMessage::from_le_bytes(buffer_num)
+        .map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
     let payload_size = header.payload_size as usize;
     let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
-    node.read_exact(&mut payload_buffer_num).map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
+    node.read_exact(&mut payload_buffer_num)
+        .map_err(|err| NodeMessageHandlerError::ReadNodeError(err.to_string()))?;
     Ok((header, payload_buffer_num))
 }
-
 
 /// Recibe un Arc apuntando a un RwLock de un vector de TcpStreams y devuelve el ultimo nodo TcpStream del vector si es que
 /// hay, si no devuelve un error del tipo BroadcastingError
@@ -269,7 +304,9 @@ fn get_last_node(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<TcpStream, NodeMe
 }
 
 /// Recibe un Arc apuntando a un vector de TcpStream y devuelve el largo del vector
-fn get_amount_of_nodes(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<usize, NodeMessageHandlerError> {
+fn get_amount_of_nodes(
+    nodes: Arc<RwLock<Vec<TcpStream>>>,
+) -> Result<usize, NodeMessageHandlerError> {
     let amount_of_nodes = nodes
         .read()
         .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
@@ -277,20 +314,20 @@ fn get_amount_of_nodes(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<usize, Node
     Ok(amount_of_nodes)
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
     #[test]
     fn get_header_command_name_as_str_returns_correct_headers_command_name() {
         let header_command_name = "headers\0\0\0\0\0";
-        assert_eq!(get_header_command_name_as_str(header_command_name), "headers");
+        assert_eq!(
+            get_header_command_name_as_str(header_command_name),
+            "headers"
+        );
     }
     #[test]
     fn get_header_command_name_as_str_returns_correct_tx_command_name() {
         let header_command_name = "tx\0\0\0\0\0\0\0\0\0\0";
         assert_eq!(get_header_command_name_as_str(header_command_name), "tx");
     }
-
 }
-

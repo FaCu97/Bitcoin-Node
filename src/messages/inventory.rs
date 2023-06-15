@@ -45,7 +45,7 @@ impl Inventory {
     }
 }
 
-/// recibe un vector de Inventory y serializa el mensaje inv con ese vector. Devuelve un vector 
+/// recibe un vector de Inventory y serializa el mensaje inv con ese vector. Devuelve un vector
 /// de u8 que representan los bytes serializados
 pub fn inv_mershalling(inventories: Vec<Inventory>) -> Vec<u8> {
     let count = CompactSizeUint::new(inventories.len() as u128);
