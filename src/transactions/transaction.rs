@@ -10,7 +10,12 @@ use crate::{
     account::Account, compact_size_uint::CompactSizeUint, utxo_tuple::UtxoTuple, wallet::Wallet,
 };
 
-use super::{outpoint::Outpoint, pubkey::Pubkey, tx_in::TxIn, tx_out::TxOut};
+use super::{
+    outpoint::Outpoint,
+    script::{pubkey::Pubkey, sig_script::SigScript},
+    tx_in::TxIn,
+    tx_out::TxOut,
+};
 
 /// Guarda el txid(hash de la transaccion) y el vector con los utxos (valor e indice)
 #[derive(Debug, PartialEq, Clone)]
@@ -200,6 +205,30 @@ impl Transaction {
         let incomplete_transaction =
             Transaction::new(version, txin_count, tx_ins, txout_count, tx_outs, lock_time);
         Ok(incomplete_transaction)
+    }
+
+    pub fn sign(
+        &mut self,
+        account: &Account,
+        utxos_to_spend: &UtxoTuple,
+    ) -> Result<Transaction, Box<dyn Error>> {
+        let mut signatures = Vec::new();
+        for index in 0..self.tx_in.len() {
+            // agregar el signature a cada input
+            let z = self.generate_incomplete_hash(index);
+            signatures.push(SigScript::generate_sig_script(z, &account)?);
+            index += 1;
+        }
+
+        for signature in signatures {}
+        self.tx_in[index].signature_script = signature_script;
+        Ok(())
+    }
+
+    /// Genera la txin con el previous pubkey del tx_in recibido.
+    /// Devuelve el hash
+    fn generate_incomplete_hash(&self, tx_in_index: usize) -> [u8; 32] {
+        self.tx_in[tx_in_index]
     }
 }
 

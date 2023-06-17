@@ -33,7 +33,7 @@ impl SigScript {
     ///funcion que devuelve el signature script con la clave publica comprimida
     pub fn generate_sig_script(
         hash_transaction: [u8; 32],
-        account: Account,
+        account: &Account,
     ) -> Result<SigScript, Box<dyn Error>> {
         let mut sig_script_bytes: Vec<u8> = Vec::new();
         let private_key = account.get_private_key()?;

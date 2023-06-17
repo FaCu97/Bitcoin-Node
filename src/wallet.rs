@@ -20,7 +20,7 @@ impl Wallet {
 
     pub fn make_transaction(
         &self,
-        account: &Account,
+        account: &mut Account,
         address_receiver: &str,
         amount: i64,
     ) -> Result<(), Box<dyn Error>> {
