@@ -106,7 +106,7 @@ impl Account {
         let utxos_to_spend: Vec<UtxoTuple> = self.get_utxos_for_amount(amount);
         let mut unsigned_transaction =
             Transaction::generate_unsigned_transaction(address_receiver, amount, &utxos_to_spend)?;
-        unsigned_transaction.sign(&self, &utxos_to_spend);
+        unsigned_transaction.sign(&self, &utxos_to_spend)?;
 
         // letTransaction::new(...)
         Ok(())

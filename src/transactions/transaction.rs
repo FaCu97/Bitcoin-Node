@@ -218,9 +218,11 @@ impl Transaction {
             let z = self.generate_message_to_sign(index, utxos_to_spend);
             signatures.push(SigScript::generate_sig_script(z, &account)?);
         }
-        /*
-        for signature in signatures {}
-        self.tx_in[index].signature_script = signature_script;*/
+        let mut index = 0;
+        for signature in signatures {
+            self.tx_in[index].add(signature);
+            index += 1;
+        }
         Ok(())
     }
 

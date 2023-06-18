@@ -145,6 +145,9 @@ impl TxIn {
     pub fn set_signature_script(&mut self, bytes: Vec<u8>) {
         self.signature_script = SigScript::new(bytes);
     }
+    pub fn add(&mut self, signature: SigScript) {
+        self.signature_script = signature
+    }
 }
 #[cfg(test)]
 
