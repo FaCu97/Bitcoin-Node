@@ -136,8 +136,14 @@ impl TxIn {
     pub fn previous_index(&self) -> usize {
         self.previous_output.index()
     }
+    pub fn previous_tx_id(&self) -> [u8; 32] {
+        self.previous_output.hash()
+    }
     pub fn is_same_hash(&self, hash: &[u8; 32]) -> bool {
         self.previous_output.same_hash(*hash)
+    }
+    pub fn set_signature_script(&mut self, bytes: Vec<u8>) {
+        self.signature_script = SigScript::new(bytes);
     }
 }
 #[cfg(test)]

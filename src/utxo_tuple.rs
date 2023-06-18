@@ -74,6 +74,18 @@ impl UtxoTuple {
         }
         Self::new(self.hash, utxos_to_spend)
     }
+
+    pub fn find(&self, previous_hash: [u8; 32], previous_index: usize) -> Option<&Vec<u8>> {
+        if self.hash != previous_hash {
+            return None;
+        }
+        for utxo in &self.utxo_set {
+            if utxo.1 == previous_index {
+                return Some(utxo.0.get_pub_key());
+            }
+        }
+        None
+    }
 }
 
 #[cfg(test)]

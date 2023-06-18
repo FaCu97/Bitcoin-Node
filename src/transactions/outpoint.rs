@@ -50,6 +50,9 @@ impl Outpoint {
     pub fn index(&self) -> usize {
         self.index as usize
     }
+    pub fn hash(&self) -> [u8; 32] {
+        self.tx_id
+    }
 }
 
 #[cfg(test)]

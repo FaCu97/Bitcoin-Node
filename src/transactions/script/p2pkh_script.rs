@@ -131,7 +131,7 @@ mod test {
         let p2pkh_script = generate_p2pkh_pk_script(
             &address_decoder::get_pubkey_hash_from_address(&account.address)?,
         )?;
-        let sig = SigScript::generate_sig_script(hash, account)?;
+        let sig = SigScript::generate_sig_script(hash, &account)?;
         let validation = p2pkh_script::validate(&hash, &p2pkh_script, sig.get_bytes())?;
 
         assert!(validation);

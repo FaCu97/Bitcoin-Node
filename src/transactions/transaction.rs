@@ -210,25 +210,42 @@ impl Transaction {
     pub fn sign(
         &mut self,
         account: &Account,
-        utxos_to_spend: &UtxoTuple,
-    ) -> Result<Transaction, Box<dyn Error>> {
+        utxos_to_spend: &Vec<UtxoTuple>,
+    ) -> Result<(), Box<dyn Error>> {
         let mut signatures = Vec::new();
         for index in 0..self.tx_in.len() {
             // agregar el signature a cada input
-            let z = self.generate_incomplete_hash(index);
+            let z = self.generate_message_to_sign(index, utxos_to_spend);
             signatures.push(SigScript::generate_sig_script(z, &account)?);
-            index += 1;
         }
-
+        /*
         for signature in signatures {}
-        self.tx_in[index].signature_script = signature_script;
+        self.tx_in[index].signature_script = signature_script;*/
         Ok(())
     }
 
     /// Genera la txin con el previous pubkey del tx_in recibido.
     /// Devuelve el hash
-    fn generate_incomplete_hash(&self, tx_in_index: usize) -> [u8; 32] {
-        self.tx_in[tx_in_index]
+    fn generate_message_to_sign(
+        &self,
+        tx_in_index: usize,
+        utxos_to_spend: &Vec<UtxoTuple>,
+    ) -> [u8; 32] {
+        let mut tx_copy = self.clone();
+        let mut script = Vec::new();
+        let input_to_sign = &tx_copy.tx_in[tx_in_index];
+        for utxos in utxos_to_spend {
+            let pubkey = utxos.find(
+                input_to_sign.previous_tx_id(),
+                input_to_sign.previous_index(),
+            );
+            script = match pubkey {
+                Some(value) => value.to_vec(),
+                None => continue,
+            };
+        }
+        tx_copy.tx_in[tx_in_index].set_signature_script(script);
+        tx_copy.hash()
     }
 }
 
