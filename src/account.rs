@@ -33,12 +33,6 @@ impl Account {
         })
     }
 
-    /*
-        pub fn get_account_balance(&self, node: &Node) -> i64 {
-            node.account_balance(self.address.clone())
-        }
-    */
-
     /// Devuelve la clave publica comprimida (33 bytes) a partir de la privada
     pub fn get_pubkey_compressed(&self) -> Result<[u8; 33], Box<dyn Error>> {
         address_decoder::get_pubkey_compressed(&self.private_key)
@@ -59,7 +53,7 @@ impl Account {
         }
         balance > value
     }
-    /// Devuelve un vector con las utxos a ser gastadas
+    /// Devuelve un vector con las utxos a ser gastadas en una transaccion nueva
     fn get_utxos_for_amount(&mut self, value: i64) -> Vec<UtxoTuple> {
         let mut utxos_to_spend = Vec::new();
         let mut partial_amount: i64 = 0;
@@ -88,12 +82,13 @@ impl Account {
         let mut aux = self.pending_transactions.write().unwrap();
         aux.push(transaction);
     }
-
+    /// Realiza la transaccion con el monto recibido , devuelve el hash de dicha transaccion
+    /// para que el nodo envie dicho hash a lo restantes nodos de la red
     pub fn make_transaction(
         &mut self,
         address_receiver: &str,
         amount: i64,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> Result<[u8; 32], Box<dyn Error>> {
         if !self.has_balance(amount) {
             return Err(Box::new(std::io::Error::new(
                 io::ErrorKind::Other,
@@ -109,9 +104,8 @@ impl Account {
         let mut unsigned_transaction =
             Transaction::generate_unsigned_transaction(address_receiver, amount, &utxos_to_spend)?;
         unsigned_transaction.sign(&self, &utxos_to_spend)?;
-
-        // letTransaction::new(...)
-        Ok(())
+        self.add_transaction(unsigned_transaction.clone());
+        Ok(unsigned_transaction.hash())
     }
 }
 

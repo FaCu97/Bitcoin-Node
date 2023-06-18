@@ -30,8 +30,8 @@ impl Wallet {
         address_receiver: &str,
         amount: i64,
     ) -> Result<(), Box<dyn Error>> {
-        let transaction = account.make_transaction(address_receiver, amount)?;
-        //self.node.broadcast_tx(transaction.hash()?;
+        let transaction_hash: [u8; 32] = account.make_transaction(address_receiver, amount)?;
+        self.node.broadcast_tx(transaction_hash)?;
         Ok(())
     }
 

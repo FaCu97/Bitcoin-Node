@@ -97,10 +97,21 @@ impl Transaction {
         let locktime_bytes: [u8; 4] = self.lock_time.to_le_bytes();
         bytes.extend_from_slice(&locktime_bytes);
     }
-
+    ///Devuelve el hash de la transaccion
     pub fn hash(&self) -> [u8; 32] {
+        self.hash_message(false)
+    }
+    /// Realiza el hash de la transaccion si recibe true ppushea dentro del vector
+    /// los bytes correspondientes al SIGHASH_ALL , caso contrario realiza el hash
+    /// normalmente
+    fn hash_message(&self, is_message: bool) -> [u8; 32] {
         let mut raw_transaction_bytes: Vec<u8> = Vec::new();
         self.marshalling(&mut raw_transaction_bytes);
+        if is_message {
+            let sig_hash_all: u32 = 0x00000001;
+            let bytes = sig_hash_all.to_le_bytes();
+            raw_transaction_bytes.extend_from_slice(&bytes);
+        }
         let hash_transaction = sha256d::Hash::hash(&raw_transaction_bytes);
         *hash_transaction.as_byte_array()
     }
@@ -264,7 +275,7 @@ impl Transaction {
             };
         }
         tx_copy.tx_in[tx_in_index].set_signature_script(script);
-        tx_copy.hash()
+        tx_copy.hash_message(true)
     }
 }
 
