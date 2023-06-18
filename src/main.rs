@@ -1,7 +1,6 @@
-use bitcoin::account::Account;
-use bitcoin::block_broadcasting::{BlockBroadcasting, BroadcastingError};
 use bitcoin::config::Config;
 use bitcoin::gtk::gtk::Gtk;
+use bitcoin::handler::node_message_handler::NodeMessageHandlerError;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
 use bitcoin::logwriter::log_writer::{
@@ -9,7 +8,7 @@ use bitcoin::logwriter::log_writer::{
 };
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
-use bitcoin::wallet::{self, Wallet};
+use bitcoin::wallet::Wallet;
 use std::error::Error;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
@@ -21,7 +20,7 @@ pub enum GenericError {
     ConfigError(Box<dyn Error>),
     ConnectionToDnsError(ConnectionToDnsError),
     LoggingError(LoggingError),
-    BroadcastingError(BroadcastingError),
+    NodeHandlerError(NodeMessageHandlerError),
 }
 
 impl fmt::Display for GenericError {
@@ -34,7 +33,9 @@ impl fmt::Display for GenericError {
                 write!(f, "CONNECTION TO DNS ERROR: {}", msg)
             }
             GenericError::LoggingError(msg) => write!(f, "LOGGING ERROR: {}", msg),
-            GenericError::BroadcastingError(msg) => write!(f, "BLOCK BROADCASTING ERROR: {}", msg),
+            GenericError::NodeHandlerError(msg) => {
+                write!(f, "NODE MESSAGE LISTENER AND WRITER ERROR: {}", msg)
+            }
         }
     }
 }
@@ -88,10 +89,25 @@ fn main() -> Result<(), GenericError> {
         )?;
     let (headers, blocks) = headers_and_blocks;
 
-    let node = Node::new(pointer_to_nodes, headers.clone(), blocks.clone());
+    let node = Node::new(logsender.clone(), pointer_to_nodes, headers, blocks)
+        .map_err(GenericError::NodeHandlerError)?;
     //  let headers: Vec<_> = Vec::new();
     //  let blocks: Vec<_> = Vec::new();
     //let wallet = wallet::Wallet { account: vec![User{private_key: "cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(), address: "mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(), pending_transactions: vec![]}], node };
+    let mut wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
+    wallet
+        .add_account(
+            "cSqmqW48wCeoUF8FCJvVsqUGwcvir27bKWCFj1MTFszFdn2Dduim".to_string(),
+            "mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi9".to_string(),
+        )
+        .map_err(GenericError::NodeHandlerError)?;
+    wallet
+        .add_account(
+            "cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(),
+            "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),
+        )
+        .map_err(GenericError::NodeHandlerError)?;
+    /*
     let wallet = Wallet {
         node,
         current_account_index: 0,
@@ -111,10 +127,9 @@ fn main() -> Result<(), GenericError> {
             pending_transactions: Arc::new(RwLock::new(Vec::new())),
         }],
     };
-    let block_listener = BlockBroadcasting::listen_for_incoming_blocks(logsender.clone(), wallet)
-        .map_err(GenericError::BroadcastingError)?;
+    */
 
-    if let Err(err) = handle_input(block_listener) {
+    if let Err(err) = handle_input(node) {
         println!("Error al leer la entrada por terminal. {}", err);
     }
 
@@ -151,7 +166,7 @@ fn main() -> Result<(), GenericError> {
     Ok(())
 }
 
-fn handle_input(block_listener: BlockBroadcasting) -> Result<(), GenericError> {
+fn handle_input(node: Node) -> Result<(), GenericError> {
     loop {
         let mut input = String::new();
 
@@ -159,9 +174,8 @@ fn handle_input(block_listener: BlockBroadcasting) -> Result<(), GenericError> {
             Ok(_) => {
                 let command = input.trim();
                 if command == "exit" {
-                    block_listener
-                        .finish()
-                        .map_err(GenericError::BroadcastingError)?;
+                    node.shutdown_node()
+                        .map_err(GenericError::NodeHandlerError)?;
                     break;
                 }
             }

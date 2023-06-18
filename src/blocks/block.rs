@@ -3,8 +3,12 @@ use std::sync::{Arc, RwLock};
 use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{
-    block_broadcasting::BroadcastingError, compact_size_uint::CompactSizeUint,
-    transactions::transaction::Transaction, utxo_tuple::UtxoTuple,
+    account::Account,
+    compact_size_uint::CompactSizeUint,
+    handler::node_message_handler::NodeMessageHandlerError,
+    logwriter::log_writer::{write_in_log, LogSender},
+    transactions::transaction::Transaction,
+    utxo_tuple::UtxoTuple,
 };
 
 use super::block_header::BlockHeader;
@@ -155,41 +159,61 @@ impl Block {
         }
         utxo_container
     }
-    /// Receives a pointer to the list of pending transactions and the list of confirmed transactions and in case the block
-    /// contains on transaction included in the list of pending transactions, notifies the user, and changes the element from the
-    /// pending transactions list to the confirmed transaction list. Returns error in case the RwLock cant be accessed
+
     pub fn contains_pending_tx(
         &self,
-        pending_transactions: Arc<RwLock<Vec<Transaction>>>,
-        confirmed_transactions: Arc<RwLock<Vec<Transaction>>>,
-    ) -> Result<(), BroadcastingError> {
+        log_sender: LogSender,
+        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
+    ) -> Result<(), NodeMessageHandlerError> {
         for tx in &self.txn {
-            if pending_transactions
+            for account in &*accounts
                 .read()
-                .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-                .contains(tx)
+                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                .read()
+                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
             {
-                println!(
-                    "%%%%%%%%% El bloque contiene la transaccion {:?} confirmada %%%%%%%%%%%",
-                    tx.hash()
-                );
-                let pending_transaction_index = pending_transactions
+                if account
+                    .pending_transactions
                     .read()
-                    .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-                    .iter()
-                    .position(|pending_tx| pending_tx.hash() == tx.hash());
-                if let Some(pending_transaction_index) = pending_transaction_index {
-                    let confirmed_tx = pending_transactions
-                        .write()
-                        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-                        .remove(pending_transaction_index);
-                    confirmed_transactions
-                        .write()
-                        .map_err(|err| BroadcastingError::LockError(err.to_string()))?
-                        .push(confirmed_tx);
+                    .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                    .contains(tx)
+                {
+                    println!(
+                        "%%%%%%%%% El bloque {:?} contiene la transaccion {:?} confirmada %%%%%%%%%%%",
+                        self.block_header.hash(),
+                        tx.hex_hash()
+                    );
+                    let pending_transaction_index = account
+                        .pending_transactions
+                        .read()
+                        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                        .iter()
+                        .position(|pending_tx| pending_tx.hash() == tx.hash());
+                    if let Some(pending_transaction_index) = pending_transaction_index {
+                        let confirmed_tx = account
+                            .pending_transactions
+                            .write()
+                            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                            .remove(pending_transaction_index);
+                        account
+                            .confirmed_transactions
+                            .write()
+                            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                            .push(confirmed_tx.clone());
+                        write_in_log(
+                            log_sender.info_log_sender.clone(),
+                            format!(
+                                "CUENTA: {:?}: SE CONFIRMA NUEVA TRANSACCION {:?} EN BLOQUE",
+                                account.address,
+                                confirmed_tx.hex_hash()
+                            )
+                            .as_str(),
+                        );
+                    }
                 }
             }
         }
+
         Ok(())
     }
 }

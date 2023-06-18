@@ -1,6 +1,11 @@
 use std::sync::{Arc, RwLock};
 
-use crate::{account::Account, compact_size_uint::CompactSizeUint};
+use crate::{
+    account::Account,
+    compact_size_uint::CompactSizeUint,
+    handler::node_message_handler::NodeMessageHandlerError,
+    logwriter::log_writer::{write_in_log, LogSender},
+};
 
 use super::{script::pubkey::Pubkey, transaction::Transaction};
 #[derive(Debug, PartialEq, Clone)]
@@ -73,21 +78,26 @@ impl TxOut {
     pub fn get_pub_key(&self) -> &Vec<u8> {
         self.pk_script.bytes()
     }
-    /// Receives a list of accounts, a transaction and a pointer to the list of pending transactions
-    /// and for each account in the list checks if the tx out asociate address is the same as the account
-    /// address. If true, notifies the user and add the transaction to the list of pending transactions. Returns error
-    /// in case the RwLock cant be accessed
+
+    /// Recibe un puntero a un puntero que apunta a las cuentas de la wallet y una transaccion y se fija si el address de la tx_out
+    /// es igual a algun address de la wallet. Si encunetra una coincidencia agrega la transaccion al vector de pending_transactions de la cuenta. En caso exitoso
+    /// devuelve Ok(()) y en caso de algun error devuevle el error especifico
     pub fn involves_user_account(
         &self,
-        accounts: Vec<Account>,
+        log_sender: LogSender,
+        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         tx: Transaction,
-        pending_transactions: Arc<RwLock<Vec<Transaction>>>,
-    ) -> Result<(), &'static str> {
-        for account in accounts {
+    ) -> Result<(), NodeMessageHandlerError> {
+        for account in &*accounts
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+        {
             if !account
                 .pending_transactions
                 .read()
-                .map_err(|_| "Error al leer puntero a vector de transacciones pendientes")?
+                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
                 .contains(&tx)
             {
                 let tx_asociate_address = match self.get_adress() {
@@ -95,11 +105,20 @@ impl TxOut {
                     Err(e) => e.to_string(),
                 };
                 if tx_asociate_address == account.address {
-                    println!("%%%%%%%%%%% TRANSACCION INVOLUCRA AL USUARIO {:?}, AUN NO SE ENCUENTRA EN UN BLOQUE (PENDING) %%%%%%%%%%%%", account.address);
-                    account.pending_transactions.write().map_err(|_| "Error al escribir puntero a vector de transacciones pendientes de la cuenta")?.push(tx.clone());
-                    pending_transactions
+                    write_in_log(
+                        log_sender.info_log_sender.clone(),
+                        format!(
+                            "Transaccion pendiente {:?} -- ivolucra al usuario {:?}",
+                            tx.hex_hash(),
+                            account.address
+                        )
+                        .as_str(),
+                    );
+                    println!("%%%%%%%%%%% TRANSACCION {:?} INVOLUCRA AL USUARIO {:?}, AUN NO SE ENCUENTRA EN UN BLOQUE (PENDING) %%%%%%%%%%%%", tx.hex_hash(), account.address);
+                    account
+                        .pending_transactions
                         .write()
-                        .map_err(|_| "Error al leer puntero a vector de transacciones pendientes")?
+                        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
                         .push(tx.clone());
                 }
             }

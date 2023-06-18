@@ -11,7 +11,7 @@ pub struct BlockMessage;
 impl BlockMessage {
     /// Recibe en bytes el mensaje "block".
     /// Devuelve un bloque
-    fn unmarshalling(block_message_payload_bytes: &Vec<u8>) -> Result<Block, Box<dyn Error>> {
+    pub fn unmarshalling(block_message_payload_bytes: &Vec<u8>) -> Result<Block, Box<dyn Error>> {
         let mut offset = 0;
         let block = Block::unmarshalling(block_message_payload_bytes, &mut offset)?;
         Ok(block)
