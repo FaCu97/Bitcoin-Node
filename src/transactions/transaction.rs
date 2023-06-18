@@ -6,7 +6,9 @@ use std::{
 use bitcoin_hashes::{sha256d, Hash};
 
 use crate::{
-    account::Account, compact_size_uint::CompactSizeUint, utxo_tuple::UtxoTuple, wallet::Wallet,
+    account::Account, compact_size_uint::CompactSizeUint,
+    handler::node_message_handler::NodeMessageHandlerError, logwriter::log_writer::LogSender,
+    utxo_tuple::UtxoTuple,
 };
 
 use super::{tx_in::TxIn, tx_out::TxOut};
@@ -145,19 +147,34 @@ impl Transaction {
         let utxo_tuple = UtxoTuple::new(hash, utxos_and_index);
         container.push(utxo_tuple);
     }
-    /// Receives a wallet and a pointer to the list of pending transactions and for each tx out
-    /// in the transaction, checks if the user account is involved in the transaction
+
+    /// Devuelve un string que representa el hash de la transaccion en hexadecimal y en el formato
+    /// que se usa en la pagina https://blockstream.info/testnet/ para mostrar transacciones
+    pub fn hex_hash(&self) -> String {
+        let hash_as_bytes = self.hash();
+        let inverted_hash: [u8; 32] = {
+            let mut inverted = [0; 32];
+            for (i, byte) in hash_as_bytes.iter().enumerate() {
+                inverted[31 - i] = *byte;
+            }
+            inverted
+        };
+        let hex_hash = inverted_hash
+            .iter()
+            .map(|byte| format!("{:02x}", byte))
+            .collect();
+        hex_hash
+    }
+
+    /// Recibe un puntero a un puntero con las cuentas de la wallet y se fija si alguna tx_out tiene una address
+    /// igual que alguna de la wallet. Devuelve Ok(()) en caso de no ocurrir ningun error o Error especifico en caso contrario
     pub fn check_if_tx_involves_user_account(
         &self,
-        wallet: Wallet,
-        pending_transactions: Arc<RwLock<Vec<Transaction>>>,
-    ) -> Result<(), &'static str> {
+        log_sender: LogSender,
+        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
+    ) -> Result<(), NodeMessageHandlerError> {
         for tx_out in self.tx_out.clone() {
-            tx_out.involves_user_account(
-                wallet.accounts.clone(),
-                self.clone(),
-                pending_transactions.clone(),
-            )?;
+            tx_out.involves_user_account(log_sender.clone(), accounts.clone(), self.clone())?;
         }
         Ok(())
     }

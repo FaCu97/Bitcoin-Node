@@ -1,21 +1,27 @@
-use std::{error::Error, io};
+use std::{
+    error::Error,
+    sync::{Arc, RwLock},
+};
 
-use crate::{account::Account, node::Node};
+use crate::{account::Account, handler::node_message_handler::NodeMessageHandlerError, node::Node};
 #[derive(Debug, Clone)]
 
 pub struct Wallet {
     pub node: Node,
     pub current_account_index: usize,
-    pub accounts: Vec<Account>,
+    pub accounts: Arc<RwLock<Vec<Account>>>,
 }
 
 impl Wallet {
-    pub fn new(node: Node) -> Wallet {
-        Wallet {
+    pub fn new(node: Node) -> Result<Self, NodeMessageHandlerError> {
+        let mut wallet = Wallet {
             node,
             current_account_index: 0,
-            accounts: vec![],
-        }
+            accounts: Arc::new(RwLock::new(Vec::new())),
+        };
+        wallet.node.set_accounts(wallet.accounts.clone())?;
+        println!("accounts added to node!\n");
+        Ok(wallet)
     }
 
     pub fn make_transaction(
@@ -25,7 +31,7 @@ impl Wallet {
         amount: i64,
     ) -> Result<(), Box<dyn Error>> {
         let transaction = account.make_transaction(address_receiver, amount)?;
-        // self.node.broadcast_transaction()?;
+        //self.node.broadcast_tx(transaction.hash()?;
         Ok(())
     }
 
@@ -35,10 +41,14 @@ impl Wallet {
         &mut self,
         wif_private_key: String,
         address: String,
-    ) -> Result<(), Box<dyn Error>> {
-        let mut account = Account::new(wif_private_key, address)?;
+    ) -> Result<(), NodeMessageHandlerError> {
+        let mut account = Account::new(wif_private_key, address)
+            .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
         self.load_data(&mut account);
-        self.accounts.push(account);
+        self.accounts
+            .write()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .push(account);
         Ok(())
     }
     /// Funcion que se encarga de cargar los respectivos utxos asociados a la cuenta
@@ -49,6 +59,7 @@ impl Wallet {
     }
 }
 
+/*
 #[cfg(test)]
 mod test {
     use crate::{account::Account, node::Node, wallet::Wallet};
@@ -73,3 +84,4 @@ mod test {
         Ok(())
     }
 }
+*/

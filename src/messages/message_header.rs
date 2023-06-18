@@ -7,6 +7,9 @@ use std::time::Duration;
 use std::vec;
 
 use crate::logwriter::log_writer::{write_in_log, LogSender};
+
+const START_STRING_TESTNET: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
+const CHECKSUM_EMPTY_PAYLOAD: [u8; 4] = [0x5d, 0xf6, 0xe0, 0xe2];
 // todo: implementar test de read_from usando mocking
 // todo: implementar test de write_to usando mocking
 // todo: implementar test de write_verack_message, read_verack_message, write_sendheaders_message usando mocking
@@ -20,6 +23,24 @@ pub struct HeaderMessage {
 }
 
 impl HeaderMessage {
+    /// Dado el nombre del comando y un Option que si es None representa que el comando
+    /// no tiene payload o un Vec<u8> representando al payload del mensaje devuelve el HeaderMessage de ese mensaje
+    pub fn new(command_name: String, payload: Option<&[u8]>) -> Self {
+        match payload {
+            None => HeaderMessage {
+                start_string: START_STRING_TESTNET,
+                command_name,
+                payload_size: 0,
+                checksum: CHECKSUM_EMPTY_PAYLOAD,
+            },
+            Some(payload) => HeaderMessage {
+                start_string: START_STRING_TESTNET,
+                command_name,
+                payload_size: payload.len() as u32,
+                checksum: get_checksum(payload),
+            },
+        }
+    }
     /// Convierte el struct que representa el header de cualquier mensaje a bytes segun las reglas de
     /// serializacion del protocolo bitcoin
     pub fn to_le_bytes(&self) -> [u8; 24] {
@@ -144,12 +165,7 @@ fn read_payload(stream: &mut dyn Read, header: &HeaderMessage) -> io::Result<Vec
 /// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje verack segun
 /// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error
 pub fn write_verack_message(stream: &mut dyn Write) -> Result<(), Box<dyn std::error::Error>> {
-    let header = HeaderMessage {
-        start_string: [0x0b, 0x11, 0x09, 0x07],
-        command_name: "verack".to_string(),
-        payload_size: 0,
-        checksum: [0x5d, 0xf6, 0xe0, 0xe2], // checksum de payload vacio
-    };
+    let header = HeaderMessage::new("verack".to_string(), None);
     header.write_to(stream)?;
     Ok(())
 }
@@ -161,13 +177,7 @@ pub fn write_pong_message(
     stream: &mut dyn Write,
     payload: &[u8],
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let checksum = get_checksum(payload);
-    let header = HeaderMessage {
-        start_string: [0x0b, 0x11, 0x09, 0x07],
-        command_name: "pong".to_string(),
-        payload_size: payload.len() as u32,
-        checksum,
-    };
+    let header = HeaderMessage::new("pong".to_string(), Some(payload));
     let header_bytes = HeaderMessage::to_le_bytes(&header);
     let mut message: Vec<u8> = Vec::new();
     message.extend_from_slice(&header_bytes);
@@ -180,12 +190,7 @@ pub fn write_pong_message(
 /// Recibe un stream que implemente el trait Write (algo donde se pueda escribir) y escribe el mensaje sendheaders segun
 /// el protocolo de bitcoin, si se escribe correctamente devuelve Ok(()) y sino devuelve un error
 pub fn write_sendheaders_message(stream: &mut dyn Write) -> Result<(), Box<dyn std::error::Error>> {
-    let header = HeaderMessage {
-        start_string: [0x0b, 0x11, 0x09, 0x07],
-        command_name: "sendheaders".to_string(),
-        payload_size: 0,
-        checksum: [0x5d, 0xf6, 0xe0, 0xe2], // checksum de payload vacio
-    };
+    let header = HeaderMessage::new("sendheaders".to_string(), None);
     header.write_to(stream)?;
     Ok(())
 }

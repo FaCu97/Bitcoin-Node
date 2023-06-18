@@ -43,15 +43,20 @@ impl GetDataMessage {
         GetDataMessage { header, payload }
     }
 
+    /// Serializa el mensaje get_data y devuelve el array de bytes para ser escrito en la red
+    pub fn marshalling(&self) -> Vec<u8> {
+        let header = self.header.to_le_bytes();
+        let payload = self.payload.to_le_bytes();
+        let mut get_data_bytes: Vec<u8> = Vec::new();
+        get_data_bytes.extend_from_slice(&header);
+        get_data_bytes.extend(payload);
+        get_data_bytes
+    }
     /// Dado un struct GetHeadersMessage y un stream que implemente el trait Write en donde se pueda escribir,
     /// escribe el mensaje serializado a bytes en el stream y devuelve un Ok() si lo pudo escribir correctamente,
     /// y un error si no se escribio correctamente en el stream
     pub fn write_to(&self, stream: &mut dyn Write) -> std::io::Result<()> {
-        let header = self.header.to_le_bytes();
-        let payload = self.payload.to_le_bytes();
-        let mut message: Vec<u8> = Vec::new();
-        message.extend_from_slice(&header);
-        message.extend(payload);
+        let message = self.marshalling();
         stream.write_all(&message)?;
         stream.flush()?;
         Ok(())
