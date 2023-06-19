@@ -143,9 +143,12 @@ impl TxIn {
         self.previous_output.same_hash(*hash)
     }
     pub fn set_signature_script(&mut self, bytes: Vec<u8>) {
+        self.script_bytes = CompactSizeUint::new(bytes.len() as u128);
         self.signature_script = SigScript::new(bytes);
     }
     pub fn add(&mut self, signature: SigScript) {
+        // acá faltaba agregar el script_bytes
+        self.script_bytes = CompactSizeUint::new(signature.get_bytes().len() as u128);
         self.signature_script = signature
     }
 }

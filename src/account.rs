@@ -107,10 +107,18 @@ impl Account {
         unsigned_transaction.sign(&self, &utxos_to_spend)?;
         let mut bytes = Vec::new();
         unsigned_transaction.marshalling(&mut bytes);
-        println!("RAW TRANSACTION: {:?}", bytes.to_vec());
+        println!(
+            "RAW TRANSACTION: {:?}",
+            bytes_to_hex_string(&bytes.to_vec())
+        );
         self.add_transaction(unsigned_transaction.clone());
         Ok(unsigned_transaction.hash())
     }
+}
+fn bytes_to_hex_string(bytes: &[u8]) -> String {
+    let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
+
+    hex_chars.join("")
 }
 
 #[cfg(test)]

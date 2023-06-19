@@ -227,9 +227,8 @@ impl Transaction {
         let txout_count = CompactSizeUint::new(tx_outs.len() as u128);
         // numero de version quizas esto deberia ir dentro del .conf
         let version = 0x00000002;
-        // current date contiene la fecha actual
-        let current_date: DateTime<Local> = Local::now();
-        let lock_time: u32 = current_date.timestamp() as u32;
+        // lock_time = 0 => Not locked
+        let lock_time: u32 = 0;
         let incomplete_transaction =
             Transaction::new(version, txin_count, tx_ins, txout_count, tx_outs, lock_time);
         Ok(incomplete_transaction)
