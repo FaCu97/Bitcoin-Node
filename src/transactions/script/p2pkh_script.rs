@@ -47,7 +47,7 @@ pub fn validate(
     // <pubKey> es la publicKey comprimida SEC (33bytes) del receptor de la tx
     // Largo bytes: 1 + 70 + 1 + 33 = 105
     let mut sig_script_pubkey: [u8; 33] = [0; 33];
-    sig_script_pubkey.copy_from_slice(&sig_script[72..105]);
+    sig_script_pubkey.copy_from_slice(&sig_script[73..106]);
 
     // 1) Chequeo que el primer comando sea OP_DUP (0x76)
     if p2pkh_script[0..1] != [0x76] {
@@ -69,18 +69,16 @@ pub fn validate(
 
     // 5) Chequeo que los hash coincidan
     if p2pkh_script[3..23] != ripemd160_hash {
-        // revisar despues
-        //    return Ok(false);
+        return Ok(false);
     }
 
     // 6) Chequeo que el siguiente comando sea OP_CHECKSIG (0xAC)
     if p2pkh_script[24..25] != [0xAC] {
         return Ok(false);
     }
-    // revisar despues
-    //if !SigScript::verify_sig(hash, &sig_script[1..71], &sig_script[74..107])? {
-    //  return Ok(false);
-    // }
+    if !SigScript::verify_sig(hash, &sig_script[1..72], &sig_script[73..106])? {
+        return Ok(false);
+    }
     Ok(true)
 }
 
