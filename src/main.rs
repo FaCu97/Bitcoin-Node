@@ -108,7 +108,8 @@ fn main() -> Result<(), GenericError> {
         )
         .map_err(GenericError::NodeHandlerError)?;
 
-    match wallet.make_transaction_index(0, "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a", 5000) {
+    match wallet.make_transaction_index(0, "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a", 5000, 5000 as i64)
+    {
         Ok(_) => println!("Transaccion ok"),
         Err(e) => println!("Error al realizar la transaccion: {}", e),
     }

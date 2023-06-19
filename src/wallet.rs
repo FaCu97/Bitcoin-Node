@@ -29,8 +29,9 @@ impl Wallet {
         account: &mut Account,
         address_receiver: &str,
         amount: i64,
+        fee: i64,
     ) -> Result<(), Box<dyn Error>> {
-        let transaction_hash: [u8; 32] = account.make_transaction(address_receiver, amount)?;
+        let transaction_hash: [u8; 32] = account.make_transaction(address_receiver, amount, fee)?;
         self.node.broadcast_tx(transaction_hash)?;
         Ok(())
     }
@@ -40,9 +41,10 @@ impl Wallet {
         account_index: usize,
         address_receiver: &str,
         amount: i64,
+        fee: i64,
     ) -> Result<(), Box<dyn Error>> {
         let transaction_hash: [u8; 32] = self.accounts.write().unwrap()[account_index]
-            .make_transaction(address_receiver, amount)?;
+            .make_transaction(address_receiver, amount, fee)?;
         println!("HASH TX: {:?}", transaction_hash);
         self.node.broadcast_tx(transaction_hash)?;
         Ok(())

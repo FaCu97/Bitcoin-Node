@@ -14,7 +14,11 @@ use crate::{
 
 use super::{
     outpoint::Outpoint,
-    script::{pubkey::Pubkey, sig_script::SigScript},
+    script::{
+        p2pkh_script::{self, validate},
+        pubkey::Pubkey,
+        sig_script::SigScript,
+    },
     tx_in::TxIn,
     tx_out::TxOut,
 };
@@ -203,6 +207,7 @@ impl Transaction {
     pub fn generate_unsigned_transaction(
         address_receiver: &str,
         value: i64,
+        fee: i64,
         utxos_to_spend: &Vec<UtxoTuple>,
     ) -> Result<Transaction, Box<dyn Error>> {
         let mut tx_ins: Vec<TxIn> = Vec::new();
@@ -279,6 +284,16 @@ impl Transaction {
         }
         tx_copy.tx_in[tx_in_index].set_signature_script(script);
         tx_copy.hash_message(true)
+    }
+
+    pub fn validate(&self, utxos_to_spend: &Vec<UtxoTuple>) -> Result<(), Box<dyn Error>> {
+        //    for utxo
+
+        // for txin in self.tx_in {
+        //txin.
+        //        p2pkh_script::validate(hash, tx_out, &txin.signature_script.get_bytes())
+        //}
+        Ok(())
     }
 }
 

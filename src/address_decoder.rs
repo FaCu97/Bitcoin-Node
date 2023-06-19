@@ -46,8 +46,8 @@ pub fn hash_160(public_key_bytes_compressed: &[u8]) -> [u8; 20] {
 /// Si la address es invalida, devuelve error
 pub fn get_pubkey_hash_from_address(address: &str) -> Result<[u8; 20], Box<dyn Error>> {
     //se decodifican de &str a bytes , desde el formate base58  a bytes
+    validate_address(address)?;
     let address_decoded_bytes = bs58::decode(address).into_vec()?;
-    validate_address(&address_decoded_bytes)?;
     let lenght_bytes = address_decoded_bytes.len();
     let mut pubkey_hash: [u8; 20] = [0; 20];
 
@@ -68,11 +68,12 @@ pub fn get_pubkey_compressed(private_key: &str) -> Result<[u8; 33], Box<dyn Erro
     Ok(public_key.serialize())
 }
 
-/// Recibe una bitcoin address decodificada.
+/// Recibe una bitcoin address.
 /// Revisa el checksum y devuelve error si es inválida.
-fn validate_address(address_decoded_bytes: &Vec<u8>) -> Result<(), Box<dyn Error>> {
+pub fn validate_address(address: &str) -> Result<(), Box<dyn Error>> {
     // validacion checksum: evita errores de tipeo en la address
     // Calcular el checksum (doble hash SHA-256) del hash extendido
+    let address_decoded_bytes = bs58::decode(address).into_vec()?;
     let lenght_bytes = address_decoded_bytes.len();
     let checksum_hash = Sha256::digest(Sha256::digest(
         &address_decoded_bytes[0..(lenght_bytes - 4)],

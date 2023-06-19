@@ -89,21 +89,28 @@ impl Account {
         &mut self,
         address_receiver: &str,
         amount: i64,
+        fee: i64,
     ) -> Result<[u8; 32], Box<dyn Error>> {
-        if !self.has_balance(amount) {
+        address_decoder::validate_address(address_receiver)?;
+        if !self.has_balance(amount + fee) {
             return Err(Box::new(std::io::Error::new(
                 io::ErrorKind::Other,
                 format!(
                     "El balance de la cuenta {} tiene menos de {} satoshis",
-                    self.address, amount,
+                    self.address,
+                    amount + fee,
                 ),
             )));
         }
         // sabemos que tenemos monto para realizar la transaccion , ahora debemos obtener las utxos
         // que utilizaremos para gastar
-        let utxos_to_spend: Vec<UtxoTuple> = self.get_utxos_for_amount(amount);
-        let mut unsigned_transaction =
-            Transaction::generate_unsigned_transaction(address_receiver, amount, &utxos_to_spend)?;
+        let utxos_to_spend: Vec<UtxoTuple> = self.get_utxos_for_amount(amount + fee);
+        let mut unsigned_transaction = Transaction::generate_unsigned_transaction(
+            address_receiver,
+            amount,
+            fee,
+            &utxos_to_spend,
+        )?;
         unsigned_transaction.sign(&self, &utxos_to_spend)?;
         let mut bytes = Vec::new();
         unsigned_transaction.marshalling(&mut bytes);
@@ -111,6 +118,9 @@ impl Account {
             "RAW TRANSACTION: {:?}",
             bytes_to_hex_string(&bytes.to_vec())
         );
+
+        //    unsigned_transaction.validate()?;
+
         self.add_transaction(unsigned_transaction.clone());
         Ok(unsigned_transaction.hash())
     }
@@ -183,6 +193,19 @@ mod test {
         )
         .unwrap();
         assert_eq!(user.get_pubkey_compressed()?, expected_pubkey);
+        Ok(())
+    }
+
+    #[test]
+    fn test_no_se_puede_realizar_transaccion_a_una_address_invalida() -> Result<(), Box<dyn Error>>
+    {
+        let address_expected: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
+        let private_key: String =
+            String::from("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR");
+        let mut account = Account::new(private_key, address_expected)?;
+        let transaction_result =
+            account.make_transaction("mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi8", 1000, 10);
+        assert!(transaction_result.is_err());
         Ok(())
     }
 }
