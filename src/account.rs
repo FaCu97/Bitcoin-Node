@@ -68,6 +68,7 @@ impl Account {
             } else {
                 utxos_to_spend
                     .push(self.utxo_set[position].utxos_to_spend(value, &mut partial_amount));
+                break;
             }
             position += 1;
         }
