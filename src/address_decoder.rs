@@ -175,13 +175,6 @@ mod test {
         let expected_private_key_bytes =
             string_to_32_bytes("066C2068A5B9D650698828A8E39F94A784E2DDD25C0236AB7F1A014D4F9B4B49")
                 .unwrap();
-
-        let address = "mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi9";
-        let private = "cSqmqW48wCeoUF8FCJvVsqUGwcvir27bKWCFj1MTFszFdn2Dduim";
-        let pubkeyhash = get_pubkey_compressed(private)?;
-        let hex = account::bytes_to_hex_string(&pubkeyhash);
-        println!("PUBKEY COMPRESSED:  {}", hex);
-
         let private_key = decode_wif_private_key(wif)?;
 
         assert_eq!(private_key.to_vec(), expected_private_key_bytes);
