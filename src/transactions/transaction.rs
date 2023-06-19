@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use bitcoin_hashes::{sha256d, Hash};
+use bitcoin_hashes::{sha256, sha256d, Hash};
 
 use crate::{
     account::Account, compact_size_uint::CompactSizeUint,
@@ -111,6 +111,10 @@ impl Transaction {
             let sig_hash_all: u32 = 0x00000001;
             let bytes = sig_hash_all.to_le_bytes();
             raw_transaction_bytes.extend_from_slice(&bytes);
+        }
+        if is_message {
+            let hash_transaction = sha256::Hash::hash(&raw_transaction_bytes);
+            return *hash_transaction.as_byte_array();
         }
         let hash_transaction = sha256d::Hash::hash(&raw_transaction_bytes);
         *hash_transaction.as_byte_array()

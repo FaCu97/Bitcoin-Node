@@ -115,7 +115,7 @@ impl Account {
         Ok(unsigned_transaction.hash())
     }
 }
-fn bytes_to_hex_string(bytes: &[u8]) -> String {
+pub fn bytes_to_hex_string(bytes: &[u8]) -> String {
     let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
 
     hex_chars.join("")

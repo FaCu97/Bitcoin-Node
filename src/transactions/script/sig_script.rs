@@ -38,13 +38,13 @@ impl SigScript {
         let mut sig_script_bytes: Vec<u8> = Vec::new();
         let private_key = account.get_private_key()?;
         let sig = Self::generate_sig(hash_transaction, private_key)?;
-        let lenght_sig = sig.len();
+        let lenght_sig = sig.len() + 1;
         // esto equivale al op inicial que indica el largo del campo sig
         sig_script_bytes.push(lenght_sig as u8);
         // se carga el campo sig
         sig_script_bytes.extend_from_slice(&sig);
         // se carga el byte de SIGHASH_ALL
-        //sig_script_bytes.push(01);
+        sig_script_bytes.push(01);
         let bytes_public_key = account.get_pubkey_compressed()?;
         let lenght_pubkey = bytes_public_key.len();
         // se carga el largo de los bytes de la clave publica
