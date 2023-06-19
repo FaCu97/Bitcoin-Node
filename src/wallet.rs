@@ -35,6 +35,19 @@ impl Wallet {
         Ok(())
     }
 
+    pub fn make_transaction_index(
+        &self,
+        account_index: usize,
+        address_receiver: &str,
+        amount: i64,
+    ) -> Result<(), Box<dyn Error>> {
+        let transaction_hash: [u8; 32] = self.accounts.write().unwrap()[account_index]
+            .make_transaction(address_receiver, amount)?;
+        println!("HASH TX: {:?}", transaction_hash);
+        self.node.broadcast_tx(transaction_hash)?;
+        Ok(())
+    }
+
     /// Agrega una cuenta a la wallet.
     /// Devuelve error si las claves ingresadas son inválidas
     pub fn add_account(

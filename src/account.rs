@@ -104,6 +104,9 @@ impl Account {
         let mut unsigned_transaction =
             Transaction::generate_unsigned_transaction(address_receiver, amount, &utxos_to_spend)?;
         unsigned_transaction.sign(&self, &utxos_to_spend)?;
+        let mut bytes = Vec::new();
+        unsigned_transaction.marshalling(&mut bytes);
+        println!("RAW TRANSACTION: {:?}", bytes.to_vec());
         self.add_transaction(unsigned_transaction.clone());
         Ok(unsigned_transaction.hash())
     }
