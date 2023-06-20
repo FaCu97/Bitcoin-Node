@@ -78,12 +78,24 @@ mod test {
 
     use crate::{account::Account, transactions::script::sig_script::SigScript};
     #[test]
-    fn test_el_largo_del_script_sig_es_71_bytes() -> Result<(), Box<dyn Error>> {
+    fn test_el_largo_del_script_sig_es_71_bytes_con_un_tipo_de_clave() -> Result<(), Box<dyn Error>>
+    {
         let hash: [u8; 32] = [123; 32];
         let signing_key: [u8; 32] = [14; 32];
 
         let sig = SigScript::generate_sig(hash, signing_key)?;
         assert_eq!(sig.len(), 71);
+        Ok(())
+    }
+
+    #[test]
+    fn test_el_largo_del_script_sig_es_72_bytes_con_otro_tipo_de_clave(
+    ) -> Result<(), Box<dyn Error>> {
+        let hash: [u8; 32] = [123; 32];
+        let signing_key: [u8; 32] = [12; 32];
+
+        let sig = SigScript::generate_sig(hash, signing_key)?;
+        assert_eq!(sig.len(), 72);
         Ok(())
     }
 
