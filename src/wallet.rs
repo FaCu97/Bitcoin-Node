@@ -46,7 +46,7 @@ impl Wallet {
         let transaction_hash: [u8; 32] = self.accounts.write().unwrap()[account_index]
             .make_transaction(address_receiver, amount, fee)?;
         println!("HASH TX: {:?}", transaction_hash);
-        self.node.broadcast_tx(transaction_hash)?;
+        //    self.node.broadcast_tx(transaction_hash)?;
         Ok(())
     }
 

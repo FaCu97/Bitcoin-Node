@@ -1,4 +1,7 @@
 use crate::transactions::tx_out::TxOut;
+
+/// Guarda el hash de la transacción y un array con los TxOut sin gastar, referentes a esa transacción
+/// La tupla guarda el TxOut y el indice en el que se encuentra en la tx
 #[derive(Debug, Clone)]
 pub struct UtxoTuple {
     pub hash: [u8; 32],
@@ -81,7 +84,7 @@ impl UtxoTuple {
         }
         for utxo in &self.utxo_set {
             if utxo.1 == previous_index {
-                return Some(utxo.0.get_pub_key());
+                return Some(utxo.0.get_pub_key_script());
             }
         }
         None

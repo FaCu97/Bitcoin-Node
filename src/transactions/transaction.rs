@@ -1,6 +1,7 @@
 use chrono::prelude::*;
 use std::{
     error::Error,
+    io,
     sync::{Arc, RwLock},
 };
 
@@ -286,13 +287,31 @@ impl Transaction {
         tx_copy.hash_message(true)
     }
 
-    pub fn validate(&self, utxos_to_spend: &Vec<UtxoTuple>) -> Result<(), Box<dyn Error>> {
-        //    for utxo
+    pub fn validate(
+        &self,
+        hash: &[u8],
+        utxos_to_spend: &Vec<UtxoTuple>,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut p2pkh_scripts = Vec::new();
+        for utxo in utxos_to_spend {
+            for (txout, _) in &utxo.utxo_set {
+                p2pkh_scripts.push(txout.get_pub_key_script())
+            }
+        }
 
-        // for txin in self.tx_in {
-        //txin.
-        //        p2pkh_script::validate(hash, tx_out, &txin.signature_script.get_bytes())
-        //}
+        for (index, txin) in self.tx_in.iter().enumerate() {
+            //txin.
+            if p2pkh_script::validate(
+                hash,
+                p2pkh_scripts[index],
+                &txin.signature_script.get_bytes(),
+            )? {
+                return Err(Box::new(std::io::Error::new(
+                    io::ErrorKind::Other,
+                    "El p2pkh_script no pasó la validación.",
+                )));
+            }
+        }
         Ok(())
     }
 }

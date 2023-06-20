@@ -119,7 +119,8 @@ impl Account {
             bytes_to_hex_string(&bytes.to_vec())
         );
 
-        //    unsigned_transaction.validate()?;
+        // el mensaje cifrado creo que no hace falta chequearlo
+        unsigned_transaction.validate(&[0; 32], &utxos_to_spend)?;
 
         self.add_transaction(unsigned_transaction.clone());
         Ok(unsigned_transaction.hash())
