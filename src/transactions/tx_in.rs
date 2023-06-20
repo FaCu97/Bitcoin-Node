@@ -151,6 +151,14 @@ impl TxIn {
         self.script_bytes = CompactSizeUint::new(signature.get_bytes().len() as u128);
         self.signature_script = signature
     }
+
+    pub fn get_previous_output_hash(&self) -> [u8; 32] {
+        self.previous_output.hash()
+    }
+
+    pub fn get_previous_output_index(&self) -> usize {
+        self.previous_output.index()
+    }
 }
 #[cfg(test)]
 

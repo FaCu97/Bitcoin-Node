@@ -1,5 +1,6 @@
 use chrono::prelude::*;
 use std::{
+    collections::HashMap,
     error::Error,
     io,
     sync::{Arc, RwLock},
@@ -144,8 +145,25 @@ impl Transaction {
     pub fn get_txout(&self) -> Vec<TxOut> {
         self.tx_out.clone()
     }
+
+    pub fn remove_utxos(
+        &self,
+        utxo_set: &mut HashMap<[u8; 32], UtxoTuple>,
+    ) -> Result<(), Box<dyn Error>> {
+        // Si la tx gasta un output existente en nuestro utxo_set, lo removemos
+        for txin in &self.tx_in {
+            let txid = &txin.get_previous_output_hash();
+            let output_index = txin.get_previous_output_index();
+            if utxo_set.contains_key(txid) {
+                if let Some(utxo) = utxo_set.get_mut(txid) {
+                    utxo.remove_utxo(output_index)?;
+                }
+            }
+        }
+        Ok(())
+    }
     /// funcion que se encarga de remover las utxos usadas por esta tx
-    pub fn remove_utxos(&self, container: &mut Vec<UtxoTuple>) {
+    pub fn remove_utxos_anterior(&self, container: &mut Vec<UtxoTuple>) {
         for list_utxos in container {
             for tx_in in &self.tx_in {
                 // aca nos fijamos si alguna de nuestra inputs usa outputs anteriores
@@ -162,7 +180,7 @@ impl Transaction {
             }
         }
     }
-    pub fn load_utxos(&self, container: &mut Vec<UtxoTuple>) {
+    pub fn load_utxos(&self, utxo_set: &mut HashMap<[u8; 32], UtxoTuple>) {
         let hash = self.hash();
         let mut utxos_and_index = Vec::new();
         let mut position: usize = 0;
@@ -172,7 +190,7 @@ impl Transaction {
             position += 1;
         }
         let utxo_tuple = UtxoTuple::new(hash, utxos_and_index);
-        container.push(utxo_tuple);
+        utxo_set.insert(hash, utxo_tuple);
     }
 
     /// Devuelve un string que representa el hash de la transaccion en hexadecimal y en el formato

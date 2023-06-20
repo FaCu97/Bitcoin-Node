@@ -1,3 +1,5 @@
+use std::{error::Error, io};
+
 use crate::transactions::tx_out::TxOut;
 
 /// Guarda el hash de la transacción y un array con los TxOut sin gastar, referentes a esa transacción
@@ -88,6 +90,22 @@ impl UtxoTuple {
             }
         }
         None
+    }
+
+    pub fn remove_utxo(&mut self, output_index: usize) -> Result<(), Box<dyn Error>> {
+        //    if self.utxo_set.len() < output_index + 1 {
+        //        return Err(Box::new(std::io::Error::new(
+        //            io::ErrorKind::Other,
+        //            "Fuera de rango. El output_index indicado excede a la cantidad de outputs de la UtxoTuple.",
+        //        )));
+        //    }
+        for index in 0..self.utxo_set.len() {
+            if self.utxo_set[index].1 == output_index {
+                self.utxo_set.remove(index);
+                break;
+            }
+        }
+        Ok(())
     }
 }
 
