@@ -1,5 +1,9 @@
+use std::error::Error;
+
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
+
+use crate::address_decoder::get_pubkey_hash_from_address;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Pubkey {
@@ -38,5 +42,21 @@ impl Pubkey {
         let encoded: bs58::encode::EncodeBuilder<&Vec<u8>> = bs58::encode(&adress_bytes);
         let string = encoded.into_string();
         Ok(string)
+    }
+
+    pub fn generate_pubkey(address: &str) -> Result<Vec<u8>, Box<dyn Error>> {
+        let pubkey_hash = get_pubkey_hash_from_address(address)?;
+        let mut pk_script: Vec<u8> = Vec::new();
+        pk_script.push(0x76); // OP_DUP  -> Pasar a constantes o enum
+        pk_script.push(0xA9);
+        pk_script.push(20); // <bytes_to_push>: Son 20 bytes
+        pk_script.extend_from_slice(&pubkey_hash);
+        pk_script.push(0x88);
+        pk_script.push(0xAC);
+        Ok(pk_script)
+    }
+
+    pub fn len(&self) -> u128 {
+        self.bytes.len() as u128
     }
 }

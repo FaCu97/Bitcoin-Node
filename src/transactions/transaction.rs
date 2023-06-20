@@ -1,9 +1,11 @@
+use chrono::prelude::*;
 use std::{
     error::Error,
+    io,
     sync::{Arc, RwLock},
 };
 
-use bitcoin_hashes::{sha256d, Hash};
+use bitcoin_hashes::{sha256, sha256d, Hash};
 
 use crate::{
     account::Account, compact_size_uint::CompactSizeUint,
@@ -11,7 +13,16 @@ use crate::{
     utxo_tuple::UtxoTuple,
 };
 
-use super::{tx_in::TxIn, tx_out::TxOut};
+use super::{
+    outpoint::Outpoint,
+    script::{
+        p2pkh_script::{self, validate},
+        pubkey::Pubkey,
+        sig_script::SigScript,
+    },
+    tx_in::TxIn,
+    tx_out::TxOut,
+};
 
 /// Guarda el txid(hash de la transaccion) y el vector con los utxos (valor e indice)
 #[derive(Debug, PartialEq, Clone)]
@@ -91,10 +102,25 @@ impl Transaction {
         let locktime_bytes: [u8; 4] = self.lock_time.to_le_bytes();
         bytes.extend_from_slice(&locktime_bytes);
     }
-
+    ///Devuelve el hash de la transaccion
     pub fn hash(&self) -> [u8; 32] {
+        self.hash_message(false)
+    }
+    /// Realiza el hash de la transaccion si recibe true ppushea dentro del vector
+    /// los bytes correspondientes al SIGHASH_ALL , caso contrario realiza el hash
+    /// normalmente
+    fn hash_message(&self, is_message: bool) -> [u8; 32] {
         let mut raw_transaction_bytes: Vec<u8> = Vec::new();
         self.marshalling(&mut raw_transaction_bytes);
+        if is_message {
+            let sig_hash_all: u32 = 0x00000001;
+            let bytes = sig_hash_all.to_le_bytes();
+            raw_transaction_bytes.extend_from_slice(&bytes);
+        }
+        if is_message {
+            let hash_transaction = sha256::Hash::hash(&raw_transaction_bytes);
+            return *hash_transaction.as_byte_array();
+        }
         let hash_transaction = sha256d::Hash::hash(&raw_transaction_bytes);
         *hash_transaction.as_byte_array()
     }
@@ -139,10 +165,11 @@ impl Transaction {
     pub fn load_utxos(&self, container: &mut Vec<UtxoTuple>) {
         let hash = self.hash();
         let mut utxos_and_index = Vec::new();
-        let position: usize = 0;
+        let mut position: usize = 0;
         for utxo in &self.tx_out {
             let utxo_and_index = (utxo.clone(), position);
             utxos_and_index.push(utxo_and_index);
+            position += 1;
         }
         let utxo_tuple = UtxoTuple::new(hash, utxos_and_index);
         container.push(utxo_tuple);
@@ -179,11 +206,113 @@ impl Transaction {
         Ok(())
     }
 
-    pub fn generate_transaction_to(
-        account_sender: Account,
+    pub fn generate_unsigned_transaction(
         address_receiver: &str,
         value: i64,
+        fee: i64,
+        utxos_to_spend: &Vec<UtxoTuple>,
+    ) -> Result<Transaction, Box<dyn Error>> {
+        let mut tx_ins: Vec<TxIn> = Vec::new();
+
+        // en esta parte se generan los tx_in de donde obtenemos los satoshis para ser
+        // gastados ,¡ojo! pueden ser mas de uno.
+        for utxo in utxos_to_spend {
+            let tx_id: [u8; 32] = utxo.hash();
+            let indexes: Vec<usize> = utxo.get_indexes_from_utxos();
+            for index in indexes {
+                let previous_output: Outpoint = Outpoint::new(tx_id, index as u32);
+                let tx_in: TxIn = TxIn::incomplete_txin(previous_output);
+                tx_ins.push(tx_in);
+            }
+        }
+        // esta variable indica la cantidad de txIn creados en los pasos anteriores
+        let txin_count: CompactSizeUint = CompactSizeUint::new(tx_ins.len() as u128);
+        // este vector contiene los outputs de nuestra transaccion
+        let mut tx_outs: Vec<TxOut> = Vec::new();
+        // creacion del pubkey_script
+        let pk_script: Vec<u8> = Pubkey::generate_pubkey(address_receiver)?;
+        let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(pk_script.len() as u128);
+        // creacion del txOut(utxo) referenciado al address que nos enviaron
+        let utxo_to_send = TxOut::new(value, pk_script_bytes, pk_script);
+        tx_outs.push(utxo_to_send);
+        let txout_count = CompactSizeUint::new(tx_outs.len() as u128);
+        // numero de version quizas esto deberia ir dentro del .conf
+        let version = 0x00000002;
+        // lock_time = 0 => Not locked
+        let lock_time: u32 = 0;
+        let incomplete_transaction =
+            Transaction::new(version, txin_count, tx_ins, txout_count, tx_outs, lock_time);
+        Ok(incomplete_transaction)
+    }
+
+    pub fn sign(
+        &mut self,
+        account: &Account,
+        utxos_to_spend: &Vec<UtxoTuple>,
     ) -> Result<(), Box<dyn Error>> {
+        let mut signatures = Vec::new();
+        for index in 0..self.tx_in.len() {
+            // agregar el signature a cada input
+            let z = self.generate_message_to_sign(index, utxos_to_spend);
+            signatures.push(SigScript::generate_sig_script(z, &account)?);
+        }
+        let mut index = 0;
+        for signature in signatures {
+            self.tx_in[index].add(signature);
+            index += 1;
+        }
+        Ok(())
+    }
+
+    /// Genera la txin con el previous pubkey del tx_in recibido.
+    /// Devuelve el hash
+    fn generate_message_to_sign(
+        &self,
+        tx_in_index: usize,
+        utxos_to_spend: &Vec<UtxoTuple>,
+    ) -> [u8; 32] {
+        let mut tx_copy = self.clone();
+        let mut script = Vec::new();
+        let input_to_sign = &tx_copy.tx_in[tx_in_index];
+        for utxos in utxos_to_spend {
+            let pubkey = utxos.find(
+                input_to_sign.previous_tx_id(),
+                input_to_sign.previous_index(),
+            );
+            script = match pubkey {
+                Some(value) => value.to_vec(),
+                None => continue,
+            };
+        }
+        tx_copy.tx_in[tx_in_index].set_signature_script(script);
+        tx_copy.hash_message(true)
+    }
+
+    pub fn validate(
+        &self,
+        hash: &[u8],
+        utxos_to_spend: &Vec<UtxoTuple>,
+    ) -> Result<(), Box<dyn Error>> {
+        let mut p2pkh_scripts = Vec::new();
+        for utxo in utxos_to_spend {
+            for (txout, _) in &utxo.utxo_set {
+                p2pkh_scripts.push(txout.get_pub_key_script())
+            }
+        }
+
+        for (index, txin) in self.tx_in.iter().enumerate() {
+            //txin.
+            if !p2pkh_script::validate(
+                hash,
+                p2pkh_scripts[index],
+                &txin.signature_script.get_bytes(),
+            )? {
+                return Err(Box::new(std::io::Error::new(
+                    io::ErrorKind::Other,
+                    "El p2pkh_script no pasó la validación.",
+                )));
+            }
+        }
         Ok(())
     }
 }

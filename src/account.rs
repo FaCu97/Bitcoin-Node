@@ -33,12 +33,6 @@ impl Account {
         })
     }
 
-    /*
-        pub fn get_account_balance(&self, node: &Node) -> i64 {
-            node.account_balance(self.address.clone())
-        }
-    */
-
     /// Devuelve la clave publica comprimida (33 bytes) a partir de la privada
     pub fn get_pubkey_compressed(&self) -> Result<[u8; 33], Box<dyn Error>> {
         address_decoder::get_pubkey_compressed(&self.private_key)
@@ -59,25 +53,83 @@ impl Account {
         }
         balance > value
     }
+    /// Devuelve un vector con las utxos a ser gastadas en una transaccion nueva
+    fn get_utxos_for_amount(&mut self, value: i64) -> Vec<UtxoTuple> {
+        let mut utxos_to_spend = Vec::new();
+        let mut partial_amount: i64 = 0;
+        let mut position: usize = 0;
+        let lenght: usize = self.utxo_set.len();
+        while position < lenght {
+            if (partial_amount + self.utxo_set[position].balance()) < value {
+                partial_amount += self.utxo_set[position].balance();
+                utxos_to_spend.push(self.utxo_set[position].clone());
+                // No corresponde removerlas mientras la tx no está confirmada
+                // self.remove_utxo(position);
+            } else {
+                utxos_to_spend
+                    .push(self.utxo_set[position].utxos_to_spend(value, &mut partial_amount));
+                break;
+            }
+            position += 1;
+        }
+        utxos_to_spend
+    }
 
+    fn remove_utxo(&mut self, position: usize) {
+        self.utxo_set.remove(position);
+    }
+
+    fn add_transaction(&self, transaction: Transaction) {
+        let mut aux = self.pending_transactions.write().unwrap();
+        aux.push(transaction);
+    }
+    /// Realiza la transaccion con el monto recibido , devuelve el hash de dicha transaccion
+    /// para que el nodo envie dicho hash a lo restantes nodos de la red
     pub fn make_transaction(
-        &self,
+        &mut self,
         address_receiver: &str,
         amount: i64,
-    ) -> Result<(), Box<dyn Error>> {
-        if !self.has_balance(amount) {
+        fee: i64,
+    ) -> Result<[u8; 32], Box<dyn Error>> {
+        address_decoder::validate_address(address_receiver)?;
+        if !self.has_balance(amount + fee) {
             return Err(Box::new(std::io::Error::new(
                 io::ErrorKind::Other,
                 format!(
                     "El balance de la cuenta {} tiene menos de {} satoshis",
-                    self.address, amount,
+                    self.address,
+                    amount + fee,
                 ),
             )));
         }
-        //let transaction: Transaction::generate_transaction_to(address: &str, amount: i64)?;
-        // letTransaction::new(...)
-        Ok(())
+        // sabemos que tenemos monto para realizar la transaccion , ahora debemos obtener las utxos
+        // que utilizaremos para gastar
+        let utxos_to_spend: Vec<UtxoTuple> = self.get_utxos_for_amount(amount + fee);
+        let mut unsigned_transaction = Transaction::generate_unsigned_transaction(
+            address_receiver,
+            amount,
+            fee,
+            &utxos_to_spend,
+        )?;
+        unsigned_transaction.sign(&self, &utxos_to_spend)?;
+        let mut bytes = Vec::new();
+        unsigned_transaction.marshalling(&mut bytes);
+        println!(
+            "RAW TRANSACTION: {:?}",
+            bytes_to_hex_string(&bytes.to_vec())
+        );
+
+        // el mensaje cifrado creo que no hace falta chequearlo
+        unsigned_transaction.validate(&[0; 32], &utxos_to_spend)?;
+
+        self.add_transaction(unsigned_transaction.clone());
+        Ok(unsigned_transaction.hash())
     }
+}
+pub fn bytes_to_hex_string(bytes: &[u8]) -> String {
+    let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
+
+    hex_chars.join("")
 }
 
 #[cfg(test)]
@@ -142,6 +194,19 @@ mod test {
         )
         .unwrap();
         assert_eq!(user.get_pubkey_compressed()?, expected_pubkey);
+        Ok(())
+    }
+
+    #[test]
+    fn test_no_se_puede_realizar_transaccion_a_una_address_invalida() -> Result<(), Box<dyn Error>>
+    {
+        let address_expected: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
+        let private_key: String =
+            String::from("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR");
+        let mut account = Account::new(private_key, address_expected)?;
+        let transaction_result =
+            account.make_transaction("mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi8", 1000, 10);
+        assert!(transaction_result.is_err());
         Ok(())
     }
 }

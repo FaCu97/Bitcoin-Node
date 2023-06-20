@@ -26,6 +26,19 @@ impl TxIn {
             sequence,
         }
     }
+    pub fn incomplete_txin(previous_output: Outpoint) -> TxIn {
+        let script_bytes: CompactSizeUint = CompactSizeUint::new(0);
+        let height: Option<Vec<u8>> = None;
+        let signature_script: SigScript = SigScript::new(vec![]);
+        let sequence: u32 = 0xffffffff;
+        Self::new(
+            previous_output,
+            script_bytes,
+            height,
+            signature_script,
+            sequence,
+        )
+    }
     /// recibe un vector de byes que contiene un txin y un offset indicando la posicion donde empieza el txin
     /// devuelve un txin completando los campos con lo que esta en los bytes en caso de que todo este bien
     /// y un string indicando el error cuando algo falla. tambien actualiza el offset
@@ -123,8 +136,20 @@ impl TxIn {
     pub fn previous_index(&self) -> usize {
         self.previous_output.index()
     }
+    pub fn previous_tx_id(&self) -> [u8; 32] {
+        self.previous_output.hash()
+    }
     pub fn is_same_hash(&self, hash: &[u8; 32]) -> bool {
         self.previous_output.same_hash(*hash)
+    }
+    pub fn set_signature_script(&mut self, bytes: Vec<u8>) {
+        self.script_bytes = CompactSizeUint::new(bytes.len() as u128);
+        self.signature_script = SigScript::new(bytes);
+    }
+    pub fn add(&mut self, signature: SigScript) {
+        // acá faltaba agregar el script_bytes
+        self.script_bytes = CompactSizeUint::new(signature.get_bytes().len() as u128);
+        self.signature_script = signature
     }
 }
 #[cfg(test)]

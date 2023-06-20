@@ -24,6 +24,7 @@ pub struct Node {
 }
 
 impl Node {
+    /// Inicializa el nodo. Recibe la blockchain ya descargada.
     pub fn new(
         log_sender: LogSender,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
@@ -70,20 +71,6 @@ impl Node {
     pub fn shutdown_node(&self) -> Result<(), NodeMessageHandlerError> {
         self.peers_handler.finish()
     }
-
-    /*
-    pub fn make_transaction(
-        &mut self,
-        adress_receiver: &str,
-        amount_to_spend: i64,
-        account: User,
-    ) -> Result<(), &'static str> {
-        if account.has_balance(amount_to_spend) {
-            return Err("no tenes saldo disponible para realizar la operacion");
-        }
-        account.make_transaction(adress_receiver, amount_to_spend);
-        Ok(())
-    }*/
 
     /// funcion que muestra si una transaccion se encuentra en un determinado bloque
     pub fn merkle_proof_of_inclusion(
