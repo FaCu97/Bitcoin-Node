@@ -165,10 +165,11 @@ impl Transaction {
     pub fn load_utxos(&self, container: &mut Vec<UtxoTuple>) {
         let hash = self.hash();
         let mut utxos_and_index = Vec::new();
-        let position: usize = 0;
+        let mut position: usize = 0;
         for utxo in &self.tx_out {
             let utxo_and_index = (utxo.clone(), position);
             utxos_and_index.push(utxo_and_index);
+            position += 1;
         }
         let utxo_tuple = UtxoTuple::new(hash, utxos_and_index);
         container.push(utxo_tuple);

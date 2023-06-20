@@ -24,6 +24,7 @@ pub struct Node {
 }
 
 impl Node {
+    /// Inicializa el nodo. Recibe la blockchain ya descargada.
     pub fn new(
         log_sender: LogSender,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
