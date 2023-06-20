@@ -301,7 +301,7 @@ impl Transaction {
 
         for (index, txin) in self.tx_in.iter().enumerate() {
             //txin.
-            if p2pkh_script::validate(
+            if !p2pkh_script::validate(
                 hash,
                 p2pkh_scripts[index],
                 &txin.signature_script.get_bytes(),
