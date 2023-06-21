@@ -19,7 +19,7 @@ pub struct Node {
     pub connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
     pub headers: Arc<RwLock<Vec<BlockHeader>>>,
     pub block_chain: Arc<RwLock<Vec<Block>>>,
-    pub utxo_set: HashMap<[u8; 32], UtxoTuple>,
+    pub utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
     pub accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     pub peers_handler: NodeMessageHandler,
 }
@@ -32,7 +32,9 @@ impl Node {
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         block_chain: Arc<RwLock<Vec<Block>>>,
     ) -> Result<Self, NodeMessageHandlerError> {
-        let utxo_set = generate_utxo_set(&block_chain)?;
+        let pointer_to_utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>> =
+            Arc::new(RwLock::new(HashMap::new()));
+        generate_utxo_set(&block_chain, pointer_to_utxo_set.clone())?;
         let pointer_to_accounts_in_node = Arc::new(RwLock::new(Arc::new(RwLock::new(vec![]))));
         let peers_handler = NodeMessageHandler::new(
             log_sender,
@@ -40,12 +42,13 @@ impl Node {
             block_chain.clone(),
             connected_nodes.clone(),
             pointer_to_accounts_in_node.clone(),
+            pointer_to_utxo_set.clone(),
         )?;
         Ok(Node {
             connected_nodes,
             headers,
             block_chain,
-            utxo_set,
+            utxo_set: pointer_to_utxo_set,
             accounts: pointer_to_accounts_in_node,
             peers_handler,
         })
@@ -58,7 +61,7 @@ impl Node {
     /// funcion que cargara las utxos asociadas a la respectiva cuenta
     pub fn utxos_referenced_to_account(&self, address: &str) -> Vec<UtxoTuple> {
         let mut account_utxo_set: Vec<UtxoTuple> = Vec::new();
-        for utxo in self.utxo_set.values() {
+        for utxo in self.utxo_set.read().unwrap().values() {
             let aux_utxo = utxo.referenced_utxos(address);
             let utxo_to_push = match aux_utxo {
                 Some(value) => value,
@@ -107,16 +110,14 @@ impl Node {
 ///Funcion que se encarga de generar la lista de utxos
 fn generate_utxo_set(
     block_chain: &Arc<RwLock<Vec<Block>>>,
-) -> Result<HashMap<[u8; 32], UtxoTuple>, NodeMessageHandlerError> {
-    let mut list_of_utxos: HashMap<[u8; 32], UtxoTuple> = HashMap::new();
-
+    utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+) -> Result<Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>, NodeMessageHandlerError> {
     let block_chain_lock = block_chain
         .read()
         .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
 
     for block in block_chain_lock.iter() {
-        block.give_me_utxos(&mut list_of_utxos);
-        //list_of_utxos.extend_from_slice(&utxos);
+        block.give_me_utxos(utxo_set.clone());
     }
-    Ok(list_of_utxos)
+    Ok(utxo_set)
 }

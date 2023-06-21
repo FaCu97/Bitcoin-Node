@@ -1,4 +1,7 @@
-use std::sync::{mpsc::Sender, Arc, RwLock};
+use std::{
+    collections::HashMap,
+    sync::{mpsc::Sender, Arc, RwLock},
+};
 
 use crate::{
     account::Account,
@@ -13,6 +16,7 @@ use crate::{
         message_header::{get_checksum, HeaderMessage},
     },
     transactions::transaction::Transaction,
+    utxo_tuple::UtxoTuple,
 };
 
 use super::node_message_handler::NodeMessageHandlerError;
@@ -126,6 +130,7 @@ pub fn handle_block_message(
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     blocks: Arc<RwLock<Vec<Block>>>,
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
+    utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
 ) -> NodeMessageHandlerResult {
     let new_block = BlockMessage::unmarshalling(&payload.to_vec())
         .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
@@ -136,6 +141,7 @@ pub fn handle_block_message(
             include_new_header(log_sender.clone(), new_block.block_header, headers)?;
             include_new_block(log_sender.clone(), new_block.clone(), blocks)?;
             new_block.contains_pending_tx(log_sender, accounts)?;
+            new_block.give_me_utxos(utxo_set);
         }
     } else {
         write_in_log(
