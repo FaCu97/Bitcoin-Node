@@ -140,8 +140,9 @@ pub fn handle_block_message(
         if header_is_not_included_yet {
             include_new_header(log_sender.clone(), new_block.block_header, headers)?;
             include_new_block(log_sender.clone(), new_block.clone(), blocks)?;
-            new_block.contains_pending_tx(log_sender, accounts)?;
-            new_block.give_me_utxos(utxo_set);
+            new_block.contains_pending_tx(log_sender, accounts.clone())?;
+            new_block.give_me_utxos(utxo_set.clone());
+            update_accounts_utxo_set(accounts, utxo_set);
         }
     } else {
         write_in_log(
@@ -286,4 +287,21 @@ fn header_is_not_included(
         }
     }
     Ok(true)
+}
+
+fn update_accounts_utxo_set(
+    accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
+    utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+) -> Result<(), NodeMessageHandlerError> {
+    let accounts_lock = accounts
+        .read()
+        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+    let mut accounts_inner_lock = accounts_lock
+        .write()
+        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+
+    for account_lock in accounts_inner_lock.iter_mut() {
+        account_lock.set_utxos(utxo_set.clone());
+    }
+    Ok(())
 }
