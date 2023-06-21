@@ -154,10 +154,7 @@ impl Block {
                 tx.load_utxos(uxto_set);
             } else {
                 //primero removemos las utxos que usa esta tx
-                match tx.remove_utxos(uxto_set) {
-                    Ok(_) => {}
-                    Err(e) => println!("error al remover utxo: {}", e),
-                }
+                tx.remove_utxos(uxto_set);
                 //luego cargamos las utxos de esta tx para que en la siguiente iteracion
                 //se remuevan aquellas con son usadas
                 tx.load_utxos(uxto_set);
