@@ -39,7 +39,7 @@ pub fn generate_p2pkh_pk_script(pubkey_hash: &[u8]) -> Result<Vec<u8>, Box<dyn E
 /// Recibe el p2pkh_script y el sig_script.
 /// Realiza la validación y devuelve true o false
 pub fn validate(
-    hash: &[u8],
+    _hash: &[u8],
     p2pkh_script: &[u8],
     sig_script: &[u8],
 ) -> Result<bool, Box<dyn Error>> {
