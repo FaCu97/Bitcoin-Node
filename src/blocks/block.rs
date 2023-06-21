@@ -163,6 +163,24 @@ impl Block {
         // utxo_container
     }
 
+    /// Devuelve un string que representa el hash del bloque en hexadecimal y en el formato
+    /// que se usa en la pagina https://blockstream.info/testnet/ para mostrar bloques
+    pub fn hex_hash(&self) -> String {
+        let hash_as_bytes = self.block_header.hash();
+        let inverted_hash: [u8; 32] = {
+            let mut inverted = [0; 32];
+            for (i, byte) in hash_as_bytes.iter().enumerate() {
+                inverted[31 - i] = *byte;
+            }
+            inverted
+        };
+        let hex_hash = inverted_hash
+            .iter()
+            .map(|byte| format!("{:02x}", byte))
+            .collect();
+        hex_hash
+    }
+
     pub fn contains_pending_tx(
         &self,
         log_sender: LogSender,
@@ -182,9 +200,10 @@ impl Block {
                     .contains(tx)
                 {
                     println!(
-                        "%%%%%%%%% El bloque {:?} contiene la transaccion {:?} confirmada %%%%%%%%%%%",
-                        self.block_header.hash(),
-                        tx.hex_hash()
+                        "%%%%%%%%% El bloque -- {} -- contiene la transaccion -- {} -- confirmada de la cuenta -- {} --%%%%%%%%%%%",
+                        self.hex_hash(),
+                        tx.hex_hash(),
+                        account.address
                     );
                     let pending_transaction_index = account
                         .pending_transactions
@@ -206,9 +225,10 @@ impl Block {
                         write_in_log(
                             log_sender.info_log_sender.clone(),
                             format!(
-                                "CUENTA: {:?}: SE CONFIRMA NUEVA TRANSACCION {:?} EN BLOQUE",
+                                "CUENTA: {}: SE CONFIRMA NUEVA TRANSACCION {} EN BLOQUE --{}--",
                                 account.address,
-                                confirmed_tx.hex_hash()
+                                confirmed_tx.hex_hash(),
+                                self.hex_hash()
                             )
                             .as_str(),
                         );
