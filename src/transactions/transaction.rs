@@ -25,7 +25,7 @@ use super::{
     tx_out::TxOut,
 };
 
-/// Guarda el txid(hash de la transaccion) y el vector con los utxos (valor e indice)
+/// Representa una transacción del protocolo bitcoin
 #[derive(Debug, PartialEq, Clone)]
 pub struct Transaction {
     pub version: i32,
@@ -55,6 +55,8 @@ impl Transaction {
         }
     }
 
+    /// Desserializa la transacción a partir de una cadena de bytes.
+    /// Devuelve la transacción o un error en caso de que la cadena no cumpla con el formato
     pub fn unmarshalling(bytes: &Vec<u8>, offset: &mut usize) -> Result<Transaction, &'static str> {
         // en teoria se lee el coinbase transaccion primero
         if bytes.len() < 10 {
@@ -89,6 +91,8 @@ impl Transaction {
         })
     }
 
+    /// Serializa la transacción.
+    /// Guarda los bytes en la referencia del vector recibido.
     pub fn marshalling(&self, bytes: &mut Vec<u8>) {
         let version_bytes: [u8; 4] = self.version.to_le_bytes();
         bytes.extend_from_slice(&version_bytes);
@@ -126,6 +130,9 @@ impl Transaction {
         *hash_transaction.as_byte_array()
     }
 
+    /// Recibe una referencia a un vector de bytes y la cantidad de transacciones a desserializar.
+    /// Devuelve un vector con las transacciones o error.
+    /// Actualiza el offset
     pub fn unmarshalling_transactions(
         bytes: &Vec<u8>,
         amount_transactions: u64,
@@ -139,47 +146,32 @@ impl Transaction {
         }
         Ok(transactions_list)
     }
+
+    /// Devuelve true o false dependiendo si la transacción es una coinbase
     pub fn is_coinbase_transaction(&self) -> bool {
         self.tx_in[0].is_coinbase()
     }
+
+    /// Devuelve una copia de los tx_out de la transaccion
     pub fn get_txout(&self) -> Vec<TxOut> {
         self.tx_out.clone()
     }
 
-    pub fn remove_utxos(
-        &self,
-        utxo_set: &mut HashMap<[u8; 32], UtxoTuple>,
-    ) -> Result<(), Box<dyn Error>> {
+    /// Revisa los inputs de la transacción y remueve las utxos que fueron gastadas
+    pub fn remove_utxos(&self, utxo_set: &mut HashMap<[u8; 32], UtxoTuple>) {
         // Si la tx gasta un output existente en nuestro utxo_set, lo removemos
         for txin in &self.tx_in {
             let txid = &txin.get_previous_output_hash();
             let output_index = txin.get_previous_output_index();
             if utxo_set.contains_key(txid) {
                 if let Some(utxo) = utxo_set.get_mut(txid) {
-                    utxo.remove_utxo(output_index)?;
-                }
-            }
-        }
-        Ok(())
-    }
-    /// funcion que se encarga de remover las utxos usadas por esta tx
-    pub fn remove_utxos_anterior(&self, container: &mut Vec<UtxoTuple>) {
-        for list_utxos in container {
-            for tx_in in &self.tx_in {
-                // aca nos fijamos si alguna de nuestra inputs usa outputs anteriores
-                // si la usa debemos remover dicho elemento de la lista
-                if tx_in.is_same_hash(&list_utxos.hash) {
-                    let mut position: usize = 0;
-                    while position < list_utxos.utxo_set.len() {
-                        if list_utxos.utxo_set[position].1 == tx_in.previous_index() {
-                            list_utxos.utxo_set.remove(position);
-                        }
-                        position += 1;
-                    }
+                    utxo.remove_utxo(output_index);
                 }
             }
         }
     }
+
+    /// Genera el UtxoTuple y lo guarda en el utxo_set
     pub fn load_utxos(&self, utxo_set: &mut HashMap<[u8; 32], UtxoTuple>) {
         let hash = self.hash();
         let mut utxos_and_index = Vec::new();
@@ -224,6 +216,8 @@ impl Transaction {
         Ok(())
     }
 
+    /// Crea la transacción sin firmar.
+    /// Busca los utxos necesarios, setea los TxIn sin el signature_script y los TxOut
     pub fn generate_unsigned_transaction(
         address_receiver: &str,
         value: i64,
@@ -263,6 +257,8 @@ impl Transaction {
         Ok(incomplete_transaction)
     }
 
+    /// Firma la transacción.
+    /// Recibe la lista de utxos a gastar y agrega el signature_script a cada TxIn.
     pub fn sign(
         &mut self,
         account: &Account,
@@ -306,6 +302,8 @@ impl Transaction {
         tx_copy.hash_message(true)
     }
 
+    /// Valida la transacción.
+    /// Ejecuta el script y devuelve error en caso de que no pase la validación.
     pub fn validate(
         &self,
         hash: &[u8],
