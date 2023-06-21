@@ -20,6 +20,8 @@ jobs:
       run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev
     - name: Install glade
       run: sudo apt install -y glade
+    - name: Install libgtk-3-doc
+      run: sudo apt-get install -y libgtk-3-doc
     - name: Build
       run: cargo build --verbose
     - name: Run cargo check
