@@ -75,10 +75,6 @@ impl Account {
         utxos_to_spend
     }
 
-    fn remove_utxo(&mut self, position: usize) {
-        self.utxo_set.remove(position);
-    }
-
     fn add_transaction(&self, transaction: Transaction) {
         let mut aux = self.pending_transactions.write().unwrap();
         aux.push(transaction);
@@ -111,7 +107,7 @@ impl Account {
             fee,
             &utxos_to_spend,
         )?;
-        unsigned_transaction.sign(&self, &utxos_to_spend)?;
+        unsigned_transaction.sign(self, &utxos_to_spend)?;
         let mut bytes = Vec::new();
         unsigned_transaction.marshalling(&mut bytes);
         println!(

@@ -58,7 +58,7 @@ impl Node {
     /// funcion que cargara las utxos asociadas a la respectiva cuenta
     pub fn utxos_referenced_to_account(&self, address: &str) -> Vec<UtxoTuple> {
         let mut account_utxo_set: Vec<UtxoTuple> = Vec::new();
-        for (_, utxo) in &self.utxo_set {
+        for utxo in self.utxo_set.values() {
             let aux_utxo = utxo.referenced_utxos(address);
             let utxo_to_push = match aux_utxo {
                 Some(value) => value,

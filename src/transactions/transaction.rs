@@ -1,4 +1,3 @@
-use chrono::prelude::*;
 use std::{
     collections::HashMap,
     error::Error,
@@ -16,11 +15,7 @@ use crate::{
 
 use super::{
     outpoint::Outpoint,
-    script::{
-        p2pkh_script::{self, validate},
-        pubkey::Pubkey,
-        sig_script::SigScript,
-    },
+    script::{p2pkh_script, pubkey::Pubkey, sig_script::SigScript},
     tx_in::TxIn,
     tx_out::TxOut,
 };
@@ -175,11 +170,9 @@ impl Transaction {
     pub fn load_utxos(&self, utxo_set: &mut HashMap<[u8; 32], UtxoTuple>) {
         let hash = self.hash();
         let mut utxos_and_index = Vec::new();
-        let mut position: usize = 0;
-        for utxo in &self.tx_out {
+        for (position, utxo) in self.tx_out.iter().enumerate() {
             let utxo_and_index = (utxo.clone(), position);
             utxos_and_index.push(utxo_and_index);
-            position += 1;
         }
         let utxo_tuple = UtxoTuple::new(hash, utxos_and_index);
         utxo_set.insert(hash, utxo_tuple);
@@ -268,12 +261,10 @@ impl Transaction {
         for index in 0..self.tx_in.len() {
             // agregar el signature a cada input
             let z = self.generate_message_to_sign(index, utxos_to_spend);
-            signatures.push(SigScript::generate_sig_script(z, &account)?);
+            signatures.push(SigScript::generate_sig_script(z, account)?);
         }
-        let mut index = 0;
-        for signature in signatures {
+        for (index, signature) in signatures.into_iter().enumerate() {
             self.tx_in[index].add(signature);
-            index += 1;
         }
         Ok(())
     }
@@ -321,7 +312,7 @@ impl Transaction {
             if !p2pkh_script::validate(
                 hash,
                 p2pkh_scripts[index],
-                &txin.signature_script.get_bytes(),
+                txin.signature_script.get_bytes(),
             )? {
                 return Err(Box::new(std::io::Error::new(
                     io::ErrorKind::Other,

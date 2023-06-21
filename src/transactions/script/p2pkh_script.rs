@@ -1,5 +1,4 @@
 use crate::address_decoder;
-use crate::transactions::script::sig_script::SigScript;
 use std::error::Error;
 use std::io;
 

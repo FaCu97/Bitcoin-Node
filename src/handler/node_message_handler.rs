@@ -290,10 +290,10 @@ fn read_header(
             Err(err) => return Err(NodeMessageHandlerError::ReadNodeError(err.to_string())), // Error inesperado, devolverlo
         }
     }
-    if is_terminated(finish.clone()) {
-        // devuelvo un header cualquiera para que no falle en la funcion en la que se llama a read_header 
+    if is_terminated(finish) {
+        // devuelvo un header cualquiera para que no falle en la funcion en la que se llama a read_header
         // y de esta manera cortar bien el ciclo while
-        return Ok(HeaderMessage::new("none".to_string(), None))
+        return Ok(HeaderMessage::new("none".to_string(), None));
     }
     HeaderMessage::from_le_bytes(buffer_num)
         .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))
