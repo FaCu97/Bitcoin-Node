@@ -18,7 +18,7 @@ jobs:
     - uses: actions/checkout@v3
     - name: Set up apt-get
       run: |
-        sudo sed -i 's/azure.archive.ubuntu.com/us.archive.ubuntu.com/g' /etc/apt/sources.list
+        sudo sed -i 's/us.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list
         sudo apt-get update
     - name: Install GTK
       run: sudo apt-get install -y libgtk-3-dev --fix-missing
