@@ -16,10 +16,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Set up apt-get
+      run: |
+        sudo sed -i 's/azure.archive.ubuntu.com/us.archive.ubuntu.com/g' /etc/apt/sources.list
+        sudo apt-get update
     - name: Install GTK
-      run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev --fix-missing
+      run: sudo apt-get install -y libgtk-3-dev --fix-missing
     - name: Install glade
-      run: sudo apt-get update && sudo apt-get install -y glade --fix-missing
+      run: sudo apt-get install -y glade --fix-missing
     - name: Install libgtk-3-doc
       run: sudo apt-get install -y libgtk-3-doc --fix-missing
     - name: Build
