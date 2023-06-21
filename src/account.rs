@@ -105,13 +105,15 @@ impl Account {
         // sabemos que tenemos monto para realizar la transaccion , ahora debemos obtener las utxos
         // que utilizaremos para gastar
         let utxos_to_spend: Vec<UtxoTuple> = self.get_utxos_for_amount(amount + fee);
+        let change_address: &str = self.address.as_str();
         let mut unsigned_transaction = Transaction::generate_unsigned_transaction(
             address_receiver,
+            change_address,
             amount,
             fee,
             &utxos_to_spend,
         )?;
-        unsigned_transaction.sign(&self, &utxos_to_spend)?;
+        unsigned_transaction.sign(self, &utxos_to_spend)?;
         let mut bytes = Vec::new();
         unsigned_transaction.marshalling(&mut bytes);
         println!(

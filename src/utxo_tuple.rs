@@ -46,7 +46,7 @@ impl UtxoTuple {
     }
 
     pub fn hash(&self) -> [u8; 32] {
-        self.hash.clone()
+        self.hash
     }
     /// Funcion que se usa para la generacion de los txIn a la hora de crear una nueva transaccion
     /// puede suceder que una transaccion tenga mas de un outpoint referenciando a las utxos de esa

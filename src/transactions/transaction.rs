@@ -1,4 +1,3 @@
-use chrono::prelude::*;
 use std::{
     error::Error,
     io,
@@ -16,7 +15,7 @@ use crate::{
 use super::{
     outpoint::Outpoint,
     script::{
-        p2pkh_script::{self, validate},
+        p2pkh_script::{self},
         pubkey::Pubkey,
         sig_script::SigScript,
     },
@@ -165,11 +164,9 @@ impl Transaction {
     pub fn load_utxos(&self, container: &mut Vec<UtxoTuple>) {
         let hash = self.hash();
         let mut utxos_and_index = Vec::new();
-        let mut position: usize = 0;
-        for utxo in &self.tx_out {
+        for (position, utxo) in self.tx_out.iter().enumerate() {
             let utxo_and_index = (utxo.clone(), position);
             utxos_and_index.push(utxo_and_index);
-            position += 1;
         }
         let utxo_tuple = UtxoTuple::new(hash, utxos_and_index);
         container.push(utxo_tuple);
@@ -205,19 +202,23 @@ impl Transaction {
         }
         Ok(())
     }
-
+    /// Esta funcion genera la transaccion sin firmar , los parametros indican la adrress
+    /// donde se enviara el monto(value), la recompensa por agregar la nueva transaccion
+    /// al bloque(fee) y la direccion para retornar el cambio en caso de que se genere(change_address)
     pub fn generate_unsigned_transaction(
         address_receiver: &str,
+        change_adress: &str,
         value: i64,
         fee: i64,
         utxos_to_spend: &Vec<UtxoTuple>,
     ) -> Result<Transaction, Box<dyn Error>> {
         let mut tx_ins: Vec<TxIn> = Vec::new();
-
-        // en esta parte se generan los tx_in de donde obtenemos los satoshis para ser
-        // gastados ,¡ojo! pueden ser mas de uno.
+        let mut input_balance: i64 = 0;
+        // en esta parte se generan los tx_in con la referencia de los utxos
+        // de donde obtenemos los satoshis para ser gastados ,¡ojo! pueden ser mas de uno.
         for utxo in utxos_to_spend {
             let tx_id: [u8; 32] = utxo.hash();
+            input_balance += utxo.balance();
             let indexes: Vec<usize> = utxo.get_indexes_from_utxos();
             for index in indexes {
                 let previous_output: Outpoint = Outpoint::new(tx_id, index as u32);
@@ -225,16 +226,26 @@ impl Transaction {
                 tx_ins.push(tx_in);
             }
         }
+        // esta variable contiene el monto correspondiente al sobrante de la tx
+        let change_amount: i64 = input_balance - (value + fee);
         // esta variable indica la cantidad de txIn creados en los pasos anteriores
         let txin_count: CompactSizeUint = CompactSizeUint::new(tx_ins.len() as u128);
         // este vector contiene los outputs de nuestra transaccion
         let mut tx_outs: Vec<TxOut> = Vec::new();
-        // creacion del pubkey_script
-        let pk_script: Vec<u8> = Pubkey::generate_pubkey(address_receiver)?;
-        let pk_script_bytes: CompactSizeUint = CompactSizeUint::new(pk_script.len() as u128);
+        // creacion del pubkey_script donde transferimos los satoshis
+        let target_pk_script: Vec<u8> = Pubkey::generate_pubkey(address_receiver)?;
+        let target_pk_script_bytes: CompactSizeUint =
+            CompactSizeUint::new(target_pk_script.len() as u128);
         // creacion del txOut(utxo) referenciado al address que nos enviaron
-        let utxo_to_send = TxOut::new(value, pk_script_bytes, pk_script);
+        let utxo_to_send: TxOut = TxOut::new(value, target_pk_script_bytes, target_pk_script);
         tx_outs.push(utxo_to_send);
+        // creacion del pubkey_script donde enviaremos el cambio de nuestra tx
+        let change_pk_script: Vec<u8> = Pubkey::generate_pubkey(change_adress)?;
+        let change_pk_script_bytes: CompactSizeUint =
+            CompactSizeUint::new(change_pk_script.len() as u128);
+        let change_utxo: TxOut =
+            TxOut::new(change_amount, change_pk_script_bytes, change_pk_script);
+        tx_outs.push(change_utxo);
         let txout_count = CompactSizeUint::new(tx_outs.len() as u128);
         // numero de version quizas esto deberia ir dentro del .conf
         let version = 0x00000002;
@@ -254,12 +265,10 @@ impl Transaction {
         for index in 0..self.tx_in.len() {
             // agregar el signature a cada input
             let z = self.generate_message_to_sign(index, utxos_to_spend);
-            signatures.push(SigScript::generate_sig_script(z, &account)?);
+            signatures.push(SigScript::generate_sig_script(z, account)?);
         }
-        let mut index = 0;
-        for signature in signatures {
+        for (index, signature) in signatures.into_iter().enumerate() {
             self.tx_in[index].add(signature);
-            index += 1;
         }
         Ok(())
     }
@@ -305,7 +314,7 @@ impl Transaction {
             if !p2pkh_script::validate(
                 hash,
                 p2pkh_scripts[index],
-                &txin.signature_script.get_bytes(),
+                txin.signature_script.get_bytes(),
             )? {
                 return Err(Box::new(std::io::Error::new(
                     io::ErrorKind::Other,
