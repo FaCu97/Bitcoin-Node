@@ -371,6 +371,17 @@ fn download_blocks(
                 .pop()
                 .ok_or("Error no hay mas nodos para descargar los bloques!\n")
                 .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+
+            if i >= block_headers_chunk_clone
+                .read()
+                .map_err(|err| DownloadError::LockError(err.to_string()))?
+                .len()
+            {
+                // Este caso evita acceder a una posición fuera de rango
+                // Significa que no hay más chunks con bloques para descargar
+                break;
+            }
+
             let block_headers = block_headers_chunk_clone
                 .write()
                 .map_err(|err| DownloadError::LockError(err.to_string()))?[i]
