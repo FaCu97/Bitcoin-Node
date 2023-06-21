@@ -142,7 +142,7 @@ pub fn handle_block_message(
             include_new_block(log_sender.clone(), new_block.clone(), blocks)?;
             new_block.contains_pending_tx(log_sender, accounts.clone())?;
             new_block.give_me_utxos(utxo_set.clone());
-            update_accounts_utxo_set(accounts, utxo_set);
+            update_accounts_utxo_set(accounts, utxo_set)?;
         }
     } else {
         write_in_log(
