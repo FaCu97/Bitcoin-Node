@@ -200,9 +200,10 @@ impl Block {
                     .contains(tx)
                 {
                     println!(
-                        "%%%%%%%%% El bloque {:?} contiene la transaccion {:?} confirmada %%%%%%%%%%%",
+                        "%%%%%%%%% El bloque -- {} -- contiene la transaccion -- {} -- confirmada de la cuenta -- {} --%%%%%%%%%%%",
                         self.hex_hash(),
-                        tx.hex_hash()
+                        tx.hex_hash(),
+                        account.address
                     );
                     let pending_transaction_index = account
                         .pending_transactions
@@ -224,9 +225,10 @@ impl Block {
                         write_in_log(
                             log_sender.info_log_sender.clone(),
                             format!(
-                                "CUENTA: {:?}: SE CONFIRMA NUEVA TRANSACCION {:?} EN BLOQUE",
+                                "CUENTA: {}: SE CONFIRMA NUEVA TRANSACCION {} EN BLOQUE --{}--",
                                 account.address,
-                                confirmed_tx.hex_hash()
+                                confirmed_tx.hex_hash(),
+                                self.hex_hash()
                             )
                             .as_str(),
                         );

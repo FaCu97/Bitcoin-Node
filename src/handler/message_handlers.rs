@@ -241,7 +241,10 @@ fn include_new_block(
     block: Block,
     blocks: Arc<RwLock<Vec<Block>>>,
 ) -> NodeMessageHandlerResult {
-    println!("%%%%%%%% RECIBO NUEVO BLOQUE: {:?} %%%%%%%\n", block.hex_hash());
+    println!(
+        "%%%%%%%% RECIBO NUEVO BLOQUE: {:?} %%%%%%%\n",
+        block.hex_hash()
+    );
     blocks
         .write()
         .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
