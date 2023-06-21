@@ -23,13 +23,7 @@ jobs:
     - name: Install GTK
       run: sudo apt-get install -y libgtk-3-dev --fix-missing
     - name: Install glade
-<<<<<<< HEAD
-      run: sudo apt-get install -y glade --fix-missing
-    - name: Install libgtk-3-doc
-      run: sudo apt-get install -y libgtk-3-doc --fix-missing
-=======
       run: sudo apt-get update && sudo apt install glade --fix-missing
->>>>>>> main
     - name: Build
       run: cargo build --verbose
     - name: Run cargo check
