@@ -3,8 +3,10 @@ use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{headers_message::is_terminated, message_header::HeaderMessage},
+    utxo_tuple::UtxoTuple,
 };
 use std::{
+    collections::HashMap,
     error::Error,
     fmt,
     io::{self, Read, Write},
@@ -86,6 +88,7 @@ impl NodeMessageHandler {
         blocks: Arc<RwLock<Vec<Block>>>,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
+        utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
     ) -> Result<Self, NodeMessageHandlerError> {
         write_in_log(
             log_sender.info_log_sender.clone(),
@@ -111,6 +114,7 @@ impl NodeMessageHandler {
                 (headers.clone(), blocks.clone()),
                 transactions_recieved.clone(),
                 accounts.clone(),
+                utxo_set.clone(),
                 node,
                 Some(finish.clone()),
             ))
@@ -176,6 +180,7 @@ pub fn handle_messages_from_node(
     (headers, blocks): NodeBlocksData,
     transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>>,
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
+    utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
     mut node: TcpStream,
     finish: Option<Arc<RwLock<bool>>>,
 ) -> JoinHandle<NodeMessageHandlerResult> {
@@ -216,6 +221,7 @@ pub fn handle_messages_from_node(
                         headers.clone(),
                         blocks.clone(),
                         accounts.clone(),
+                        utxo_set.clone(),
                     )?;
                 }
                 "inv" => {

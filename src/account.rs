@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::error::Error;
 use std::io;
 use std::sync::Arc;
@@ -122,6 +123,20 @@ impl Account {
 
         self.add_transaction(unsigned_transaction.clone());
         Ok(unsigned_transaction.hash())
+    }
+
+    /// Recibe el utxo_set, lo recorre y setea el utxo_set de la cuenta.
+    pub fn set_utxos(&mut self, utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>) {
+        let mut account_utxo_set: Vec<UtxoTuple> = Vec::new();
+        for utxo in utxo_set.read().unwrap().values() {
+            let aux_utxo = utxo.referenced_utxos(&self.address);
+            let utxo_to_push = match aux_utxo {
+                Some(value) => value,
+                None => continue,
+            };
+            account_utxo_set.push(utxo_to_push);
+        }
+        self.utxo_set = account_utxo_set;
     }
 }
 pub fn bytes_to_hex_string(bytes: &[u8]) -> String {

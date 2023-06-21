@@ -108,13 +108,13 @@ impl TxOut {
                     write_in_log(
                         log_sender.info_log_sender.clone(),
                         format!(
-                            "Transaccion pendiente {:?} -- ivolucra al usuario {:?}",
+                            "Transaccion pendiente {:?} -- involucra a la cuenta {:?}",
                             tx.hex_hash(),
                             account.address
                         )
                         .as_str(),
                     );
-                    println!("%%%%%%%%%%% TRANSACCION {:?} INVOLUCRA AL USUARIO {:?}, AUN NO SE ENCUENTRA EN UN BLOQUE (PENDING) %%%%%%%%%%%%", tx.hex_hash(), account.address);
+                    println!("%%%%%%%%%%% TRANSACCION {:?} INVOLUCRA A LA CUENTA {:?}, AUN NO SE ENCUENTRA EN UN BLOQUE (PENDING) %%%%%%%%%%%%", tx.hex_hash(), account.address);
                     account
                         .pending_transactions
                         .write()
