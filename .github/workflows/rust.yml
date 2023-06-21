@@ -19,7 +19,7 @@ jobs:
     - name: Install GTK
       run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev
     - name: Install glade
-      run: apt-get update && sudo apt-get install -y glade
+      run: sudo apt-get update && sudo apt-get install -y glade
     - name: Install libgtk-3-doc
       run: sudo apt-get install -y libgtk-3-doc
     - name: Build
