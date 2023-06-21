@@ -242,7 +242,7 @@ fn include_new_block(
     blocks: Arc<RwLock<Vec<Block>>>,
 ) -> NodeMessageHandlerResult {
     println!(
-        "%%%%%%%% RECIBO NUEVO BLOQUE: {:?} %%%%%%%\n",
+        "%%%%%%%% RECIBO NUEVO BLOQUE: {} %%%%%%%\n",
         block.hex_hash()
     );
     blocks
