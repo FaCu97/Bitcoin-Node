@@ -13,13 +13,15 @@ use crate::{
     transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
 };
-#[derive(Debug, Clone)]
 
+type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
+
+#[derive(Debug, Clone)]
 pub struct Node {
     pub connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
     pub headers: Arc<RwLock<Vec<BlockHeader>>>,
     pub block_chain: Arc<RwLock<Vec<Block>>>,
-    pub utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+    pub utxo_set: UtxoSetPointer,
     pub accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     pub peers_handler: NodeMessageHandler,
 }
@@ -32,8 +34,7 @@ impl Node {
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         block_chain: Arc<RwLock<Vec<Block>>>,
     ) -> Result<Self, NodeMessageHandlerError> {
-        let pointer_to_utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>> =
-            Arc::new(RwLock::new(HashMap::new()));
+        let pointer_to_utxo_set: UtxoSetPointer = Arc::new(RwLock::new(HashMap::new()));
         generate_utxo_set(&block_chain, pointer_to_utxo_set.clone())?;
         let pointer_to_accounts_in_node = Arc::new(RwLock::new(Arc::new(RwLock::new(vec![]))));
         let peers_handler = NodeMessageHandler::new(
@@ -110,8 +111,8 @@ impl Node {
 ///Funcion que se encarga de generar la lista de utxos
 fn generate_utxo_set(
     block_chain: &Arc<RwLock<Vec<Block>>>,
-    utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
-) -> Result<Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>, NodeMessageHandlerError> {
+    utxo_set: UtxoSetPointer,
+) -> Result<UtxoSetPointer, NodeMessageHandlerError> {
     let block_chain_lock = block_chain
         .read()
         .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
