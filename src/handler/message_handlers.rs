@@ -289,6 +289,7 @@ fn header_is_not_included(
     Ok(true)
 }
 
+/// Actualiza el utxo_set de cada cuenta
 fn update_accounts_utxo_set(
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
