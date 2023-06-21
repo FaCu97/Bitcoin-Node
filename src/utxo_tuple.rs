@@ -89,6 +89,16 @@ impl UtxoTuple {
         }
         None
     }
+
+    /// Remueve el output que contiene el indice recibido.
+    pub fn remove_utxo(&mut self, output_index: usize) {
+        for index in 0..self.utxo_set.len() {
+            if self.utxo_set[index].1 == output_index {
+                self.utxo_set.remove(index);
+                break;
+            }
+        }
+    }
 }
 
 #[cfg(test)]

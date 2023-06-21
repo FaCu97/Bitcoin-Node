@@ -1,4 +1,7 @@
-use std::sync::{Arc, RwLock};
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
 use bitcoin_hashes::{sha256d, Hash};
 
@@ -140,24 +143,24 @@ impl Block {
         current_hash == self.generate_merkle_root()
     }
 
-    pub fn give_me_utxos(&self) -> Vec<UtxoTuple> {
+    pub fn give_me_utxos(&self, uxto_set: &mut HashMap<[u8; 32], UtxoTuple>) {
         // este vector contiene el hash de una transaccion y todas las utxos correspondientes
         // y sus respectivas posiciones en la tx
-        let mut utxo_container: Vec<UtxoTuple> = Vec::new();
+        //    let mut utxo_container: Vec<UtxoTuple> = Vec::new();
         for tx in &self.txn {
             if tx.is_coinbase_transaction() {
                 // como se trata de una coinbase al ser la primera tx solo se cargaran
                 // las utxos de esta transaccion
-                tx.load_utxos(&mut utxo_container);
+                tx.load_utxos(uxto_set);
             } else {
                 //primero removemos las utxos que usa esta tx
-                tx.remove_utxos(&mut utxo_container);
+                tx.remove_utxos(uxto_set);
                 //luego cargamos las utxos de esta tx para que en la siguiente iteracion
                 //se remuevan aquellas con son usadas
-                tx.load_utxos(&mut utxo_container);
+                tx.load_utxos(uxto_set);
             }
         }
-        utxo_container
+        // utxo_container
     }
 
     pub fn contains_pending_tx(

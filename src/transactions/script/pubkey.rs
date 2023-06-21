@@ -55,8 +55,4 @@ impl Pubkey {
         pk_script.push(0xAC);
         Ok(pk_script)
     }
-
-    pub fn len(&self) -> u128 {
-        self.bytes.len() as u128
-    }
 }
