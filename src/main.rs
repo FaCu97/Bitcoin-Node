@@ -9,7 +9,9 @@ use bitcoin::logwriter::log_writer::{
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
 use bitcoin::wallet::Wallet;
+use gtk::glib::ParamSpec;
 use std::error::Error;
+use std::num::ParseIntError;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
 
@@ -91,10 +93,9 @@ fn main() -> Result<(), GenericError> {
 
     let node = Node::new(logsender.clone(), pointer_to_nodes, headers, blocks)
         .map_err(GenericError::NodeHandlerError)?;
-    //  let headers: Vec<_> = Vec::new();
-    //  let blocks: Vec<_> = Vec::new();
-    //let wallet = wallet::Wallet { account: vec![User{private_key: "cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(), address: "mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(), pending_transactions: vec![]}], node };
     let mut wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
+
+/* 
     wallet
         .add_account(
             "cSqmqW48wCeoUF8FCJvVsqUGwcvir27bKWCFj1MTFszFdn2Dduim".to_string(),
@@ -113,54 +114,12 @@ fn main() -> Result<(), GenericError> {
         Err(e) => println!("Error al realizar la transaccion: {}", e),
     }
 
-    /*
-    let wallet = Wallet {
-        node,
-        current_account_index: 0,
-        //accounts: vec![Account {private_key:"cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(),address:"mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(),utxo_set:vec![], pending_transactions: Arc::new(RwLock::new(Vec::new())) }]
-        /*
-        accounts: vec![Account {
-            private_key: "cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(),
-            address: "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),
-            utxo_set: vec![],
-            pending_transactions: Arc::new(RwLock::new(Vec::new())),
-        }],
-        */
-        accounts: vec![Account {
-            private_key: "cSqmqW48wCeoUF8FCJvVsqUGwcvir27bKWCFj1MTFszFdn2Dduim".to_string(),
-            address: "mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi9".to_string(),
-            utxo_set: vec![],
-            pending_transactions: Arc::new(RwLock::new(Vec::new())),
-        }],
-    };
-    */
-
-    if let Err(err) = handle_input(node) {
+*/
+    if let Err(err) = handle_input(wallet) {
         println!("Error al leer la entrada por terminal. {}", err);
     }
 
-    // esta parte es para explicar el comportamiento en la demo !!
-
-    // mostrar_comportamiento_del_nodo(node);/*
-
-    /*let block_1 = node.block_chain.read().unwrap()[0].clone();
-    let block_2 = node.block_chain.read().unwrap()[1].clone();
-    let mut hash_block_1 = block_1.block_header.hash();
-    hash_block_1.reverse();
-    let block1_hex: String = hash_block_1.encode_hex::<String>();
-    println!("bloque 1 :{}", block1_hex);
-    let mut hash_block_2 = block_2.block_header.hash();
-    hash_block_2.reverse();
-    let block2_hex: String = hash_block_2.encode_hex::<String>();
-    println!("bloque 2 :{}", block2_hex);
-
-    let height_block = block_1.txn[0].tx_in[0].height.clone().unwrap();
-    let height_hex: String = height_block.encode_hex::<String>();
-    println!("height :{}", height_hex);
-    let height_block = block_2.txn[0].tx_in[0].height.clone().unwrap();
-    let height_hex: String = height_block.encode_hex::<String>();
-    println!("height :{}", height_hex);
-    */
+    node.shutdown_node().map_err(GenericError::NodeHandlerError)?;
 
     write_in_log(
         logsender.info_log_sender.clone(),
@@ -172,18 +131,40 @@ fn main() -> Result<(), GenericError> {
     Ok(())
 }
 
-fn handle_input(node: Node) -> Result<(), GenericError> {
+
+
+
+fn handle_input(mut wallet: Wallet) -> Result<(), GenericError> {
+    show_options();
     loop {
         let mut input = String::new();
 
         match std::io::stdin().read_line(&mut input) {
             Ok(_) => {
+                println!("\n");
                 let command = input.trim();
-                if command == "exit" {
-                    node.shutdown_node()
-                        .map_err(GenericError::NodeHandlerError)?;
-                    break;
+                match command {
+                    "exit" => {
+                        println!("Cerrando nodo...\n");
+                        break;
+                    }
+                    "add account" => {
+                        println!("add account leido correctamente! \n");
+                        handle_add_account_request(&mut wallet);
+                    }
+                    "balance" => {
+                        println!("balance leido correctamente! \n");
+                    }
+                    "transaccion" => {
+                        println!("transaccion leido correctamente! \n");
+                        handle_transaccion_request(&mut wallet);
+
+                    }
+                    _ => {
+                        println!("Comando no reconocido. Inténtalo de nuevo! \n");
+                    }
                 }
+                show_options()
             }
             Err(error) => {
                 println!("Error al leer la entrada: {}", error);
@@ -193,56 +174,144 @@ fn handle_input(node: Node) -> Result<(), GenericError> {
 
     Ok(())
 }
-/*
-fn mostrar_comportamiento_del_nodo(node: Node) {
-    let mut header_1 = node.headers[0].hash();
-    header_1.reverse();
-    let mut header_2 = node.headers[1].hash();
-    header_2.reverse();
-    let header_1_hex = header_1.encode_hex::<String>();
-    let header_2_hex = header_2.encode_hex::<String>();
-    println!("header 1 : {}", header_1_hex);
-    println!("header 2 : {}", header_2_hex);
 
-    let mut bloque_1 = node.block_chain[0].block_header.hash();
-    bloque_1.reverse();
-    let bloque1_hex: String = bloque_1.encode_hex::<String>();
-    let validate = node.block_chain[0].validate();
-    println!("validate devuelve: {}, {}", validate.0, validate.1);
-    println!("bloque : {}", bloque1_hex);
-    println!(
-        "cantidad de transacciones en el bloque : {}",
-        node.block_chain[0].txn_count.decoded_value()
-    );
-    println!(
-        "version del bloque : {:x}",
-        node.block_chain[0].block_header.version
-    );
-    println!(
-        "nbits del bloque : {:x}",
-        node.block_chain[0].block_header.n_bits
-    );
-    println!(
-        "nonce del bloque : {:x}",
-        node.block_chain[0].block_header.nonce
-    );
-    let transaccion = &node.block_chain[0].txn[0];
-    let mut hash = transaccion.hash();
-    hash.reverse();
-    let hash_hex: String = hash.encode_hex::<String>();
-    println!("hash de la primera transaccion : {}", hash_hex);
-    println!("version de la transaccion : {}", transaccion.version);
-    println!(
-        "inputs de la transaccion : {}",
-        transaccion.txin_count.decoded_value()
-    );
-    println!(
-        "outputs de la transaccion : {}",
-        transaccion.txout_count.decoded_value()
-    );
-    println!("lock time de la transaccion : {}", transaccion.lock_time);
-}*/
+fn show_options() {
+    println!("-----------------------------------------------------------\n\n");
+    println!("INGRESE ALGUNO DE LOS SIGUIENTES COMANDOS\n");
+    println!("exit: terminar el programa\n");
+    println!("add account: añadir una cuenta a la wallet\n");
+    println!("balance: mostrar balance de una cuenta\n");
+    println!("transaccion: hacer transaccion desde una cuenta\n");
+    println!("poI: prueba de inclusion de una transaccion en un bloque\n");
+    println!("-----------------------------------------------------------\n\n");
+}
 
+
+
+
+fn handle_transaccion_request(wallet: &mut Wallet) {
+    println!("INGRESE LOS SIGUIENTES DATOS PARA REALIZAR UNA TRANSACCION \n");  
+    println!("Índice de la cuenta:");  
+    let mut account_index_input = String::new();
+    match std::io::stdin().read_line(&mut account_index_input) {
+        Ok(_) => {
+            let account_index = account_index_input.trim().parse::<usize>();
+            match account_index {
+                Ok(index) => {
+                    println!("Dirección del receptor:");
+                    let mut address_receiver_input = String::new();
+                    match std::io::stdin().read_line(&mut address_receiver_input) {
+                        Ok(_) => {
+                            let address_receiver = address_receiver_input.trim();
+
+                            println!("Cantidad:");
+                            let mut amount_input = String::new();
+                            match std::io::stdin().read_line(&mut amount_input) {
+                                Ok(_) => {
+                                    let amount = amount_input.trim().parse::<i64>();
+                                    match amount {
+                                        Ok(parsed_amount) => {
+                                            println!("Tarifa:");
+                                            let mut fee_input = String::new();
+                                            match std::io::stdin().read_line(&mut fee_input) {
+                                                Ok(_) => {
+                                                    let fee = fee_input.trim().parse::<i64>();
+                                                    match fee {
+                                                        Ok(parsed_fee) => {
+                                                            // Lógica para realizar la transacción
+                                                            if let Err(error) = wallet.make_transaction_index(index, address_receiver, parsed_amount, parsed_fee) {
+                                                                println!("Error al realizar la transacción: {}", error);
+                                                            } else {
+                                                                println!("Transacción realizada correctamente.");
+                                                            }
+                                                        }
+                                                        Err(error) => {
+                                                            println!("Error al leer la entrada: {}", error);
+                                                        }
+                                                    }
+                                                }
+                                                Err(error) => {
+                                                    println!("Error al leer la entrada: {}", error);
+                                                }
+                                            }
+                                        }
+                                        Err(error) => {
+                                            println!("Error al leer la entrada: {}", error);
+                                        }
+                                    }
+                                }
+                                Err(error) => {
+                                    println!("Error al leer la entrada: {}", error);
+                                }
+                            }
+                        }
+                        Err(error) => {
+                            println!("Error al leer la entrada: {}", error);
+                        }
+                    }
+                }
+                Err(error) => {
+                    println!("Error al leer la entrada: {}", error);
+                }
+            }
+        }
+        Err(error) => {
+            println!("Error al leer la entrada: {}", error);
+        }
+    }
+                
+            
+}
+
+
+fn handle_add_account_request(wallet: &mut Wallet)  {
+    println!("Ingrese PRIVATE KEY en formato WIF: ");
+    let mut private_key_input = String::new();
+    match std::io::stdin().read_line(&mut private_key_input) {
+        Ok(_) => {
+            let wif_private_key = private_key_input.trim();
+            println!("Ingrese la ADDRESS de la cuenta: ");
+            let mut address_input = String::new();
+            match std::io::stdin().read_line(&mut address_input) {
+                Ok(_) => {
+                    let address = address_input.trim();
+                    if let Err(err) = wallet.add_account(wif_private_key.to_string(), address.to_string()) {
+                        println!("ERROR: {err}\n");
+                        println!("Ocurrio un error al intentar añadir una nueva cuenta, intente de nuevo! \n");
+                    } else {
+                        println!("Cuenta -- {} -- añadida correctamente a la wallet!\n", address);
+                    }
+                }
+                Err(error) => {
+                    println!("Error al leer la entrada: {}", error);
+                }
+            }
+        }
+        Err(error) => {
+            println!("Error al leer la entrada: {}", error);
+        }
+    }
+
+}
+
+
+
+fn handle_balance_request(wallet: Wallet) -> Result<(), GenericError> {
+    println!("Ingrese la cuenta para obtener el balance:");
+    let mut account_input = String::new();
+    match std::io::stdin().read_line(&mut account_input) {
+        Ok(_) => {
+            let account = account_input.trim();
+            // Lógica para obtener el balance de la cuenta especificada
+            // Puedes llamar a funciones o métodos específicos para obtener el balance
+            println!("Obteniendo el balance de la cuenta {}...", account);
+        }
+        Err(error) => {
+            println!("Error al leer la entrada: {}", error);
+        }
+    }
+    Ok(())
+}
 #[cfg(test)]
 mod tests {
 
