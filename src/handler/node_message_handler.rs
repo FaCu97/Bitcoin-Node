@@ -10,12 +10,13 @@ use std::{
     error::Error,
     fmt,
     io::{self, Read, Write},
+    mem,
     net::TcpStream,
     sync::{
         mpsc::{channel, Receiver, Sender},
         Arc, Mutex, RwLock,
     },
-    thread::{self, JoinHandle}, mem,
+    thread::{self, JoinHandle},
 };
 
 use super::message_handlers::{
@@ -142,7 +143,9 @@ impl NodeMessageHandler {
         }
         // Si de todos los nodos, no se le pudo enviar a ninguno --> falla el broadcasting
         if amount_of_failed_nodes == self.nodes_sender.len() {
-            return Err(NodeMessageHandlerError::ThreadChannelError("Todos los channels cerrados, no se pudo boradcastear tx".to_string()))
+            return Err(NodeMessageHandlerError::ThreadChannelError(
+                "Todos los channels cerrados, no se pudo boradcastear tx".to_string(),
+            ));
         }
         Ok(())
     }
@@ -156,16 +159,21 @@ impl NodeMessageHandler {
             .finish
             .write()
             .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))? = true;
-        
+
         let handles: Vec<JoinHandle<()>> = {
-            let mut locked_handles = self.nodes_handle.lock().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+            let mut locked_handles = self
+                .nodes_handle
+                .lock()
+                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
             mem::take(&mut *locked_handles)
         };
-        
+
         for handle in handles {
-            handle.join().map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))?;
+            handle
+                .join()
+                .map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))?;
         }
-        
+
         for node_sender in self.nodes_sender.clone() {
             drop(node_sender);
         }
@@ -197,7 +205,7 @@ pub fn handle_messages_from_node(
                     break;
                 }
             }
-    
+
             let header = match read_header(&mut node, finish.clone()) {
                 Ok(header) => header,
                 Err(err) => {
@@ -205,27 +213,38 @@ pub fn handle_messages_from_node(
                     break;
                 }
             };
-    
+
             if is_terminated(finish.clone()) {
                 break;
             }
-    
-            let payload = match read_payload(&mut node, header.payload_size as usize, finish.clone()) {
-                Ok(payload) => payload,
-                Err(err) => {
-                    error = Some(err);
-                    break;
-                }
-            };
-    
+
+            let payload =
+                match read_payload(&mut node, header.payload_size as usize, finish.clone()) {
+                    Ok(payload) => payload,
+                    Err(err) => {
+                        error = Some(err);
+                        break;
+                    }
+                };
+
             let command_name = get_header_command_name_as_str(header.command_name.as_str());
-    
+
             match command_name {
                 "headers" => handle_message(&mut error, || {
-                    handle_headers_message(log_sender.clone(), tx.clone(), &payload, headers.clone())
+                    handle_headers_message(
+                        log_sender.clone(),
+                        tx.clone(),
+                        &payload,
+                        headers.clone(),
+                    )
                 }),
                 "getdata" => handle_message(&mut error, || {
-                    handle_getdata_message(log_sender.clone(), tx.clone(), &payload, accounts.clone())
+                    handle_getdata_message(
+                        log_sender.clone(),
+                        tx.clone(),
+                        &payload,
+                        accounts.clone(),
+                    )
                 }),
                 "block" => handle_message(&mut error, || {
                     handle_block_message(
@@ -240,9 +259,7 @@ pub fn handle_messages_from_node(
                 "inv" => handle_message(&mut error, || {
                     handle_inv_message(tx.clone(), &payload, transactions_recieved.clone())
                 }),
-                "ping" => handle_message(&mut error, || {
-                    handle_ping_message(tx.clone(), &payload)
-                }),
+                "ping" => handle_message(&mut error, || handle_ping_message(tx.clone(), &payload)),
                 "tx" => handle_message(&mut error, || {
                     handle_tx_message(log_sender.clone(), &payload, accounts.clone())
                 }),
@@ -274,17 +291,17 @@ pub fn handle_messages_from_node(
             // si ocurrio un error en el handleo salgo del ciclo
             if error.is_some() {
                 break;
-            }    
-
+            }
         }
         // si ocurrio un error lo documento en el log sender de errores
         if let Some(err) = error {
-            write_in_log(log_sender.error_log_sender, format!("NODO {:?} DESCONECTADO!! {}", node.peer_addr(), err).as_str());
-        }    
+            write_in_log(
+                log_sender.error_log_sender,
+                format!("NODO {:?} DESCONECTADO!! {}", node.peer_addr(), err).as_str(),
+            );
+        }
     })
 }
-
-
 
 fn handle_message<T, E>(error: &mut Option<E>, func: impl FnOnce() -> Result<T, E>) -> Option<T> {
     match func() {
@@ -295,7 +312,6 @@ fn handle_message<T, E>(error: &mut Option<E>, func: impl FnOnce() -> Result<T, 
         }
     }
 }
-
 
 /// Recibe un &str que representa el nombre de un comando de un header con su respectivo nombre
 /// y los \0 hasta completar los 12 bytes. Devuelve un &str con el nombre del mensaje y le quita los

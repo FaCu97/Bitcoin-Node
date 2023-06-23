@@ -17,7 +17,6 @@ pub mod transactions;
 pub mod utxo_tuple;
 pub mod wallet;
 
-
 pub fn terminal_ui(mut wallet: Wallet) {
     show_options();
     loop {
@@ -56,7 +55,6 @@ pub fn terminal_ui(mut wallet: Wallet) {
             }
         }
     }
-
 }
 
 fn show_options() {
@@ -107,12 +105,15 @@ where
     let mut input = String::new();
     std::io::stdin().read_line(&mut input)?;
     let value: T = input.trim().parse().map_err(|err| {
-        std::io::Error::new(std::io::ErrorKind::InvalidInput, format!("Error parsing input: {}", err))
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            format!("Error parsing input: {}", err),
+        )
     })?;
     Ok(value)
 }
 
-fn handle_add_account_request(wallet: &mut Wallet)  {
+fn handle_add_account_request(wallet: &mut Wallet) {
     println!("Ingrese PRIVATE KEY en formato WIF: ");
     let mut private_key_input = String::new();
     match std::io::stdin().read_line(&mut private_key_input) {
@@ -124,11 +125,16 @@ fn handle_add_account_request(wallet: &mut Wallet)  {
                 Ok(_) => {
                     let address = address_input.trim();
                     println!("Agregando la cuenta -- {} -- a la wallet...\n", address);
-                    if let Err(err) = wallet.add_account(wif_private_key.to_string(), address.to_string()) {
+                    if let Err(err) =
+                        wallet.add_account(wif_private_key.to_string(), address.to_string())
+                    {
                         println!("ERROR: {err}\n");
                         println!("Ocurrio un error al intentar añadir una nueva cuenta, intente de nuevo! \n");
                     } else {
-                        println!("CUENTA -- {} -- AÑADIDA CORRECTAMENTE A LA WALLET!\n", address);
+                        println!(
+                            "CUENTA -- {} -- AÑADIDA CORRECTAMENTE A LA WALLET!\n",
+                            address
+                        );
                     }
                 }
                 Err(error) => {
@@ -140,14 +146,9 @@ fn handle_add_account_request(wallet: &mut Wallet)  {
             println!("Error al leer la entrada: {}", error);
         }
     }
-
 }
-
-
 
 fn handle_balance_request(wallet: &mut Wallet) {
     println!("Calculando el balance de las cuentas...\n");
     wallet.show_accounts_balance();
 }
-
-

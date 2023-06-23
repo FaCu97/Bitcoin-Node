@@ -94,34 +94,34 @@ fn main() -> Result<(), GenericError> {
         .map_err(GenericError::NodeHandlerError)?;
     let wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
 
-/* 
-    wallet
-        .add_account(
-            "cSqmqW48wCeoUF8FCJvVsqUGwcvir27bKWCFj1MTFszFdn2Dduim".to_string(),
-            "mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi9".to_string(),
-        )
-        .map_err(GenericError::NodeHandlerError)?;
-    wallet
-        .add_account(
-            "cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(),
-            "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),
-        )
-        .map_err(GenericError::NodeHandlerError)?;
+    /*
+        wallet
+            .add_account(
+                "cSqmqW48wCeoUF8FCJvVsqUGwcvir27bKWCFj1MTFszFdn2Dduim".to_string(),
+                "mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi9".to_string(),
+            )
+            .map_err(GenericError::NodeHandlerError)?;
+        wallet
+            .add_account(
+                "cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(),
+                "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),
+            )
+            .map_err(GenericError::NodeHandlerError)?;
 
-    match wallet.make_transaction_index(0, "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a", 10000, 2000) {
-        Ok(_) => println!("Transaccion ok"),
-        Err(e) => println!("Error al realizar la transaccion: {}", e),
-    }
+        match wallet.make_transaction_index(0, "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a", 10000, 2000) {
+            Ok(_) => println!("Transaccion ok"),
+            Err(e) => println!("Error al realizar la transaccion: {}", e),
+        }
 
-*/
+    */
     terminal_ui(wallet);
-    node.shutdown_node().map_err(GenericError::NodeHandlerError)?;
+    node.shutdown_node()
+        .map_err(GenericError::NodeHandlerError)?;
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
         .map_err(GenericError::LoggingError)?;
 
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {

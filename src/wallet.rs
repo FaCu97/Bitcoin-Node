@@ -23,8 +23,6 @@ impl Wallet {
         Ok(wallet)
     }
 
-    
-
     pub fn make_transaction(
         &self,
         account_index: usize,
@@ -32,8 +30,11 @@ impl Wallet {
         amount: i64,
         fee: i64,
     ) -> Result<(), Box<dyn Error>> {
-        let transaction_hash = self.accounts.write().unwrap()[account_index]
-            .make_transaction(address_receiver, amount, fee)?;
+        let transaction_hash = self.accounts.write().unwrap()[account_index].make_transaction(
+            address_receiver,
+            amount,
+            fee,
+        )?;
         self.node.broadcast_tx(transaction_hash)?;
         Ok(())
     }
@@ -62,12 +63,16 @@ impl Wallet {
     }
 
     /// Muestra el balance de las cuentas.
-    pub fn show_accounts_balance(&self){
+    pub fn show_accounts_balance(&self) {
         if self.accounts.read().unwrap().is_empty() {
             println!("No hay cuentas en la wallet!");
         }
-        for account in self.accounts.write().unwrap().iter(){
-            println!("Cuenta: {} - Balance: {:.8} tBTC",account.address,account.balance() as f64 / 1e8);
+        for account in self.accounts.write().unwrap().iter() {
+            println!(
+                "Cuenta: {} - Balance: {:.8} tBTC",
+                account.address,
+                account.balance() as f64 / 1e8
+            );
         }
     }
 
@@ -75,10 +80,10 @@ impl Wallet {
     pub fn show_indexes_of_accounts(&self) -> Option<()> {
         if self.accounts.read().unwrap().is_empty() {
             println!("No hay cuentas en la wallet. No es posible realizar una transaccion!");
-            return None
+            return None;
         }
         println!("INDICES DE LAS CUENTAS");
-        for (index, account) in self.accounts.read().unwrap().iter().enumerate(){
+        for (index, account) in self.accounts.read().unwrap().iter().enumerate() {
             println!("{}: {}", index, account.address);
         }
         println!();
