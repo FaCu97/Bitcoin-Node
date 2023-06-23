@@ -66,6 +66,7 @@ impl GetDataMessage {
     }
 }
 
+/// Devuelve el Header Message del mensaje getdata.
 fn get_data_header_message(payload: &GetDataPayload) -> HeaderMessage {
     let payload_bytes = payload.to_le_bytes();
     let binding = sha256d::Hash::hash(payload_bytes);

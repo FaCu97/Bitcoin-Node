@@ -24,6 +24,9 @@ impl Wallet {
         Ok(wallet)
     }
 
+    /// Realiza una transacción y hace el broadcast.
+    /// Recibe la cuenta que envía, la address receptora, monto y fee.
+    /// Devuelve error en caso de que algo falle.
     pub fn make_transaction(
         &self,
         account: &mut Account,
@@ -36,6 +39,9 @@ impl Wallet {
         Ok(())
     }
 
+    /// Realiza una transacción y hace el broadcast.
+    /// Recibe el indice de la cuenta que envía, la address receptora, monto y fee.
+    /// Devuelve error en caso de que algo falle.
     pub fn make_transaction_index(
         &self,
         account_index: usize,
