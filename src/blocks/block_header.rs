@@ -31,7 +31,7 @@ impl BlockHeader {
         }
     }
 
-    /// Recibe una cadena de bytes, la desserializa y devuelve el Block Header.
+    /// Recibe una cadena de bytes, la deserializa y devuelve el Block Header.
     /// Actualiza el offset según la cantidad de bytes que leyó de la cadena.
     pub fn unmarshalling(
         block_header_message: &[u8],

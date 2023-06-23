@@ -36,7 +36,7 @@ impl Block {
         }
     }
 
-    /// Recibe una cadena de bytes, la desserializa y devuelve el bloque.
+    /// Recibe una cadena de bytes, la deserializa y devuelve el bloque.
     /// Actualiza el offset según la cantidad de bytes que leyó de la cadena.
     pub fn unmarshalling(bytes: &Vec<u8>, offset: &mut usize) -> Result<Block, &'static str> {
         let block_header: BlockHeader = BlockHeader::unmarshalling(bytes, offset)?;

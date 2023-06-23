@@ -60,6 +60,7 @@ type Loggers = (
     JoinHandle<()>,
 );
 
+/// Imprime el mensaje en el logFile recibido
 pub fn write_in_log(log_sender: LogFileSender, msg: &str) {
     if let Err(err) = log_sender.send(msg.to_string()) {
         println!(
@@ -69,6 +70,8 @@ pub fn write_in_log(log_sender: LogFileSender, msg: &str) {
     };
 }
 
+/// Inicializa los loggers.
+/// Recibe el file path de cada uno
 pub fn set_up_loggers(
     config: Arc<Config>,
     error_file_path: String,
@@ -91,6 +94,7 @@ pub fn set_up_loggers(
     ))
 }
 
+/// Cierra los loggers
 pub fn shutdown_loggers(
     log_sender: LogSender,
     error_handler: JoinHandle<()>,
@@ -103,6 +107,7 @@ pub fn shutdown_loggers(
     Ok(())
 }
 
+/// Almacena los 3 tipos de LogSender
 #[derive(Debug, Clone)]
 pub struct LogSender {
     pub error_log_sender: LogFileSender,
@@ -111,6 +116,7 @@ pub struct LogSender {
 }
 
 impl LogSender {
+    /// Inicializa el Log Sender con los LogFile recibidos
     pub fn new(
         error_log_sender: LogFileSender,
         info_log_sender: LogFileSender,
@@ -191,6 +197,7 @@ impl LogWriter {
     }
 }
 
+/// Abre el file donde va a imprimir el log
 fn open_log_file(log_file: &String, config: Arc<Config>) -> Result<File, LoggingError> {
     let logs_dir = PathBuf::from(config.logs_folder_path.clone());
     let log_path = logs_dir.join(log_file);
@@ -219,39 +226,3 @@ fn shutdown_logger(tx: LogFileSender, handler: JoinHandle<()>) -> Result<(), Log
         .map_err(|err| LoggingError::ThreadJoinError(format!("{:?}", err)))?;
     Ok(())
 }
-
-/*
-#[cfg(test)]
-mod test {
-    use std::{
-        fs::File,
-        io::{BufRead, BufReader},
-    };
-
-    use super::LogWriter;
-
-    #[test]
-    fn test_el_archivo_se_crea_correctamente() {
-        let log_writer: Result<LogWriter, std::io::Error> =
-            LogWriter::create_log_writer("src/log.txt");
-        assert!(log_writer.is_ok());
-    }
-    #[test]
-    fn test_se_escribe_correctamentamente_en_el_archivo() -> Result<(), std::io::Error> {
-        let mut log_writer: LogWriter = LogWriter::create_log_writer("src/log.txt")?;
-        let contenido_escrito = "Hola Mundo";
-        log_writer.write(contenido_escrito)?;
-        let file = File::open("src/log.txt")?;
-        let lector = BufReader::new(file);
-        let mut lineas = Vec::new();
-
-        for linea_resultado in lector.lines() {
-            let linea = linea_resultado?.to_string();
-            lineas.push(linea);
-        }
-        let contenido_esperado = lineas[0].as_str();
-        assert_eq!(contenido_escrito, contenido_esperado);
-        Ok(())
-    }
-}
- */

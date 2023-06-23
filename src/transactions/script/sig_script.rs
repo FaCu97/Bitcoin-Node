@@ -32,7 +32,7 @@ impl SigScript {
         Ok(signature_bytes)
     }
 
-    ///funcion que devuelve el signature script con la clave publica comprimida
+    /// Devuelve el signature script con la clave publica comprimida
     pub fn generate_sig_script(
         hash_transaction: [u8; 32],
         account: &Account,
@@ -45,8 +45,7 @@ impl SigScript {
         sig_script_bytes.push(lenght_sig as u8);
         // se carga el campo sig
         sig_script_bytes.extend_from_slice(&sig);
-        // se carga el byte de SIGHASH_ALL
-        //       sig_script_bytes.push(01);
+
         let bytes_public_key = account.get_pubkey_compressed()?;
         let lenght_pubkey = bytes_public_key.len();
         // se carga el largo de los bytes de la clave publica
@@ -64,7 +63,6 @@ impl SigScript {
         sig_bytes: &[u8],
         public_key: &[u8],
     ) -> Result<bool, Box<dyn Error>> {
-        // Verifying
         // se saca el byte de SIGHASH_ALL
         let signature_bytes_without_flag = &sig_bytes[0..sig_bytes.len() - 1];
         let verifying_key = ecdsa::VerifyingKey::from_sec1_bytes(public_key)?;

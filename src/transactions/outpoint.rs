@@ -9,6 +9,7 @@ impl Outpoint {
         Outpoint { tx_id, index }
     }
 
+    /// Revisa el outpoint y devuelve true o false dependiendo si se trata de una coinbase o no.
     pub fn is_a_coinbase_outpoint(&self) -> bool {
         if self.index == 0xffffffff {
             return true;
@@ -20,6 +21,8 @@ impl Outpoint {
         false
     }
 
+    /// Recibe una cadena de bytes, avanza leyendo sobre la misma y devuelve el Outpoint.
+    /// Actualiza el offset
     pub fn unmarshalling(bytes: &Vec<u8>, offset: &mut usize) -> Result<Outpoint, &'static str> {
         if bytes.len() - *offset < 36 {
             return Err(
@@ -35,7 +38,9 @@ impl Outpoint {
         let index = u32::from_le_bytes(index_bytes);
         Ok(Outpoint { tx_id, index })
     }
-    // esta funcion se encarga de serializar un outpoint y cargarlo en el array bytes
+
+    // Serializa el Outpoint según el protocolo bitcoin.
+    // Se guarda en el array recibido.
     pub fn marshalling(&self, bytes: &mut Vec<u8>) {
         bytes.extend_from_slice(&self.tx_id[0..32]); // se cargan los elementos del tx_id
         let index_bytes: [u8; 4] = self.index.to_le_bytes();
@@ -43,13 +48,19 @@ impl Outpoint {
             bytes.push(item);
         }
     }
+
+    /// Compara el hash recibido con el del outpoint.
+    /// Devuelve true o false dependiendo de si coinciden o no,
     pub fn same_hash(&self, hash: [u8; 32]) -> bool {
         self.tx_id == hash
     }
 
+    ///Devuelve el indice del outpoint
     pub fn index(&self) -> usize {
         self.index as usize
     }
+
+    ///Devuelve el hash del outpoint
     pub fn hash(&self) -> [u8; 32] {
         self.tx_id
     }

@@ -10,9 +10,7 @@ use crate::logwriter::log_writer::{write_in_log, LogSender};
 
 const START_STRING_TESTNET: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
 const CHECKSUM_EMPTY_PAYLOAD: [u8; 4] = [0x5d, 0xf6, 0xe0, 0xe2];
-// todo: implementar test de read_from usando mocking
-// todo: implementar test de write_to usando mocking
-// todo: implementar test de write_verack_message, read_verack_message, write_sendheaders_message usando mocking
+
 #[derive(Clone, Debug)]
 /// Representa el header de cualquier mensaje del protocolo bitcoin
 pub struct HeaderMessage {
@@ -51,7 +49,7 @@ impl HeaderMessage {
         header_message_bytes[20..24].copy_from_slice(&self.checksum);
         header_message_bytes
     }
-    /// recibe los bytes de un header de un mensaje y los convierte a un struct HeaderMessage
+    /// Recibe los bytes de un header de un mensaje y los convierte a un struct HeaderMessage
     /// de acuerdo al protocolo de bitcoin
     pub fn from_le_bytes(bytes: [u8; 24]) -> Result<Self, Utf8Error> {
         let mut start_string = [0; 4];
@@ -75,7 +73,7 @@ impl HeaderMessage {
             checksum,
         })
     }
-    /// recibe un struct HeaderMessage que representa un el header de un mensaje segun protocolo de bitcoin
+    /// Recibe un struct HeaderMessage que representa un el header de un mensaje segun protocolo de bitcoin
     /// y un stream que implemente el trait Write (en donde se pueda escribir) y escribe el mensaje serializado
     /// en bytes en el stream. Devuelve un error en caso de que no se haya podido escribir correctamente o un Ok en caso
     /// de que se haya escrito correctamente
@@ -148,6 +146,8 @@ impl HeaderMessage {
     }
 }
 
+/// Consulta la variable finish recibida.
+/// Devuelve true o false dependiendo de si el programa debe finalizar
 pub fn is_terminated(finish: Option<Arc<RwLock<bool>>>) -> bool {
     match finish {
         Some(m) => *m.read().unwrap(),
@@ -155,6 +155,8 @@ pub fn is_terminated(finish: Option<Arc<RwLock<bool>>>) -> bool {
     }
 }
 
+/// Recibe el HeaderMessage y lee el payload correspondiente del stream,
+/// Devuelve los bytes leidos del stream
 fn read_payload(stream: &mut dyn Read, header: &HeaderMessage) -> io::Result<Vec<u8>> {
     let payload_size = header.payload_size as usize;
     let mut payload_buffer_num: Vec<u8> = vec![0; payload_size];
@@ -215,6 +217,8 @@ pub fn command_name_to_bytes(command: &String) -> [u8; 12] {
     command_name_bytes
 }
 
+/// Genera el checksum del payload recibido.
+/// Devuelve los 4 bytes del checksum.
 pub fn get_checksum(payload: &[u8]) -> [u8; 4] {
     let sha_hash = sha256d::Hash::hash(payload); // hasheo doble de los bytes del payload
     let hash_bytes: [u8; 32] = sha_hash.to_byte_array(); // convert Hash to [u8; 32] array

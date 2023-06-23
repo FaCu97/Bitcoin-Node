@@ -8,13 +8,7 @@ use std::io;
 // HEXA:         0x76   0xA9       <bytes_to_push> <pubKeyHash>  0x88            0xAC
 // Largo bytes:  1 + 1 + 1 + 20 + 1 + 1 = 25
 // Si una Tx es P2PKH el largo de su pk_script debe ser == 25
-
 // <pubKeyHash>: Son 20 bytes. Es el resultado de aplicar hash160 (sha256 + ripemd160 hash) a la publicKey comprimida SEC
-
-// scriptSig:   <length sig>     <sig>   <length pubKey>   <pubKey>
-// <pubKey> es la publicKey comprimida SEC (33bytes) del receptor de la tx
-// Largo bytes: 1 + 71 + 1 + 33 = 106
-// el largo de <sig> depende de la llave DER, puede variar usualmente me da 71 o 72
 
 /// Genera el pk_script de una transaccion P2PKH
 /// Recibe el <pubKeyHash> del receptor de la tx.
@@ -46,7 +40,7 @@ pub fn validate(
     // scriptSig:   <length sig>     <sig>   <length pubKey>   <pubKey>
     // <pubKey> es la publicKey comprimida SEC (33bytes) del receptor de la tx
     // Largo bytes: 1 + 71 + 1 + 33 = 106
-    // el largo de <sig> depende de la llave DER, puede variar usualmente me da 71 o 72
+    // el largo de <sig> depende de la llave DER, puede variar entre 71 o 72
     let length_sig = sig_script[0];
     let mut sig_script_pubkey: [u8; 33] = [0; 33];
     sig_script_pubkey

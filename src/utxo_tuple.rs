@@ -19,7 +19,7 @@ impl UtxoTuple {
         let hash = self.hash;
         let mut utxo_set: Vec<(TxOut, usize)> = Vec::new();
         for utxo in &self.utxo_set {
-            match utxo.0.get_adress() {
+            match utxo.0.get_address() {
                 Ok(value) => {
                     if *address == value {
                         utxo_set.push(utxo.clone());

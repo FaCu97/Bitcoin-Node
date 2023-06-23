@@ -24,6 +24,9 @@ use super::{
     tx_out::TxOut,
 };
 
+const SIG_HASH_ALL: u32 = 0x00000001;
+const TRANSACTION_VERSION: i32 = 0x00000002;
+
 /// Representa una transacción del protocolo bitcoin
 #[derive(Debug, PartialEq, Clone)]
 pub struct Transaction {
@@ -36,6 +39,7 @@ pub struct Transaction {
 }
 
 impl Transaction {
+    /// Crea la transacción con los parámetros recibidos.
     pub fn new(
         version: i32,
         txin_count: CompactSizeUint,
@@ -54,7 +58,7 @@ impl Transaction {
         }
     }
 
-    /// Desserializa la transacción a partir de una cadena de bytes.
+    /// Deserializa la transacción a partir de una cadena de bytes.
     /// Devuelve la transacción o un error en caso de que la cadena no cumpla con el formato
     pub fn unmarshalling(bytes: &Vec<u8>, offset: &mut usize) -> Result<Transaction, &'static str> {
         // en teoria se lee el coinbase transaccion primero
@@ -110,15 +114,14 @@ impl Transaction {
     pub fn hash(&self) -> [u8; 32] {
         self.hash_message(false)
     }
-    /// Realiza el hash de la transaccion si recibe true ppushea dentro del vector
-    /// los bytes correspondientes al SIGHASH_ALL , caso contrario realiza el hash
-    /// normalmente
+    /// Realiza el hash de la transaccion.
+    /// Si recibe true pushea dentro del vector los bytes correspondientes al SIGHASH_ALL.
+    /// Caso contrario realiza el hash normalmente
     fn hash_message(&self, is_message: bool) -> [u8; 32] {
         let mut raw_transaction_bytes: Vec<u8> = Vec::new();
         self.marshalling(&mut raw_transaction_bytes);
         if is_message {
-            let sig_hash_all: u32 = 0x00000001;
-            let bytes = sig_hash_all.to_le_bytes();
+            let bytes = SIG_HASH_ALL.to_le_bytes();
             raw_transaction_bytes.extend_from_slice(&bytes);
         }
         if is_message {
@@ -129,7 +132,7 @@ impl Transaction {
         *hash_transaction.as_byte_array()
     }
 
-    /// Recibe una referencia a un vector de bytes y la cantidad de transacciones a desserializar.
+    /// Recibe una referencia a un vector de bytes y la cantidad de transacciones a deserializar.
     /// Devuelve un vector con las transacciones o error.
     /// Actualiza el offset
     pub fn unmarshalling_transactions(
@@ -257,12 +260,16 @@ impl Transaction {
             TxOut::new(change_amount, change_pk_script_bytes, change_pk_script);
         tx_outs.push(change_utxo);
         let txout_count = CompactSizeUint::new(tx_outs.len() as u128);
-        // numero de version quizas esto deberia ir dentro del .conf
-        let version = 0x00000002;
         // lock_time = 0 => Not locked
         let lock_time: u32 = 0;
-        let incomplete_transaction =
-            Transaction::new(version, txin_count, tx_ins, txout_count, tx_outs, lock_time);
+        let incomplete_transaction = Transaction::new(
+            TRANSACTION_VERSION,
+            txin_count,
+            tx_ins,
+            txout_count,
+            tx_outs,
+            lock_time,
+        );
         Ok(incomplete_transaction)
     }
 
@@ -297,8 +304,8 @@ impl Transaction {
         let input_to_sign = &tx_copy.tx_in[tx_in_index];
         for utxos in utxos_to_spend {
             let pubkey = utxos.find(
-                input_to_sign.previous_tx_id(),
-                input_to_sign.previous_index(),
+                input_to_sign.get_previous_output_hash(),
+                input_to_sign.get_previous_output_index(),
             );
             script = match pubkey {
                 Some(value) => value.to_vec(),
@@ -351,6 +358,7 @@ mod test {
     };
     use bitcoin_hashes::{sha256d, Hash};
 
+    /// Funcion auxiliar que crea los txin
     fn crear_txins(cantidad: u128) -> Vec<TxIn> {
         let mut tx_in: Vec<TxIn> = Vec::new();
         for _i in 0..cantidad {
@@ -372,6 +380,7 @@ mod test {
         tx_in
     }
 
+    /// Funcion auxiliar que crea los txout
     fn crear_txouts(cantidad: u128) -> Vec<TxOut> {
         let mut tx_out: Vec<TxOut> = Vec::new();
         for _i in 0..cantidad {
@@ -383,6 +392,7 @@ mod test {
         tx_out
     }
 
+    /// Funcion auxiliar que crea la cadena de bytes para testear la deserializacion
     fn generar_flujo_de_datos(
         version: i32,
         tx_in_count: u128,

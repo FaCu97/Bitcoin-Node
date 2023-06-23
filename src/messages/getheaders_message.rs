@@ -5,7 +5,6 @@ use crate::config::Config;
 use std::io::Write;
 use std::sync::Arc;
 
-// todo: Implementar pruebas usando mocking
 /// Representa un mensaje del tipo getheaders segun el protocolo de bitcoin, con su respectivo header y payload
 pub struct GetHeadersMessage {
     pub header: HeaderMessage,

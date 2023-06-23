@@ -1,6 +1,8 @@
 use crate::compact_size_uint::CompactSizeUint;
 
 use super::{outpoint::Outpoint, script::sig_script::SigScript};
+
+/// Representa la estructura TxIn del protocolo bitcoin
 #[derive(Debug, PartialEq, Clone)]
 pub struct TxIn {
     previous_output: Outpoint,
@@ -11,6 +13,7 @@ pub struct TxIn {
 }
 
 impl TxIn {
+    /// Crea el TxIn con los parámetros recibidos.
     pub fn new(
         previous_output: Outpoint,
         script_bytes: CompactSizeUint,
@@ -26,6 +29,9 @@ impl TxIn {
             sequence,
         }
     }
+
+    /// Crea el TxIn incompleto.
+    /// Se utiliza al momento de crear una transacción, el campo signature_script está vacío
     pub fn incomplete_txin(previous_output: Outpoint) -> TxIn {
         let script_bytes: CompactSizeUint = CompactSizeUint::new(0);
         let height: Option<Vec<u8>> = None;
@@ -39,9 +45,9 @@ impl TxIn {
             sequence,
         )
     }
-    /// recibe un vector de byes que contiene un txin y un offset indicando la posicion donde empieza el txin
-    /// devuelve un txin completando los campos con lo que esta en los bytes en caso de que todo este bien
-    /// y un string indicando el error cuando algo falla. tambien actualiza el offset
+    /// Recibe un vector de bytes que contiene un txin y un offset indicando la posicion donde empieza.
+    /// Devuelve el txin completando los campos según los bytes leidos en caso de que todo este bien
+    /// y un string indicando el error cuando algo falla. Actualiza el offset
     pub fn unmarshalling(bytes: &Vec<u8>, offset: &mut usize) -> Result<TxIn, &'static str> {
         if bytes.len() - *offset < 41 {
             return Err(
@@ -83,6 +89,8 @@ impl TxIn {
         })
     }
 
+    /// Deserializa los txin recibidos en la cadena de bytes.
+    /// Actualiza el offset y devuelve el vector de TxIn.
     pub fn unmarshalling_txins(
         bytes: &Vec<u8>,
         amount_txin: u64,
@@ -97,6 +105,8 @@ impl TxIn {
         Ok(tx_in_list)
     }
 
+    /// Serializa el TxIn a bytes según el protocolo bitcoin.
+    /// Los guarda en el vector recibido por parámetro.
     pub fn marshalling(&self, bytes: &mut Vec<u8>) {
         self.previous_output.marshalling(bytes);
         let script_bytes: Vec<u8> = self.script_bytes.marshalling();
@@ -111,10 +121,12 @@ impl TxIn {
         bytes.extend_from_slice(&sequence_bytes);
     }
 
+    /// Devuelve true o false dependiendo si la TxIn es de una coinbase transaction.
     pub fn is_coinbase(&self) -> bool {
         self.height.is_some()
     }
 
+    /// Devuelve el outpoint previo
     pub fn outpoint(&self) -> Outpoint {
         self.previous_output
     }
@@ -133,29 +145,25 @@ impl TxIn {
         aux_bytes.copy_from_slice(&bytes);
         u32::from_be_bytes(aux_bytes)
     }
-    pub fn previous_index(&self) -> usize {
-        self.previous_output.index()
-    }
-    pub fn previous_tx_id(&self) -> [u8; 32] {
-        self.previous_output.hash()
-    }
+    /// Compara el hash recibido con el del output previo de la TxIn
     pub fn is_same_hash(&self, hash: &[u8; 32]) -> bool {
         self.previous_output.same_hash(*hash)
     }
+    /// Setea en el TxIn el signature script recibido en formato bytes
     pub fn set_signature_script(&mut self, bytes: Vec<u8>) {
         self.script_bytes = CompactSizeUint::new(bytes.len() as u128);
         self.signature_script = SigScript::new(bytes);
     }
+    /// Setea en el TxIn el signature script recibido en formato SigScript
     pub fn add(&mut self, signature: SigScript) {
-        // acá faltaba agregar el script_bytes
         self.script_bytes = CompactSizeUint::new(signature.get_bytes().len() as u128);
         self.signature_script = signature
     }
-
+    /// Devuelve el hash del output previo
     pub fn get_previous_output_hash(&self) -> [u8; 32] {
         self.previous_output.hash()
     }
-
+    /// Devuelve el indice del output previo
     pub fn get_previous_output_index(&self) -> usize {
         self.previous_output.index()
     }
