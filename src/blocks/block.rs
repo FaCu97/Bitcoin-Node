@@ -243,10 +243,6 @@ impl Block {
 
 #[cfg(test)]
 mod test {
-    use std::vec;
-
-    use hex::ToHex;
-
     use crate::{
         blocks::block_header::BlockHeader,
         compact_size_uint::CompactSizeUint,
@@ -255,14 +251,32 @@ mod test {
             tx_in::TxIn, tx_out::TxOut,
         },
     };
+    use std::{error::Error, io, vec};
 
     use super::Block;
 
-    fn string_to_bytes(input: &str) -> Result<[u8; 32], hex::FromHexError> {
-        let bytes = hex::decode(input)?;
+    /// Convierte el str recibido en hexadecimal, a bytes
+    fn string_to_bytes(input: &str) -> Result<[u8; 32], Box<dyn Error>> {
+        if input.len() != 64 {
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                "El string recibido es inválido. No tiene el largo correcto",
+            )));
+        }
+
         let mut result = [0; 32];
-        result.copy_from_slice(&bytes[..32]);
+        for i in 0..32 {
+            let byte_str = &input[i * 2..i * 2 + 2];
+            result[i] = u8::from_str_radix(byte_str, 16)?;
+        }
+
         Ok(result)
+    }
+    /// Convierte los bytes a hexadecimal.
+    pub fn bytes_to_hex_string(bytes: &[u8]) -> String {
+        let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
+
+        hex_chars.join("")
     }
 
     fn crear_txins(cantidad: u128) -> Vec<TxIn> {
@@ -527,7 +541,7 @@ mod test {
         transactions.push(tx_4);
         let mut merkle_root = Block::recursive_generation_merkle_root(transactions);
         merkle_root.reverse();
-        let hash_generated = merkle_root.encode_hex::<String>();
+        let hash_generated = bytes_to_hex_string(&merkle_root);
         let hash_expected = "bc689ae06069c1381eb92aabef250bb576d8aac8aedec9b7533a37351b6dedf8";
         assert_eq!(hash_generated, hash_expected);
     }
