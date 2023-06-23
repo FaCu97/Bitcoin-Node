@@ -193,36 +193,46 @@ pub fn handle_messages_from_node(
     finish: Option<Arc<RwLock<bool>>>,
 ) -> JoinHandle<NodeMessageHandlerResult> {
     thread::spawn(move || -> NodeMessageHandlerResult {
+        // si ocurre algun error se guarda en esta variable
+        let mut error: Option<NodeMessageHandlerError> = None;
         while !is_terminated(finish.clone()) {
-            // veo si mandaron algo para escribir
             if let Ok(message) = rx.try_recv() {
-                write_message_in_node(&mut node, &message)?
+                if let Err(err) = write_message_in_node(&mut node, &message) {
+                    error = Some(err);
+                    break;
+                }
             }
-            //leo header y payload
-            let header = read_header(&mut node, finish.clone())?;
+    
+            let header = match read_header(&mut node, finish.clone()) {
+                Ok(header) => header,
+                Err(err) => {
+                    error = Some(err);
+                    break;
+                }
+            };
+    
             if is_terminated(finish.clone()) {
                 break;
             }
-            let payload = read_payload(&mut node, header.payload_size as usize, finish.clone())?;
+    
+            let payload = match read_payload(&mut node, header.payload_size as usize, finish.clone()) {
+                Ok(payload) => payload,
+                Err(err) => {
+                    error = Some(err);
+                    break;
+                }
+            };
+    
             let command_name = get_header_command_name_as_str(header.command_name.as_str());
+    
             match command_name {
-                "headers" => {
-                    handle_headers_message(
-                        log_sender.clone(),
-                        tx.clone(),
-                        &payload,
-                        headers.clone(),
-                    )?;
-                }
-                "getdata" => {
-                    handle_getdata_message(
-                        log_sender.clone(),
-                        tx.clone(),
-                        &payload,
-                        accounts.clone(),
-                    )?;
-                }
-                "block" => {
+                "headers" => handle_message(&mut error, || {
+                    handle_headers_message(log_sender.clone(), tx.clone(), &payload, headers.clone())
+                }),
+                "getdata" => handle_message(&mut error, || {
+                    handle_getdata_message(log_sender.clone(), tx.clone(), &payload, accounts.clone())
+                }),
+                "block" => handle_message(&mut error, || {
                     handle_block_message(
                         log_sender.clone(),
                         &payload,
@@ -230,17 +240,17 @@ pub fn handle_messages_from_node(
                         blocks.clone(),
                         accounts.clone(),
                         utxo_set.clone(),
-                    )?;
-                }
-                "inv" => {
-                    handle_inv_message(tx.clone(), &payload, transactions_recieved.clone())?;
-                }
-                "ping" => {
-                    handle_ping_message(tx.clone(), &payload)?;
-                }
-                "tx" => {
-                    handle_tx_message(log_sender.clone(), &payload, accounts.clone())?;
-                }
+                    )
+                }),
+                "inv" => handle_message(&mut error, || {
+                    handle_inv_message(tx.clone(), &payload, transactions_recieved.clone())
+                }),
+                "ping" => handle_message(&mut error, || {
+                    handle_ping_message(tx.clone(), &payload)
+                }),
+                "tx" => handle_message(&mut error, || {
+                    handle_tx_message(log_sender.clone(), &payload, accounts.clone())
+                }),
                 _ => {
                     write_in_log(
                         log_sender.messege_log_sender.clone(),
@@ -253,23 +263,29 @@ pub fn handle_messages_from_node(
                     );
                     continue;
                 }
-            }
-            if command_name != "inv" {
-                // no me interesa tener todos los inv en el log_message
-                write_in_log(
-                    log_sender.messege_log_sender.clone(),
-                    format!(
-                        "Recibo correctamente: {} -- Nodo: {:?}",
-                        command_name,
-                        node.peer_addr()
-                    )
-                    .as_str(),
-                );
-            }
+            };
         }
+    
+        if let Some(err) = error {
+            println!("Nodo {:?} desconectado. {}", node.peer_addr(), err);
+        }
+    
         Ok(())
     })
 }
+
+
+
+fn handle_message<T, E>(error: &mut Option<E>, func: impl FnOnce() -> Result<T, E>) -> Option<T> {
+    match func() {
+        Ok(result) => Some(result),
+        Err(err) => {
+            *error = Some(err);
+            None
+        }
+    }
+}
+
 
 /// Recibe un &str que representa el nombre de un comando de un header con su respectivo nombre
 /// y los \0 hasta completar los 12 bytes. Devuelve un &str con el nombre del mensaje y le quita los
