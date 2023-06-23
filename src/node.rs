@@ -8,11 +8,11 @@ use std::{
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
-    handler::node_message_handler::{NodeMessageHandler, NodeMessageHandlerError},
+    handler::node_message_handler::{NodeMessageHandler},
     logwriter::log_writer::LogSender,
     messages::inventory::{inv_mershalling, Inventory},
     transactions::transaction::Transaction,
-    utxo_tuple::UtxoTuple,
+    utxo_tuple::UtxoTuple, custom_errors::NodeCustomErrors,
 };
 
 type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
@@ -34,7 +34,7 @@ impl Node {
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         block_chain: Arc<RwLock<Vec<Block>>>,
-    ) -> Result<Self, NodeMessageHandlerError> {
+    ) -> Result<Self, NodeCustomErrors> {
         let pointer_to_utxo_set: UtxoSetPointer = Arc::new(RwLock::new(HashMap::new()));
         generate_utxo_set(&block_chain, pointer_to_utxo_set.clone())?;
         let pointer_to_accounts_in_node = Arc::new(RwLock::new(Arc::new(RwLock::new(vec![]))));
@@ -69,7 +69,7 @@ impl Node {
         for utxo in self
             .utxo_set
             .read()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .values()
         {
             let aux_utxo = utxo.referenced_utxos(address);
@@ -82,7 +82,7 @@ impl Node {
         Ok(account_utxo_set)
     }
     /// Se encarga de llamar a la funcion finish() del peers_handler del nodo
-    pub fn shutdown_node(&self) -> Result<(), NodeMessageHandlerError> {
+    pub fn shutdown_node(&self) -> Result<(), NodeCustomErrors> {
         self.peers_handler.finish()
     }
 
@@ -97,7 +97,7 @@ impl Node {
 
     /// Recibe un vector de bytes que representa a la raw format transaction para se enviada por
     /// la red a todos los nodos conectados
-    pub fn broadcast_tx(&self, raw_tx: [u8; 32]) -> Result<(), NodeMessageHandlerError> {
+    pub fn broadcast_tx(&self, raw_tx: [u8; 32]) -> Result<(), NodeCustomErrors> {
         let inventories = vec![Inventory::new_tx(raw_tx)];
         let inv_message_bytes = inv_mershalling(inventories);
         self.peers_handler.broadcast_to_nodes(inv_message_bytes)
@@ -108,11 +108,11 @@ impl Node {
     pub fn set_accounts(
         &mut self,
         accounts: Arc<RwLock<Vec<Account>>>,
-    ) -> Result<(), NodeMessageHandlerError> {
+    ) -> Result<(), NodeCustomErrors> {
         *self
             .accounts
             .write()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))? = accounts;
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))? = accounts;
         Ok(())
     }
 }
@@ -121,15 +121,15 @@ impl Node {
 fn generate_utxo_set(
     block_chain: &Arc<RwLock<Vec<Block>>>,
     utxo_set: UtxoSetPointer,
-) -> Result<UtxoSetPointer, NodeMessageHandlerError> {
+) -> Result<UtxoSetPointer, NodeCustomErrors> {
     let block_chain_lock = block_chain
         .read()
-        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
 
     for block in block_chain_lock.iter() {
         block
             .give_me_utxos(utxo_set.clone())
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
     }
     Ok(utxo_set)
 }

@@ -1,6 +1,6 @@
 use bitcoin::config::Config;
+use bitcoin::custom_errors::NodeCustomErrors;
 use bitcoin::gtk::interfaz_gtk::Gtk;
-use bitcoin::handler::node_message_handler::NodeMessageHandlerError;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
 use bitcoin::logwriter::log_writer::{
@@ -21,7 +21,7 @@ pub enum GenericError {
     ConfigError(Box<dyn Error>),
     ConnectionToDnsError(ConnectionToDnsError),
     LoggingError(LoggingError),
-    NodeHandlerError(NodeMessageHandlerError),
+    NodeHandlerError(NodeCustomErrors),
 }
 
 impl fmt::Display for GenericError {

@@ -3,12 +3,10 @@ use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{message_header::is_terminated, message_header::HeaderMessage},
-    utxo_tuple::UtxoTuple,
+    utxo_tuple::UtxoTuple, custom_errors::NodeCustomErrors,
 };
 use std::{
     collections::HashMap,
-    error::Error,
-    fmt,
     io::{self, Read, Write},
     net::TcpStream,
     sync::{
@@ -23,46 +21,9 @@ use super::message_handlers::{
     handle_ping_message, handle_tx_message,
 };
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum NodeMessageHandlerError {
-    ThreadJoinError(String),
-    LockError(String),
-    ReadNodeError(String),
-    WriteNodeError(String),
-    CanNotRead(String),
-    ThreadChannelError(String),
-    UnmarshallingError(String),
-}
 
-impl fmt::Display for NodeMessageHandlerError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            NodeMessageHandlerError::ThreadJoinError(msg) => {
-                write!(f, "ThreadJoinError Error: {}", msg)
-            }
-            NodeMessageHandlerError::LockError(msg) => write!(f, "LockError Error: {}", msg),
-            NodeMessageHandlerError::ReadNodeError(msg) => {
-                write!(f, "Can not read from socket Error: {}", msg)
-            }
-            NodeMessageHandlerError::WriteNodeError(msg) => {
-                write!(f, "Can not write in socket Error: {}", msg)
-            }
-            NodeMessageHandlerError::CanNotRead(msg) => {
-                write!(f, "No more elements in list Error: {}", msg)
-            }
-            NodeMessageHandlerError::ThreadChannelError(msg) => {
-                write!(f, "Can not send elements to channel Error: {}", msg)
-            }
-            NodeMessageHandlerError::UnmarshallingError(msg) => {
-                write!(f, "Can not unmarshall bytes Error: {}", msg)
-            }
-        }
-    }
-}
 
-impl Error for NodeMessageHandlerError {}
-
-type NodeMessageHandlerResult = Result<(), NodeMessageHandlerError>;
+type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;
 type NodeSender = Sender<Vec<u8>>;
 type NodeReceiver = Receiver<Vec<u8>>;
 type NodeBlocksData = (Arc<RwLock<Vec<BlockHeader>>>, Arc<RwLock<Vec<Block>>>);
@@ -81,7 +42,7 @@ impl NodeMessageHandler {
     /// Recibe la informacion que tiene el nodo (headers, bloques y nodos conectados)
     /// y se encarga de crear un thread por cada nodo y lo deja esuchando mensajes
     /// y handleandolos de forma oportuna. Si ocurre algun error devuelve un Error del enum
-    /// NodeMessageHandlerError y en caso contrario devuelve el nuevo struct
+    /// NodeCustomErrors y en caso contrario devuelve el nuevo struct
     /// NodeMessageHandler con sus respectivos campos
     pub fn new(
         log_sender: LogSender,
@@ -90,7 +51,7 @@ impl NodeMessageHandler {
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
-    ) -> Result<Self, NodeMessageHandlerError> {
+    ) -> Result<Self, NodeCustomErrors> {
         write_in_log(
             log_sender.info_log_sender.clone(),
             "Empiezo a escuchar por nuevos bloques y transaccciones",
@@ -142,7 +103,7 @@ impl NodeMessageHandler {
         }
         // Si de todos los nodos, no se le pudo enviar a ninguno --> falla el broadcasting
         if amount_of_failed_nodes == self.nodes_sender.len() {
-            return Err(NodeMessageHandlerError::ThreadChannelError(
+            return Err(NodeCustomErrors::ThreadChannelError(
                 "Todos los channels cerrados, no se pudo boradcastear tx".to_string(),
             ));
         }
@@ -157,15 +118,15 @@ impl NodeMessageHandler {
         *self
             .finish
             .write()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))? = true;
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))? = true;
         let handles: Vec<JoinHandle<()>> = {
-            let mut locked_handles = self.nodes_handle.lock().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+            let mut locked_handles = self.nodes_handle.lock().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
             mem::take(&mut *locked_handles)
         };
         for handle in handles {
             handle
                 .join()
-                .map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))?;
+                .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))?;
         }
         for node_sender in self.nodes_sender.clone() {
             drop(node_sender);
@@ -189,7 +150,7 @@ pub fn handle_messages_from_node(
 ) -> JoinHandle<()> {
     thread::spawn(move || {
         // si ocurre algun error se guarda en esta variable
-        let mut error: Option<NodeMessageHandlerError> = None;
+        let mut error: Option<NodeCustomErrors> = None;
         while !is_terminated(finish.clone()) {
             // Veo si mandaron algo para escribir
             if let Ok(message) = rx.try_recv() {
@@ -318,9 +279,9 @@ fn get_header_command_name_as_str(command: &str) -> &str {
 /// Ok(()) en caso de que se escriba exitosamente o un error especifico de escritura en caso contrarios
 pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessageHandlerResult {
     node.write_all(message)
-        .map_err(|err| NodeMessageHandlerError::WriteNodeError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
     node.flush()
-        .map_err(|err| NodeMessageHandlerError::WriteNodeError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
     Ok(())
 }
 
@@ -329,13 +290,13 @@ pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessag
 fn read_header(
     node: &mut dyn Read,
     finish: Option<Arc<RwLock<bool>>>,
-) -> Result<HeaderMessage, NodeMessageHandlerError> {
+) -> Result<HeaderMessage, NodeCustomErrors> {
     let mut buffer_num = [0; 24];
     while !is_terminated(finish.clone()) {
         match node.read_exact(&mut buffer_num) {
             Ok(_) => break, // Lectura exitosa, salimos del bucle
             Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => continue, // No hay suficientes datos disponibles, continuar esperando
-            Err(err) => return Err(NodeMessageHandlerError::ReadNodeError(err.to_string())), // Error inesperado, devolverlo
+            Err(err) => return Err(NodeCustomErrors::ReadNodeError(err.to_string())), // Error inesperado, devolverlo
         }
     }
     if is_terminated(finish) {
@@ -344,7 +305,7 @@ fn read_header(
         return Ok(HeaderMessage::new("none".to_string(), None));
     }
     HeaderMessage::from_le_bytes(buffer_num)
-        .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))
+        .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))
 }
 
 /// Se mantiene leyendo del socket del nodo hasta recibir el payload esperado.
@@ -353,13 +314,13 @@ fn read_payload(
     node: &mut dyn Read,
     size: usize,
     finish: Option<Arc<RwLock<bool>>>,
-) -> Result<Vec<u8>, NodeMessageHandlerError> {
+) -> Result<Vec<u8>, NodeCustomErrors> {
     let mut payload_buffer_num: Vec<u8> = vec![0; size];
     while !is_terminated(finish.clone()) {
         match node.read_exact(&mut payload_buffer_num) {
             Ok(_) => break, // Lectura exitosa, salimos del bucle
             Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => continue, // No hay suficientes datos disponibles, continuar esperando
-            Err(err) => return Err(NodeMessageHandlerError::ReadNodeError(err.to_string())), // Error inesperado, devolverlo
+            Err(err) => return Err(NodeCustomErrors::ReadNodeError(err.to_string())), // Error inesperado, devolverlo
         }
     }
     Ok(payload_buffer_num)
@@ -367,23 +328,23 @@ fn read_payload(
 
 /// Recibe un Arc apuntando a un RwLock de un vector de TcpStreams y devuelve el ultimo nodo TcpStream del vector si es que
 /// hay, si no devuelve un error del tipo BroadcastingError
-fn get_last_node(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<TcpStream, NodeMessageHandlerError> {
+fn get_last_node(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<TcpStream, NodeCustomErrors> {
     let node = nodes
         .try_write()
-        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .pop()
         .ok_or("Error no hay mas nodos para descargar los headers!\n")
-        .map_err(|err| NodeMessageHandlerError::CanNotRead(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
     Ok(node)
 }
 
 /// Recibe un Arc apuntando a un vector de TcpStream y devuelve el largo del vector
 fn get_amount_of_nodes(
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-) -> Result<usize, NodeMessageHandlerError> {
+) -> Result<usize, NodeCustomErrors> {
     let amount_of_nodes = nodes
         .read()
-        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .len();
     Ok(amount_of_nodes)
 }

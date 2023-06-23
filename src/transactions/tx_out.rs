@@ -3,8 +3,7 @@ use std::sync::{Arc, RwLock};
 use crate::{
     account::Account,
     compact_size_uint::CompactSizeUint,
-    handler::node_message_handler::NodeMessageHandlerError,
-    logwriter::log_writer::{write_in_log, LogSender},
+    logwriter::log_writer::{write_in_log, LogSender}, custom_errors::NodeCustomErrors,
 };
 
 use super::{script::pubkey::Pubkey, transaction::Transaction};
@@ -98,17 +97,17 @@ impl TxOut {
         log_sender: LogSender,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         tx: Transaction,
-    ) -> Result<(), NodeMessageHandlerError> {
+    ) -> Result<(), NodeCustomErrors> {
         for account in &*accounts
             .read()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .read()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         {
             if !account
                 .pending_transactions
                 .read()
-                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                 .contains(&tx)
             {
                 let tx_asociate_address = match self.get_address() {
@@ -129,7 +128,7 @@ impl TxOut {
                     account
                         .pending_transactions
                         .write()
-                        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                         .push(tx.clone());
                 }
             }

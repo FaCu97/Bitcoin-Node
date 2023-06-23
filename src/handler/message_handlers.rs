@@ -19,9 +19,10 @@ use crate::{
     utxo_tuple::UtxoTuple,
 };
 
-use super::node_message_handler::NodeMessageHandlerError;
+use crate::custom_errors::NodeCustomErrors;
 
-type NodeMessageHandlerResult = Result<(), NodeMessageHandlerError>;
+
+type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;
 type NodeSender = Sender<Vec<u8>>;
 
 const START_STRING: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
@@ -41,7 +42,7 @@ pub fn handle_headers_message(
     headers: Arc<RwLock<Vec<BlockHeader>>>,
 ) -> NodeMessageHandlerResult {
     let new_headers = HeadersMessage::unmarshalling(&payload.to_vec())
-        .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
     for header in new_headers {
         if !header.validate() {
             write_in_log(
@@ -56,7 +57,7 @@ pub fn handle_headers_message(
                     GetDataMessage::new(vec![Inventory::new_block(header.hash())]);
                 let get_data_message_bytes = get_data_message.marshalling();
                 tx.send(get_data_message_bytes)
-                    .map_err(|err| NodeMessageHandlerError::ThreadChannelError(err.to_string()))?;
+                    .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
             }
         }
     }
@@ -65,16 +66,16 @@ pub fn handle_headers_message(
 
 /// Recibe un Sender de bytes, el payload del mensaje getdata recibido y un vector de cuentas de la wallet y deserializa el mensaje getdata que llega
 /// y por cada Inventory que pide si esta como pending_transaction en alguna de las cuentas de la wallet se le envia el mensaje tx con la transaccion pedida
-/// por el channel para ser escrita. Devuelve Ok(()) en caso exitoso o error de tipo NodeMessageHandlerError en caso contrarui
+/// por el channel para ser escrita. Devuelve Ok(()) en caso exitoso o error de tipo NodeCustomErrors en caso contrarui
 pub fn handle_getdata_message(
     log_sender: LogSender,
     node_sender: NodeSender,
     payload: &[u8],
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
-) -> Result<(), NodeMessageHandlerError> {
+) -> Result<(), NodeCustomErrors> {
     let mut offset: usize = 0;
     let count = CompactSizeUint::unmarshalling(payload, &mut offset)
-        .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
     for _ in 0..count.decoded_value() as usize {
         let mut inventory_bytes = vec![0; 36];
         inventory_bytes.copy_from_slice(&payload[offset..(offset + 36)]);
@@ -82,14 +83,14 @@ pub fn handle_getdata_message(
         if inv.type_identifier == 1 {
             for account in &*accounts
                 .read()
-                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                 .read()
-                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             {
                 for tx in &*account
                     .pending_transactions
                     .read()
-                    .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                    .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                 {
                     if tx.hash() == inv.hash {
                         write_tx_message(log_sender.clone(), node_sender.clone(), tx)?;
@@ -102,12 +103,12 @@ pub fn handle_getdata_message(
 }
 
 /// Recibe un NodeSender y una tx y se encarga de mandar por el channel el mensaje tx con la transaccion pasada por parametro
-/// para ser escrita al nodo conectado. Devuelve Ok(()) si salio todo bien NodeMessageHandlerError en caso contrario
+/// para ser escrita al nodo conectado. Devuelve Ok(()) si salio todo bien NodeCustomErrors en caso contrario
 fn write_tx_message(
     log_sender: LogSender,
     node_sender: NodeSender,
     tx: &Transaction,
-) -> Result<(), NodeMessageHandlerError> {
+) -> Result<(), NodeCustomErrors> {
     let mut tx_payload = vec![];
     tx.marshalling(&mut tx_payload);
     let header = HeaderMessage::new("tx".to_string(), Some(&tx_payload));
@@ -116,7 +117,7 @@ fn write_tx_message(
     tx_message.extend_from_slice(&tx_payload);
     node_sender
         .send(tx_message)
-        .map_err(|err| NodeMessageHandlerError::ThreadChannelError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
     write_in_log(
         log_sender.info_log_sender,
         format!("transaccion {:?} enviada", tx.hex_hash()).as_str(),
@@ -135,7 +136,7 @@ pub fn handle_block_message(
     utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
 ) -> NodeMessageHandlerResult {
     let new_block = BlockMessage::unmarshalling(&payload.to_vec())
-        .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
     if new_block.validate().0 {
         let header_is_not_included_yet =
             header_is_not_included(new_block.block_header, headers.clone())?;
@@ -145,7 +146,7 @@ pub fn handle_block_message(
             new_block.contains_pending_tx(log_sender, accounts.clone())?;
             new_block
                 .give_me_utxos(utxo_set.clone())
-                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
             update_accounts_utxo_set(accounts, utxo_set)?;
         }
     } else {
@@ -166,7 +167,7 @@ pub fn handle_inv_message(
 ) -> NodeMessageHandlerResult {
     let mut offset: usize = 0;
     let count = CompactSizeUint::unmarshalling(payload, &mut offset)
-        .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
     let mut inventories = vec![];
     for _ in 0..count.decoded_value() as usize {
         let mut inventory_bytes = vec![0; 36];
@@ -175,12 +176,12 @@ pub fn handle_inv_message(
         if inv.type_identifier == 1
             && !transactions_received
                 .read()
-                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                 .contains(&inv.hash())
         {
             transactions_received
                 .write()
-                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                 .push(inv.hash());
             inventories.push(inv);
         }
@@ -206,7 +207,7 @@ pub fn handle_ping_message(tx: NodeSender, payload: &[u8]) -> NodeMessageHandler
     message.extend_from_slice(&header_bytes);
     message.extend(payload);
     tx.send(message)
-        .map_err(|err| NodeMessageHandlerError::ThreadChannelError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
     Ok(())
 }
 
@@ -218,7 +219,7 @@ pub fn handle_tx_message(
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
 ) -> NodeMessageHandlerResult {
     let tx = Transaction::unmarshalling(&payload.to_vec(), &mut 0)
-        .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
     tx.check_if_tx_involves_user_account(log_sender, accounts)?;
     Ok(())
 }
@@ -234,7 +235,7 @@ fn ask_for_incoming_tx(tx: NodeSender, inventories: Vec<Inventory>) -> NodeMessa
     let get_data_message = GetDataMessage::new(inventories);
     let get_data_message_bytes = get_data_message.marshalling();
     tx.send(get_data_message_bytes)
-        .map_err(|err| NodeMessageHandlerError::ThreadChannelError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
     Ok(())
 }
 
@@ -252,7 +253,7 @@ fn include_new_block(
     );
     blocks
         .write()
-        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .push(block);
     Ok(())
 }
@@ -266,7 +267,7 @@ fn include_new_header(
 ) -> NodeMessageHandlerResult {
     headers
         .write()
-        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .push(header);
     write_in_log(
         log_sender.info_log_sender,
@@ -281,10 +282,10 @@ fn include_new_header(
 fn header_is_not_included(
     header: BlockHeader,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
-) -> Result<bool, NodeMessageHandlerError> {
+) -> Result<bool, NodeCustomErrors> {
     let headers_guard = headers
         .read()
-        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
     let start_index = headers_guard.len().saturating_sub(10);
     let last_10_headers = &headers_guard[start_index..];
     // Verificar si el header está en los ultimos 10 headers
@@ -300,18 +301,18 @@ fn header_is_not_included(
 fn update_accounts_utxo_set(
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
-) -> Result<(), NodeMessageHandlerError> {
+) -> Result<(), NodeCustomErrors> {
     let accounts_lock = accounts
         .read()
-        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
     let mut accounts_inner_lock = accounts_lock
         .write()
-        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
 
     for account_lock in accounts_inner_lock.iter_mut() {
         account_lock
             .set_utxos(utxo_set.clone())
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
     }
     Ok(())
 }
