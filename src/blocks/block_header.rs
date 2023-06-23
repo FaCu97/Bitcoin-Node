@@ -1,4 +1,6 @@
 use bitcoin_hashes::{sha256d, Hash};
+
+/// Representa el Block Header del protocolo bitcoin
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct BlockHeader {
     pub version: i32,
@@ -10,6 +12,7 @@ pub struct BlockHeader {
 }
 
 impl BlockHeader {
+    /// Inicializa el BlockHeader con los campos recibidos.
     pub fn new(
         version: i32,
         previous_block_header_hash: [u8; 32],
@@ -28,6 +31,8 @@ impl BlockHeader {
         }
     }
 
+    /// Recibe una cadena de bytes, la deserializa y devuelve el Block Header.
+    /// Actualiza el offset según la cantidad de bytes que leyó de la cadena.
     pub fn unmarshalling(
         block_header_message: &[u8],
         offset: &mut usize,
@@ -69,6 +74,8 @@ impl BlockHeader {
         })
     }
 
+    /// Convierte el Block Header a bytes según el protocolo bitcoin.
+    /// Guarda dichos bytes en el vector recibido por parámetro.
     pub fn marshalling(&self, marshaled_block_header: &mut Vec<u8>) {
         let version_bytes = self.version.to_le_bytes();
         marshaled_block_header.extend_from_slice(&version_bytes);
@@ -81,12 +88,8 @@ impl BlockHeader {
         let nonce_bytes = self.nonce.to_le_bytes();
         marshaled_block_header.extend_from_slice(&nonce_bytes);
     }
-    /*
-    fn reverse_bytes(bytes: &[u8]) -> Vec<u8> {
-        let mut reversed_bytes = bytes.to_vec();
-        reversed_bytes.reverse();
-        reversed_bytes
-    } */
+
+    /// Devuelve el hash del Block Header
     pub fn hash(&self) -> [u8; 32] {
         let mut block_header_marshaled: Vec<u8> = Vec::new();
         self.marshalling(&mut block_header_marshaled);
@@ -94,7 +97,9 @@ impl BlockHeader {
         *hash_block.as_byte_array()
     }
 
-    // Esta funcion realiza la proof of work
+    /// Esta funcion realiza la proof of work
+    /// Valida el Block Header.
+    /// Devuelve true o false según pasa la validación o no.
     pub fn validate(&self) -> bool {
         let n_bits_bytes = self.n_bits.to_be_bytes();
         let mut mantisa = Vec::new();
@@ -116,18 +121,19 @@ impl BlockHeader {
         }
         false
     }
+
+    /// Compara la raiz del merkle root
     pub fn is_same_merkle_root_hash(&self, received_hash: &[u8; 32]) -> bool {
         self.merkle_root_hash == *received_hash
     }
 }
-unsafe impl Send for BlockHeader {}
-unsafe impl Sync for BlockHeader {}
 
 #[cfg(test)]
 mod tests {
     use super::BlockHeader;
     use bitcoin_hashes::{sha256d, Hash};
 
+    /// Función auxiliar que inicializa un Block Header
     fn generar_block_header() -> Result<BlockHeader, &'static str> {
         let mut message_header: Vec<u8> = Vec::new();
         for i in 0..80 {

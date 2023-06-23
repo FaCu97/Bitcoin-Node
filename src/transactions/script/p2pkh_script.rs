@@ -8,13 +8,7 @@ use std::io;
 // HEXA:         0x76   0xA9       <bytes_to_push> <pubKeyHash>  0x88            0xAC
 // Largo bytes:  1 + 1 + 1 + 20 + 1 + 1 = 25
 // Si una Tx es P2PKH el largo de su pk_script debe ser == 25
-
 // <pubKeyHash>: Son 20 bytes. Es el resultado de aplicar hash160 (sha256 + ripemd160 hash) a la publicKey comprimida SEC
-
-// scriptSig:   <length sig>     <sig>   <length pubKey>   <pubKey>
-// <pubKey> es la publicKey comprimida SEC (33bytes) del receptor de la tx
-// Largo bytes: 1 + 71 + 1 + 33 = 106
-// el largo de <sig> depende de la llave DER, puede variar usualmente me da 71 o 72
 
 /// Genera el pk_script de una transaccion P2PKH
 /// Recibe el <pubKeyHash> del receptor de la tx.
@@ -26,7 +20,7 @@ pub fn generate_p2pkh_pk_script(pubkey_hash: &[u8]) -> Result<Vec<u8>, Box<dyn E
         )));
     }
     let mut pk_script: Vec<u8> = Vec::new();
-    pk_script.push(0x76); // OP_DUP  -> Pasar a constantes o enum
+    pk_script.push(0x76); // OP_DUP
     pk_script.push(0xA9);
     pk_script.push(20); // <bytes_to_push>: Son 20 bytes
 
@@ -38,15 +32,11 @@ pub fn generate_p2pkh_pk_script(pubkey_hash: &[u8]) -> Result<Vec<u8>, Box<dyn E
 
 /// Recibe el p2pkh_script y el sig_script.
 /// Realiza la validación y devuelve true o false
-pub fn validate(
-    _hash: &[u8],
-    p2pkh_script: &[u8],
-    sig_script: &[u8],
-) -> Result<bool, Box<dyn Error>> {
+pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> Result<bool, Box<dyn Error>> {
     // scriptSig:   <length sig>     <sig>   <length pubKey>   <pubKey>
     // <pubKey> es la publicKey comprimida SEC (33bytes) del receptor de la tx
     // Largo bytes: 1 + 71 + 1 + 33 = 106
-    // el largo de <sig> depende de la llave DER, puede variar usualmente me da 71 o 72
+    // el largo de <sig> depende de la llave DER, puede variar entre 71 o 72
     let length_sig = sig_script[0];
     let mut sig_script_pubkey: [u8; 33] = [0; 33];
     sig_script_pubkey
@@ -79,9 +69,6 @@ pub fn validate(
     if p2pkh_script[24..25] != [0xAC] {
         return Ok(false);
     }
-    //    if !SigScript::verify_sig(hash, &sig_script[1..72], &sig_script[73..106])? {
-    //        return Ok(false);
-    //    }
     Ok(true)
 }
 
@@ -134,7 +121,7 @@ mod test {
             &address_decoder::get_pubkey_hash_from_address(&account.address)?,
         )?;
         let sig = SigScript::generate_sig_script(hash, &account)?;
-        let validation = p2pkh_script::validate(&hash, &p2pkh_script, sig.get_bytes())?;
+        let validation = p2pkh_script::validate(&p2pkh_script, sig.get_bytes())?;
 
         assert!(validation);
         Ok(())

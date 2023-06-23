@@ -10,6 +10,8 @@ use std::sync::Arc;
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
 const CANTIDAD_ATRIBUTOS: usize = 17;
+
+/// Almacena los campos leidos del archivo de configuración
 #[derive(Debug, Clone)]
 pub struct Config {
     pub number_of_nodes: usize,
@@ -57,6 +59,7 @@ impl Config {
         Self::from_reader(file)
     }
 
+    /// Lee del file recibido y devuelve el struct de configuración inicializado.
     fn from_reader<T: Read>(content: T) -> Result<Arc<Config>, Box<dyn Error>> {
         let reader = BufReader::new(content);
 
@@ -102,6 +105,8 @@ impl Config {
         Ok(Arc::new(cfg))
     }
 
+    /// Chequea la cantidad atributos contra la cantidad leida.
+    /// Devuelve error en caso de haber diferencia
     fn check_number_of_attributes(cantidad_de_lineas: usize) -> Result<(), Box<dyn Error>> {
         if cantidad_de_lineas != CANTIDAD_ATRIBUTOS {
             return Err(Box::new(io::Error::new(
@@ -112,6 +117,8 @@ impl Config {
         Ok(())
     }
 
+    /// Recibe el nombre del atributo y lo guarda en el struct de configuración.
+    /// Actualiza la cantidad de atributos leidos para su posterior verificación.
     fn load_setting(
         &mut self,
         name: &str,
