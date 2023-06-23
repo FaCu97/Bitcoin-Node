@@ -228,37 +228,43 @@ pub fn get_checksum(payload: &[u8]) -> [u8; 4] {
 }
 #[cfg(test)]
 mod tests {
+    use std::error::Error;
+
     use super::*;
 
     #[test]
-    fn header_message_bytes_from_verack_message_unmarshalling_correctly() {
+    fn header_message_bytes_from_verack_message_unmarshalling_correctly(
+    ) -> Result<(), Box<dyn Error>> {
         // GIVEN : un header messege del mensaje verack en bytes
         let header_message_bytes: [u8; 24] = [
             11, 17, 9, 7, 118, 101, 114, 97, 99, 107, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 93, 246, 224,
             226,
         ];
         // WHEN: se ejecuta la funcion form_le_bytes del struct HeaderMessage con los bytes pasados por parametro
-        let header = HeaderMessage::from_le_bytes(header_message_bytes).unwrap();
+        let header = HeaderMessage::from_le_bytes(header_message_bytes)?;
         // THEN: se devuelve un struct HeaderMessage con los campos correctos segun el mensaje verack
         assert_eq!([11u8, 17u8, 9u8, 7u8], header.start_string);
         assert_eq!("verack\0\0\0\0\0\0", header.command_name);
         assert_eq!(0, header.payload_size);
         assert_eq!([93u8, 246u8, 224u8, 226u8], header.checksum);
+        Ok(())
     }
     #[test]
-    fn header_message_bytes_from_version_message_unmarshalling_correctly() {
+    fn header_message_bytes_from_version_message_unmarshalling_correctly(
+    ) -> Result<(), Box<dyn Error>> {
         // GIVEN : un header messege del mensaje version en bytes
         let header_message_bytes: [u8; 24] = [
             11, 17, 9, 7, 118, 101, 114, 115, 105, 111, 110, 0, 0, 0, 0, 0, 100, 0, 0, 0, 152, 16,
             0, 0,
         ];
         // WHEN: se ejecuta la funcion form_le_bytes del struct HeaderMessage con los bytes pasados por parametro
-        let header = HeaderMessage::from_le_bytes(header_message_bytes).unwrap();
+        let header = HeaderMessage::from_le_bytes(header_message_bytes)?;
         // THEN: se devuelve un struct HeaderMessage con los campos correctos segun el mensaje version
         assert_eq!([11u8, 17u8, 9u8, 7u8], header.start_string);
         assert_eq!("version\0\0\0\0\0", header.command_name);
         assert_eq!(100, header.payload_size);
         assert_eq!([152u8, 16u8, 0u8, 0u8], header.checksum);
+        Ok(())
     }
     #[test]
     fn error_when_command_name_bytes_can_not_be_represented_as_string() {

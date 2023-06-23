@@ -520,35 +520,31 @@ mod test {
     }
 
     #[test]
-    fn test_generacion_correcta_del_merkle_root_hash_de_bloque_de_la_mainnet() {
+    fn test_generacion_correcta_del_merkle_root_hash_de_bloque_de_la_mainnet(
+    ) -> Result<(), Box<dyn Error>> {
         // bloque 00000000000000127a638dfa7b517f1045217884cb986ab8f653b8be0ab37447
         // esos reverse son parapasar el verdadero id ya que en la pagina los hashes
         // estan cargados en LE
         // link a la pagina : https://tbtc.bitaps.com/00000000000000127a638dfa7b517f1045217884cb986ab8f653b8be0ab37447
         let mut transactions: Vec<[u8; 32]> = Vec::new();
         let mut coinbase =
-            string_to_bytes("129f32d171b2a0c4ad5fd21f7504ae483845d311214f79eb927db49dfb28b838")
-                .unwrap();
+            string_to_bytes("129f32d171b2a0c4ad5fd21f7504ae483845d311214f79eb927db49dfb28b838")?;
         coinbase.reverse();
         transactions.push(coinbase);
         let mut tx_1 =
-            string_to_bytes("aefeb6fb10f2f6a63a3cd4f70f1b7f8b193881a10ae5832a595e938d1630f1b9")
-                .unwrap();
+            string_to_bytes("aefeb6fb10f2f6a63a3cd4f70f1b7f8b193881a10ae5832a595e938d1630f1b9")?;
         tx_1.reverse();
         transactions.push(tx_1);
         let mut tx_2 =
-            string_to_bytes("4b0d8fd869e252803909aed9642bc8af28ebd18f2c4045b9b41679eda0ff79dd")
-                .unwrap();
+            string_to_bytes("4b0d8fd869e252803909aed9642bc8af28ebd18f2c4045b9b41679eda0ff79dd")?;
         tx_2.reverse();
         transactions.push(tx_2);
         let mut tx_3 =
-            string_to_bytes("dbd558c896afe59a6dce2dc26bc32f4679b336ff0b1c0f2f8aaee846c5732333")
-                .unwrap();
+            string_to_bytes("dbd558c896afe59a6dce2dc26bc32f4679b336ff0b1c0f2f8aaee846c5732333")?;
         tx_3.reverse();
         transactions.push(tx_3);
         let mut tx_4 =
-            string_to_bytes("88030de1d5f1b023893f8258df1796863756d99eef5c91a5528362f73497ac51")
-                .unwrap();
+            string_to_bytes("88030de1d5f1b023893f8258df1796863756d99eef5c91a5528362f73497ac51")?;
         tx_4.reverse();
         transactions.push(tx_4);
         let mut merkle_root = Block::recursive_generation_merkle_root(transactions);
@@ -556,6 +552,7 @@ mod test {
         let hash_generated = bytes_to_hex_string(&merkle_root);
         let hash_expected = "bc689ae06069c1381eb92aabef250bb576d8aac8aedec9b7533a37351b6dedf8";
         assert_eq!(hash_generated, hash_expected);
+        Ok(())
     }
 
     #[test]
