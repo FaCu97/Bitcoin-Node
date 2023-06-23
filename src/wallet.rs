@@ -20,7 +20,6 @@ impl Wallet {
             accounts: Arc::new(RwLock::new(Vec::new())),
         };
         wallet.node.set_accounts(wallet.accounts.clone())?;
-        println!("accounts added to node!\n");
         Ok(wallet)
     }
 
@@ -29,29 +28,16 @@ impl Wallet {
     /// Devuelve error en caso de que algo falle.
     pub fn make_transaction(
         &self,
-        account: &mut Account,
-        address_receiver: &str,
-        amount: i64,
-        fee: i64,
-    ) -> Result<(), Box<dyn Error>> {
-        let transaction_hash: [u8; 32] = account.make_transaction(address_receiver, amount, fee)?;
-        self.node.broadcast_tx(transaction_hash)?;
-        Ok(())
-    }
-
-    /// Realiza una transacción y hace el broadcast.
-    /// Recibe el indice de la cuenta que envía, la address receptora, monto y fee.
-    /// Devuelve error en caso de que algo falle.
-    pub fn make_transaction_index(
-        &self,
         account_index: usize,
         address_receiver: &str,
         amount: i64,
         fee: i64,
     ) -> Result<(), Box<dyn Error>> {
-        let transaction_hash: [u8; 32] = self.accounts.write().unwrap()[account_index]
-            .make_transaction(address_receiver, amount, fee)?;
-        println!("HASH TX: {:?}", transaction_hash);
+        let transaction_hash = self.accounts.write().unwrap()[account_index].make_transaction(
+            address_receiver,
+            amount,
+            fee,
+        )?;
         self.node.broadcast_tx(transaction_hash)?;
         Ok(())
     }
@@ -77,6 +63,34 @@ impl Wallet {
         let address = account.get_address().clone();
         let utxos_to_account = self.node.utxos_referenced_to_account(&address);
         account.load_utxos(utxos_to_account);
+    }
+
+    /// Muestra el balance de las cuentas.
+    pub fn show_accounts_balance(&self) {
+        if self.accounts.read().unwrap().is_empty() {
+            println!("No hay cuentas en la wallet!");
+        }
+        for account in self.accounts.write().unwrap().iter() {
+            println!(
+                "Cuenta: {} - Balance: {:.8} tBTC",
+                account.address,
+                account.balance() as f64 / 1e8
+            );
+        }
+    }
+
+    /// Muestra los idices que corresponden a cada cuenta
+    pub fn show_indexes_of_accounts(&self) -> Option<()> {
+        if self.accounts.read().unwrap().is_empty() {
+            println!("No hay cuentas en la wallet. No es posible realizar una transaccion!");
+            return None;
+        }
+        println!("INDICES DE LAS CUENTAS");
+        for (index, account) in self.accounts.read().unwrap().iter().enumerate() {
+            println!("{}: {}", index, account.address);
+        }
+        println!();
+        Some(())
     }
 }
 

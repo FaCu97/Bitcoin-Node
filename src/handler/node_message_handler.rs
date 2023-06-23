@@ -10,6 +10,7 @@ use std::{
     error::Error,
     fmt,
     io::{self, Read, Write},
+    mem,
     net::TcpStream,
     sync::{
         mpsc::{channel, Receiver, Sender},
@@ -71,7 +72,7 @@ type NodeBlocksData = (Arc<RwLock<Vec<BlockHeader>>>, Arc<RwLock<Vec<Block>>>);
 /// Struct para controlar todos los nodos conectados al nuestro. Escucha permanentemente
 /// a estos y decide que hacer con los mensajes que llegan y con los que tiene que escribir
 pub struct NodeMessageHandler {
-    nodes_handle: Arc<Mutex<Vec<JoinHandle<NodeMessageHandlerResult>>>>,
+    nodes_handle: Arc<Mutex<Vec<JoinHandle<()>>>>,
     nodes_sender: Vec<NodeSender>,
     finish: Arc<RwLock<bool>>,
 }
@@ -95,7 +96,7 @@ impl NodeMessageHandler {
             "Empiezo a escuchar por nuevos bloques y transaccciones",
         );
         let finish = Arc::new(RwLock::new(false));
-        let mut nodes_handle: Vec<JoinHandle<NodeMessageHandlerResult>> = vec![];
+        let mut nodes_handle: Vec<JoinHandle<()>> = vec![];
         let cant_nodos = get_amount_of_nodes(connected_nodes.clone())?;
         let mut nodes_sender = vec![];
         // Lista de transacciones recibidas para no recibir las mismas de varios nodos
@@ -131,10 +132,20 @@ impl NodeMessageHandler {
     /// De esta manera se broadcastea el mensaje a todos los nodos conectados.
     /// Devuelve Ok(()) en caso exitoso o un error ThreadChannelError en caso contrario
     pub fn broadcast_to_nodes(&self, message: Vec<u8>) -> NodeMessageHandlerResult {
+        let mut amount_of_failed_nodes = 0;
         for node_sender in &self.nodes_sender {
-            node_sender
-                .send(message.clone())
-                .map_err(|err| NodeMessageHandlerError::ThreadChannelError(err.to_string()))?;
+            // si alguno de los channels esta cerrado significa que por alguna razon el nodo fallo entonces lo ignoro y pruebo broadcastear
+            // en los siguientes nodos restantes
+            if node_sender.send(message.clone()).is_err() {
+                amount_of_failed_nodes += 1;
+                continue;
+            }
+        }
+        // Si de todos los nodos, no se le pudo enviar a ninguno --> falla el broadcasting
+        if amount_of_failed_nodes == self.nodes_sender.len() {
+            return Err(NodeMessageHandlerError::ThreadChannelError(
+                "Todos los channels cerrados, no se pudo boradcastear tx".to_string(),
+            ));
         }
         Ok(())
     }
@@ -148,21 +159,21 @@ impl NodeMessageHandler {
             .finish
             .write()
             .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))? = true;
-        let cant_nodos = self
-            .nodes_handle
-            .lock()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
-            .len();
-        for _ in 0..cant_nodos {
-            self.nodes_handle
+
+        let handles: Vec<JoinHandle<()>> = {
+            let mut locked_handles = self
+                .nodes_handle
                 .lock()
-                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
-                .pop()
-                .ok_or("Error no hay mas nodos para descargar los headers!\n")
-                .map_err(|err| NodeMessageHandlerError::CanNotRead(err.to_string()))?
+                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+            mem::take(&mut *locked_handles)
+        };
+
+        for handle in handles {
+            handle
                 .join()
-                .map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))??;
+                .map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))?;
         }
+
         for node_sender in self.nodes_sender.clone() {
             drop(node_sender);
         }
@@ -183,38 +194,55 @@ pub fn handle_messages_from_node(
     utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
     mut node: TcpStream,
     finish: Option<Arc<RwLock<bool>>>,
-) -> JoinHandle<NodeMessageHandlerResult> {
-    thread::spawn(move || -> NodeMessageHandlerResult {
+) -> JoinHandle<()> {
+    thread::spawn(move || {
+        // si ocurre algun error se guarda en esta variable
+        let mut error: Option<NodeMessageHandlerError> = None;
         while !is_terminated(finish.clone()) {
             // Veo si mandaron algo para escribir
             if let Ok(message) = rx.try_recv() {
-                write_message_in_node(&mut node, &message)?
+                if let Err(err) = write_message_in_node(&mut node, &message) {
+                    error = Some(err);
+                    break;
+                }
             }
-            // Leo header y payload
-            let header = read_header(&mut node, finish.clone())?;
-            if is_terminated(finish.clone()) {
-                break;
-            }
-            let payload = read_payload(&mut node, header.payload_size as usize, finish.clone())?;
+            let header = match read_header(&mut node, finish.clone()) {
+                Err(err) => {
+                    error = Some(err);
+                    break;
+                }
+                Ok(header) => header,
+            };
+
+            let payload =
+                match read_payload(&mut node, header.payload_size as usize, finish.clone()) {
+                    Ok(payload) => payload,
+                    Err(err) => {
+                        error = Some(err);
+                        break;
+                    }
+                };
+
             let command_name = get_header_command_name_as_str(header.command_name.as_str());
+
             match command_name {
-                "headers" => {
+                "headers" => handle_message(&mut error, || {
                     handle_headers_message(
                         log_sender.clone(),
                         tx.clone(),
                         &payload,
                         headers.clone(),
-                    )?;
-                }
-                "getdata" => {
+                    )
+                }),
+                "getdata" => handle_message(&mut error, || {
                     handle_getdata_message(
                         log_sender.clone(),
                         tx.clone(),
                         &payload,
                         accounts.clone(),
-                    )?;
-                }
-                "block" => {
+                    )
+                }),
+                "block" => handle_message(&mut error, || {
                     handle_block_message(
                         log_sender.clone(),
                         &payload,
@@ -222,17 +250,15 @@ pub fn handle_messages_from_node(
                         blocks.clone(),
                         accounts.clone(),
                         utxo_set.clone(),
-                    )?;
-                }
-                "inv" => {
-                    handle_inv_message(tx.clone(), &payload, transactions_recieved.clone())?;
-                }
-                "ping" => {
-                    handle_ping_message(tx.clone(), &payload)?;
-                }
-                "tx" => {
-                    handle_tx_message(log_sender.clone(), &payload, accounts.clone())?;
-                }
+                    )
+                }),
+                "inv" => handle_message(&mut error, || {
+                    handle_inv_message(tx.clone(), &payload, transactions_recieved.clone())
+                }),
+                "ping" => handle_message(&mut error, || handle_ping_message(tx.clone(), &payload)),
+                "tx" => handle_message(&mut error, || {
+                    handle_tx_message(log_sender.clone(), &payload, accounts.clone())
+                }),
                 _ => {
                     write_in_log(
                         log_sender.messege_log_sender.clone(),
@@ -245,7 +271,7 @@ pub fn handle_messages_from_node(
                     );
                     continue;
                 }
-            }
+            };
             if command_name != "inv" {
                 // Se imprimen en el log_message todos los mensajes menos el inv
                 write_in_log(
@@ -258,9 +284,29 @@ pub fn handle_messages_from_node(
                     .as_str(),
                 );
             }
+            // si ocurrio un error en el handleo salgo del ciclo
+            if error.is_some() {
+                break;
+            }
         }
-        Ok(())
+        // si ocurrio un error lo documento en el log sender de errores
+        if let Some(err) = error {
+            write_in_log(
+                log_sender.error_log_sender,
+                format!("NODO {:?} DESCONECTADO!! {}", node.peer_addr(), err).as_str(),
+            );
+        }
     })
+}
+
+fn handle_message<T, E>(error: &mut Option<E>, func: impl FnOnce() -> Result<T, E>) -> Option<T> {
+    match func() {
+        Ok(result) => Some(result),
+        Err(err) => {
+            *error = Some(err);
+            None
+        }
+    }
 }
 
 /// Recibe un &str que representa el nombre de un comando de un header con su respectivo nombre
