@@ -217,7 +217,7 @@ impl Block {
                     .contains(tx)
                 {
                     println!(
-                        "%%%%%%%%% El bloque -- {} -- contiene la transaccion -- {} -- confirmada de la cuenta -- {} --%%%%%%%%%%%",
+                        "EL BLOQUE {} \nCONTIENE LA TRANSACCION {} CONFIRMADA \nDE LA CUENTA {}\n",
                         self.hex_hash(),
                         tx.hex_hash(),
                         account.address

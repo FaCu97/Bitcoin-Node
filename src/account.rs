@@ -54,12 +54,20 @@ impl Account {
     pub fn load_utxos(&mut self, utxos: Vec<UtxoTuple>) {
         self.utxo_set = utxos;
     }
+
+    /// Compara el monto recibido con el balance de la cuenta.
+    /// Devuelve true si el balance es mayor. Caso contrario false
     pub fn has_balance(&self, value: i64) -> bool {
+        self.balance() > value
+    }
+
+    /// Devuelve el balance de la cuenta
+    pub fn balance(&self) -> i64 {
         let mut balance: i64 = 0;
         for utxo in &self.utxo_set {
             balance += utxo.balance();
         }
-        balance > value
+        balance
     }
     /// Devuelve un vector con las utxos a ser gastadas en una transaccion nueva, según el monto recibido.
     fn get_utxos_for_amount(&mut self, value: i64) -> Vec<UtxoTuple> {
@@ -124,10 +132,6 @@ impl Account {
         unsigned_transaction.sign(self, &utxos_to_spend)?;
         let mut bytes = Vec::new();
         unsigned_transaction.marshalling(&mut bytes);
-        println!(
-            "RAW TRANSACTION: {:?}",
-            bytes_to_hex_string(&bytes.to_vec())
-        );
 
         // el mensaje cifrado creo que no hace falta chequearlo
         unsigned_transaction.validate(&utxos_to_spend)?;

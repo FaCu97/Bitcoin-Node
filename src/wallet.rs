@@ -1,5 +1,6 @@
 use std::{
     error::Error,
+    io,
     sync::{Arc, RwLock},
 };
 
@@ -20,7 +21,6 @@ impl Wallet {
             accounts: Arc::new(RwLock::new(Vec::new())),
         };
         wallet.node.set_accounts(wallet.accounts.clone())?;
-        println!("accounts added to node!\n");
         Ok(wallet)
     }
 
@@ -28,21 +28,6 @@ impl Wallet {
     /// Recibe la cuenta que envía, la address receptora, monto y fee.
     /// Devuelve error en caso de que algo falle.
     pub fn make_transaction(
-        &self,
-        account: &mut Account,
-        address_receiver: &str,
-        amount: i64,
-        fee: i64,
-    ) -> Result<(), Box<dyn Error>> {
-        let transaction_hash: [u8; 32] = account.make_transaction(address_receiver, amount, fee)?;
-        self.node.broadcast_tx(transaction_hash)?;
-        Ok(())
-    }
-
-    /// Realiza una transacción y hace el broadcast.
-    /// Recibe el indice de la cuenta que envía, la address receptora, monto y fee.
-    /// Devuelve error en caso de que algo falle.
-    pub fn make_transaction_index(
         &self,
         account_index: usize,
         address_receiver: &str,
@@ -54,7 +39,6 @@ impl Wallet {
             .write()
             .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?[account_index]
             .make_transaction(address_receiver, amount, fee)?;
-        println!("HASH TX: {:?}", transaction_hash);
         self.node.broadcast_tx(transaction_hash)?;
         Ok(())
     }
@@ -83,31 +67,57 @@ impl Wallet {
         account.load_utxos(utxos_to_account);
         Ok(())
     }
-}
 
-/*
-#[cfg(test)]
-mod test {
-    use crate::{account::Account, node::Node, wallet::Wallet};
-    use std::{
-        error::Error,
-        sync::{Arc, RwLock},
-    };
+    /// Muestra el balance de las cuentas.
+    pub fn show_accounts_balance(&self) -> Result<(), Box<dyn Error>> {
+        if self
+            .accounts
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .is_empty()
+        {
+            println!("No hay cuentas en la wallet!");
+        }
+        for account in self
+            .accounts
+            .write()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .iter()
+        {
+            println!(
+                "Cuenta: {} - Balance: {:.8} tBTC",
+                account.address,
+                account.balance() as f64 / 1e8
+            );
+        }
+        Ok(())
+    }
 
-    #[test]
-    fn test_una_address_se_registra_correctamente() -> Result<(), Box<dyn Error>> {
-        let address: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
-        let private_key: String =
-            String::from("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR");
-        let blocks = Arc::new(RwLock::new(Vec::new()));
-        let headers = Arc::new(RwLock::new(Vec::new()));
-
-        let node = Node::new(Arc::new(RwLock::new(vec![])), headers, blocks);
-        let mut wallet = Wallet::new(node);
-        let account_addecd_result = wallet.add_account(private_key, address);
-
-        assert!(account_addecd_result.is_ok());
+    /// Muestra los indices que corresponden a cada cuenta
+    pub fn show_indexes_of_accounts(&self) -> Result<(), Box<dyn Error>> {
+        if self
+            .accounts
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .is_empty()
+        {
+            println!("No hay cuentas en la wallet. No es posible realizar una transaccion!");
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                "No hay cuentas en la wallet. No es posible realizar una transaccion!",
+            )));
+        }
+        println!("INDICES DE LAS CUENTAS");
+        for (index, account) in self
+            .accounts
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .iter()
+            .enumerate()
+        {
+            println!("{}: {}", index, account.address);
+        }
+        println!();
         Ok(())
     }
 }
-*/

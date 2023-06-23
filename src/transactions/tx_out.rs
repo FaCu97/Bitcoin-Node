@@ -125,7 +125,7 @@ impl TxOut {
                         )
                         .as_str(),
                     );
-                    println!("%%%%%%%%%%% TRANSACCION {:?} INVOLUCRA A LA CUENTA {:?}, AUN NO SE ENCUENTRA EN UN BLOQUE (PENDING) %%%%%%%%%%%%", tx.hex_hash(), account.address);
+                    println!("\nTRANSACCION: {} \nINVOLUCRA A LA CUENTA: {}\nAUN NO SE ENCUENTRA EN UN BLOQUE (PENDIENTE)", tx.hex_hash(), account.address);
                     account
                         .pending_transactions
                         .write()

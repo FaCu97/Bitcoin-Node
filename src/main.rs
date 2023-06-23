@@ -8,6 +8,7 @@ use bitcoin::logwriter::log_writer::{
 };
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
+use bitcoin::terminal_ui;
 use bitcoin::wallet::Wallet;
 use std::error::Error;
 use std::sync::Arc;
@@ -89,157 +90,30 @@ fn main() -> Result<(), GenericError> {
 
     let node = Node::new(logsender.clone(), pointer_to_nodes, headers, blocks)
         .map_err(GenericError::NodeHandlerError)?;
-    //  let headers: Vec<_> = Vec::new();
-    //  let blocks: Vec<_> = Vec::new();
-    //let wallet = wallet::Wallet { account: vec![User{private_key: "cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(), address: "mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(), pending_transactions: vec![]}], node };
-    let mut wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
-    wallet
-        .add_account(
-            "cSqmqW48wCeoUF8FCJvVsqUGwcvir27bKWCFj1MTFszFdn2Dduim".to_string(),
-            "mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi9".to_string(),
-        )
-        .map_err(GenericError::NodeHandlerError)?;
-    wallet
-        .add_account(
-            "cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(),
-            "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),
-        )
-        .map_err(GenericError::NodeHandlerError)?;
-
-    match wallet.make_transaction_index(0, "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a", 10000, 2000) {
-        Ok(_) => println!("Transaccion ok"),
-        Err(e) => println!("Error al realizar la transaccion: {}", e),
-    }
+    let wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
 
     /*
-    let wallet = Wallet {
-        node,
-        current_account_index: 0,
-        //accounts: vec![Account {private_key:"cTJdkwZ1JScFHVHMR26XLzcbu8n5yWpTZLKkx4LnV8mJRpTGfawQ".to_string(),address:"mnzKX6goXp4xNwxKDFr8LHnPsJcRdqgAGY".to_string(),utxo_set:vec![], pending_transactions: Arc::new(RwLock::new(Vec::new())) }]
-        /*
-        accounts: vec![Account {
-            private_key: "cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(),
-            address: "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),
-            utxo_set: vec![],
-            pending_transactions: Arc::new(RwLock::new(Vec::new())),
-        }],
-        */
-        accounts: vec![Account {
-            private_key: "cSqmqW48wCeoUF8FCJvVsqUGwcvir27bKWCFj1MTFszFdn2Dduim".to_string(),
-            address: "mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi9".to_string(),
-            utxo_set: vec![],
-            pending_transactions: Arc::new(RwLock::new(Vec::new())),
-        }],
-    };
+        wallet
+            .add_account(
+                "cSqmqW48wCeoUF8FCJvVsqUGwcvir27bKWCFj1MTFszFdn2Dduim".to_string(),
+                "mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi9".to_string(),
+            )
+            .map_err(GenericError::NodeHandlerError)?;
+        wallet
+            .add_account(
+                "cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(),
+                "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),
+            )
+            .map_err(GenericError::NodeHandlerError)?;
     */
-
-    if let Err(err) = handle_input(node) {
-        println!("Error al leer la entrada por terminal. {}", err);
-    }
-
-    // esta parte es para explicar el comportamiento en la demo !!
-
-    // mostrar_comportamiento_del_nodo(node);/*
-
-    /*let block_1 = node.block_chain.read().unwrap()[0].clone();
-    let block_2 = node.block_chain.read().unwrap()[1].clone();
-    let mut hash_block_1 = block_1.block_header.hash();
-    hash_block_1.reverse();
-    let block1_hex: String = hash_block_1.encode_hex::<String>();
-    println!("bloque 1 :{}", block1_hex);
-    let mut hash_block_2 = block_2.block_header.hash();
-    hash_block_2.reverse();
-    let block2_hex: String = hash_block_2.encode_hex::<String>();
-    println!("bloque 2 :{}", block2_hex);
-
-    let height_block = block_1.txn[0].tx_in[0].height.clone().unwrap();
-    let height_hex: String = height_block.encode_hex::<String>();
-    println!("height :{}", height_hex);
-    let height_block = block_2.txn[0].tx_in[0].height.clone().unwrap();
-    let height_hex: String = height_block.encode_hex::<String>();
-    println!("height :{}", height_hex);
-    */
-
-    write_in_log(
-        logsender.info_log_sender.clone(),
-        "TERMINA CORRECTAMENTE EL PROGRAMA!",
-    );
+    terminal_ui(wallet);
+    node.shutdown_node()
+        .map_err(GenericError::NodeHandlerError)?;
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
         .map_err(GenericError::LoggingError)?;
 
     Ok(())
 }
-
-fn handle_input(node: Node) -> Result<(), GenericError> {
-    loop {
-        let mut input = String::new();
-
-        match std::io::stdin().read_line(&mut input) {
-            Ok(_) => {
-                let command = input.trim();
-                if command == "exit" {
-                    node.shutdown_node()
-                        .map_err(GenericError::NodeHandlerError)?;
-                    break;
-                }
-            }
-            Err(error) => {
-                println!("Error al leer la entrada: {}", error);
-            }
-        }
-    }
-
-    Ok(())
-}
-/*
-fn mostrar_comportamiento_del_nodo(node: Node) {
-    let mut header_1 = node.headers[0].hash();
-    header_1.reverse();
-    let mut header_2 = node.headers[1].hash();
-    header_2.reverse();
-    let header_1_hex = header_1.encode_hex::<String>();
-    let header_2_hex = header_2.encode_hex::<String>();
-    println!("header 1 : {}", header_1_hex);
-    println!("header 2 : {}", header_2_hex);
-
-    let mut bloque_1 = node.block_chain[0].block_header.hash();
-    bloque_1.reverse();
-    let bloque1_hex: String = bloque_1.encode_hex::<String>();
-    let validate = node.block_chain[0].validate();
-    println!("validate devuelve: {}, {}", validate.0, validate.1);
-    println!("bloque : {}", bloque1_hex);
-    println!(
-        "cantidad de transacciones en el bloque : {}",
-        node.block_chain[0].txn_count.decoded_value()
-    );
-    println!(
-        "version del bloque : {:x}",
-        node.block_chain[0].block_header.version
-    );
-    println!(
-        "nbits del bloque : {:x}",
-        node.block_chain[0].block_header.n_bits
-    );
-    println!(
-        "nonce del bloque : {:x}",
-        node.block_chain[0].block_header.nonce
-    );
-    let transaccion = &node.block_chain[0].txn[0];
-    let mut hash = transaccion.hash();
-    hash.reverse();
-    let hash_hex: String = hash.encode_hex::<String>();
-    println!("hash de la primera transaccion : {}", hash_hex);
-    println!("version de la transaccion : {}", transaccion.version);
-    println!(
-        "inputs de la transaccion : {}",
-        transaccion.txin_count.decoded_value()
-    );
-    println!(
-        "outputs de la transaccion : {}",
-        transaccion.txout_count.decoded_value()
-    );
-    println!("lock time de la transaccion : {}", transaccion.lock_time);
-}*/
 
 #[cfg(test)]
 mod tests {

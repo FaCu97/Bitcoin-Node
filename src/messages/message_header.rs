@@ -1,3 +1,4 @@
+use crate::logwriter::log_writer::{write_in_log, LogSender};
 use bitcoin_hashes::{sha256d, Hash};
 use std::error::Error;
 use std::io::{self, Read, Write};
@@ -6,9 +7,6 @@ use std::str::Utf8Error;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use std::vec;
-
-use crate::handler::node_message_handler::NodeMessageHandlerError;
-use crate::logwriter::log_writer::{write_in_log, LogSender};
 
 const START_STRING_TESTNET: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
 const CHECKSUM_EMPTY_PAYLOAD: [u8; 4] = [0x5d, 0xf6, 0xe0, 0xe2];
