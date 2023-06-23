@@ -8,10 +8,9 @@ use bitcoin::logwriter::log_writer::{
 };
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
+use bitcoin::terminal_ui;
 use bitcoin::wallet::Wallet;
-use gtk::glib::ParamSpec;
 use std::error::Error;
-use std::num::ParseIntError;
 use std::sync::{Arc, RwLock};
 use std::{env, fmt};
 
@@ -93,7 +92,7 @@ fn main() -> Result<(), GenericError> {
 
     let node = Node::new(logsender.clone(), pointer_to_nodes, headers, blocks)
         .map_err(GenericError::NodeHandlerError)?;
-    let mut wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
+    let wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
 
 /* 
     wallet
@@ -115,16 +114,8 @@ fn main() -> Result<(), GenericError> {
     }
 
 */
-    if let Err(err) = handle_input(wallet) {
-        println!("Error al leer la entrada por terminal. {}", err);
-    }
-
+    terminal_ui(wallet);
     node.shutdown_node().map_err(GenericError::NodeHandlerError)?;
-
-    write_in_log(
-        logsender.info_log_sender.clone(),
-        "TERMINA CORRECTAMENTE EL PROGRAMA!",
-    );
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
         .map_err(GenericError::LoggingError)?;
 
@@ -132,176 +123,6 @@ fn main() -> Result<(), GenericError> {
 }
 
 
-
-
-fn handle_input(mut wallet: Wallet) -> Result<(), GenericError> {
-    show_options();
-    loop {
-        let mut input = String::new();
-
-        match std::io::stdin().read_line(&mut input) {
-            Ok(_) => {
-                println!("\n\n");
-                let command = input.trim();
-                if let Ok(num) = command.parse::<u32>() {
-                    match num {
-                        0 => {
-                            println!("Cerrando nodo...\n");
-                            break;
-                        }
-                        1 => {
-                            handle_add_account_request(&mut wallet);
-                        }
-                        2 => {
-                            handle_balance_request(&mut wallet);
-                        }
-                        3 => {
-                            handle_transaccion_request(&mut wallet);
-                        }
-                        _ => {
-                            println!("Número no reconocido. Inténtalo de nuevo! \n");
-                        }
-                    }
-                    show_options();
-                } else {
-                    println!("Entrada inválida. Inténtalo de nuevo! \n");
-                }
-            }
-            Err(error) => {
-                println!("Error al leer la entrada: {}", error);
-            }
-        }
-    }
-
-    Ok(())
-}
-
-fn show_options() {
-    println!("\n");
-    println!("INGRESE ALGUNO DE LOS SIGUIENTES COMANDOS\n");
-    println!("0: terminar el programa");
-    println!("1: añadir una cuenta a la wallet");
-    println!("2: mostrar balance de las cuentas");
-    println!("3: hacer transaccion desde una cuenta");
-    println!("4: prueba de inclusion de una transaccion en un bloque");
-    println!("-----------------------------------------------------------\n");
-}
-
-
-
-
-fn handle_transaccion_request(wallet: &mut Wallet) {
-    println!("INGRESE LOS SIGUIENTES DATOS PARA REALIZAR UNA TRANSACCION \n");  
-    println!("Índice de la cuenta:");  
-    let mut account_index_input = String::new();
-    match std::io::stdin().read_line(&mut account_index_input) {
-        Ok(_) => {
-            let account_index = account_index_input.trim().parse::<usize>();
-            match account_index {
-                Ok(index) => {
-                    println!("Dirección del receptor:");
-                    let mut address_receiver_input = String::new();
-                    match std::io::stdin().read_line(&mut address_receiver_input) {
-                        Ok(_) => {
-                            let address_receiver = address_receiver_input.trim();
-
-                            println!("Cantidad:");
-                            let mut amount_input = String::new();
-                            match std::io::stdin().read_line(&mut amount_input) {
-                                Ok(_) => {
-                                    let amount = amount_input.trim().parse::<i64>();
-                                    match amount {
-                                        Ok(parsed_amount) => {
-                                            println!("Tarifa:");
-                                            let mut fee_input = String::new();
-                                            match std::io::stdin().read_line(&mut fee_input) {
-                                                Ok(_) => {
-                                                    let fee = fee_input.trim().parse::<i64>();
-                                                    match fee {
-                                                        Ok(parsed_fee) => {
-                                                            // Lógica para realizar la transacción
-                                                            if let Err(error) = wallet.make_transaction_index(index, address_receiver, parsed_amount, parsed_fee) {
-                                                                println!("Error al realizar la transacción: {}", error);
-                                                            } else {
-                                                                println!("Transacción realizada correctamente.");
-                                                            }
-                                                        }
-                                                        Err(error) => {
-                                                            println!("Error al leer la entrada: {}", error);
-                                                        }
-                                                    }
-                                                }
-                                                Err(error) => {
-                                                    println!("Error al leer la entrada: {}", error);
-                                                }
-                                            }
-                                        }
-                                        Err(error) => {
-                                            println!("Error al leer la entrada: {}", error);
-                                        }
-                                    }
-                                }
-                                Err(error) => {
-                                    println!("Error al leer la entrada: {}", error);
-                                }
-                            }
-                        }
-                        Err(error) => {
-                            println!("Error al leer la entrada: {}", error);
-                        }
-                    }
-                }
-                Err(error) => {
-                    println!("Error al leer la entrada: {}", error);
-                }
-            }
-        }
-        Err(error) => {
-            println!("Error al leer la entrada: {}", error);
-        }
-    }
-                
-            
-}
-
-
-fn handle_add_account_request(wallet: &mut Wallet)  {
-    println!("Ingrese PRIVATE KEY en formato WIF: ");
-    let mut private_key_input = String::new();
-    match std::io::stdin().read_line(&mut private_key_input) {
-        Ok(_) => {
-            let wif_private_key = private_key_input.trim();
-            println!("Ingrese la ADDRESS de la cuenta: ");
-            let mut address_input = String::new();
-            match std::io::stdin().read_line(&mut address_input) {
-                Ok(_) => {
-                    let address = address_input.trim();
-                    println!("Agregando la cuenta -- {} -- a la wallet...\n", address);
-                    if let Err(err) = wallet.add_account(wif_private_key.to_string(), address.to_string()) {
-                        println!("ERROR: {err}\n");
-                        println!("Ocurrio un error al intentar añadir una nueva cuenta, intente de nuevo! \n");
-                    } else {
-                        println!("Cuenta -- {} -- añadida correctamente a la wallet!\n", address);
-                    }
-                }
-                Err(error) => {
-                    println!("Error al leer la entrada: {}", error);
-                }
-            }
-        }
-        Err(error) => {
-            println!("Error al leer la entrada: {}", error);
-        }
-    }
-
-}
-
-
-
-fn handle_balance_request(wallet: &mut Wallet) {
-    println!("Calculando el balance de las cuentas...");
-    wallet.show_accounts_balance();
-}
 #[cfg(test)]
 mod tests {
 

@@ -23,27 +23,18 @@ impl Wallet {
         Ok(wallet)
     }
 
-    pub fn make_transaction(
-        &self,
-        account: &mut Account,
-        address_receiver: &str,
-        amount: i64,
-        fee: i64,
-    ) -> Result<(), Box<dyn Error>> {
-        let transaction_hash: [u8; 32] = account.make_transaction(address_receiver, amount, fee)?;
-        self.node.broadcast_tx(transaction_hash)?;
-        Ok(())
-    }
+    
 
-    pub fn make_transaction_index(
+    pub fn make_transaction(
         &self,
         account_index: usize,
         address_receiver: &str,
         amount: i64,
         fee: i64,
     ) -> Result<(), Box<dyn Error>> {
-        self.accounts.write().unwrap()[account_index]
+        let transaction_hash = self.accounts.write().unwrap()[account_index]
             .make_transaction(address_receiver, amount, fee)?;
+        self.node.broadcast_tx(transaction_hash)?;
         Ok(())
     }
 
@@ -72,9 +63,28 @@ impl Wallet {
 
     /// Muestra el balance de las cuentas.
     pub fn show_accounts_balance(&self){
+        if self.accounts.read().unwrap().is_empty() {
+            println!("No hay cuentas en la wallet!");
+        }
         for account in self.accounts.write().unwrap().iter(){
             println!("Cuenta: {} - Balance: {:.8} tBTC",account.address,account.balance() as f64 / 1e8);
         }
+    }
+
+    /// Muestra los idices que corresponden a cada cuenta
+    pub fn show_indexes_of_accounts(&self) -> Option<()> {
+        if self.accounts.read().unwrap().is_empty() {
+            println!("No hay cuentas en la wallet. No es posible realizar una transaccion!");
+            return None
+        }
+        let mut index = 0;
+        println!("INDICES DE LAS CUENTAS");
+        for account in self.accounts.write().unwrap().iter(){
+            println!("{}: {}", index, account.address);
+            index += 1;
+        }
+        println!();
+        Some(())
     }
 }
 

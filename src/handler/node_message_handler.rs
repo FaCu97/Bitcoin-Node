@@ -165,38 +165,7 @@ impl NodeMessageHandler {
         for handle in handles {
             handle.join().map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))?;
         }
-        /* 
-        let cant_nodos = self
-            .nodes_handle
-            .lock()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
-            .len();
-        for _ in 0..cant_nodos {
-            let mut nodes_handle = self.nodes_handle.lock().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
-            let join_handle = nodes_handle.pop().ok_or("Error, no hay mas join handles para hace join!\n")
-            .map_err(|err| NodeMessageHandlerError::CanNotRead(err.to_string()))?;
-            join_handle.join().map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))?;
-        }  
-        */  
-       
         
-        /* 
-        let cant_nodos = self
-            .nodes_handle
-            .lock()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
-            .len();
-        for _ in 0..cant_nodos {
-            self.nodes_handle
-                .lock()
-                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
-                .pop()
-                .ok_or("Error no hay mas nodos para descargar los headers!\n")
-                .map_err(|err| NodeMessageHandlerError::CanNotRead(err.to_string()))?
-                .join()
-                .map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))??;
-        }
-        */
         for node_sender in self.nodes_sender.clone() {
             drop(node_sender);
         }
@@ -290,10 +259,27 @@ pub fn handle_messages_from_node(
                     continue;
                 }
             };
+            if command_name != "inv" {
+                // no me interesa tener todos los inv en el log_message
+                write_in_log(
+                    log_sender.messege_log_sender.clone(),
+                    format!(
+                        "Recibo correctamente: {} -- Nodo: {:?}",
+                        command_name,
+                        node.peer_addr()
+                    )
+                    .as_str(),
+                );
+            }
+            // si ocurrio un error en el handleo salgo del ciclo
+            if let Some(_) = error {
+                break;
+            }    
+
         }
-    
+        // si ocurrio un error lo documento en el log sender de errores
         if let Some(err) = error {
-            write_in_log(log_sender.error_log_sender, format!("NODO {:?} DESCONECTADO!!. {}", node.peer_addr(), err).as_str());
+            write_in_log(log_sender.error_log_sender, format!("NODO {:?} DESCONECTADO!! {}", node.peer_addr(), err).as_str());
         }    
     })
 }

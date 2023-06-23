@@ -120,10 +120,6 @@ impl Account {
         unsigned_transaction.sign(self, &utxos_to_spend)?;
         let mut bytes = Vec::new();
         unsigned_transaction.marshalling(&mut bytes);
-        println!(
-            "RAW TRANSACTION: {:?}",
-            bytes_to_hex_string(&bytes.to_vec())
-        );
 
         // el mensaje cifrado creo que no hace falta chequearlo
         unsigned_transaction.validate(&[0; 32], &utxos_to_spend)?;
