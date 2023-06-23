@@ -4,6 +4,9 @@ use std::io::Write;
 use super::{
     inventory::Inventory, message_header::HeaderMessage, payload::get_data_payload::GetDataPayload,
 };
+
+const START_STRING: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
+
 // todo: el write_to es código repetido, es igual que el de getheaders_message.rs. Habría que extraerlos.
 /// Implementa el mensaje getdata necesario para solicitar objetos a otro nodo.
 /// Puede usarse para solicitar transacciones, bloques, etc.
@@ -69,7 +72,7 @@ fn get_data_header_message(payload: &GetDataPayload) -> HeaderMessage {
     let binding = sha256d::Hash::hash(payload_bytes);
     let checksum = binding.as_byte_array();
     HeaderMessage {
-        start_string: [0x0b, 0x11, 0x09, 0x07],
+        start_string: START_STRING,
         command_name: "getdata".to_string(),
         payload_size: payload_bytes.len() as u32,
         checksum: [checksum[0], checksum[1], checksum[2], checksum[3]],
