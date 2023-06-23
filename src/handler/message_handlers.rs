@@ -24,6 +24,8 @@ use super::node_message_handler::NodeMessageHandlerError;
 type NodeMessageHandlerResult = Result<(), NodeMessageHandlerError>;
 type NodeSender = Sender<Vec<u8>>;
 
+const START_STRING: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
+
 /*
 ***************************************************************************
 ****************************** HANDLERS ***********************************
@@ -192,7 +194,7 @@ pub fn handle_inv_message(
 /// y quede respondido el ping. Devuelve Ok(()) en caso de que se pueda enviar bien por el channel o Error de channel en caso contrario
 pub fn handle_ping_message(tx: NodeSender, payload: &[u8]) -> NodeMessageHandlerResult {
     let header = HeaderMessage {
-        start_string: [0x0b, 0x11, 0x09, 0x07],
+        start_string: START_STRING,
         command_name: "pong".to_string(),
         payload_size: payload.len() as u32,
         checksum: get_checksum(payload),
@@ -245,7 +247,10 @@ fn include_new_block(
         "%%%%%%%% RECIBO NUEVO BLOQUE: {} %%%%%%%\n",
         block.hex_hash()
     );
-    write_in_log(log_sender.info_log_sender, format!("NUEVO BLOQUE AGREGADO: -- {} --", block.hex_hash()).as_str());
+    write_in_log(
+        log_sender.info_log_sender,
+        format!("NUEVO BLOQUE AGREGADO: -- {} --", block.hex_hash()).as_str(),
+    );
     blocks
         .write()
         .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
