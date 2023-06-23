@@ -49,9 +49,9 @@ impl Account {
     pub fn get_address(&self) -> &String {
         &self.address
     }
-    /// Guarda los utxos en la cuenta **********
+    /// Guarda los utxos en la cuenta
     pub fn load_utxos(&mut self, utxos: Vec<UtxoTuple>) {
-        self.utxo_set.extend_from_slice(&utxos);
+        self.utxo_set = utxos;
     }
     pub fn has_balance(&self, value: i64) -> bool {
         let mut balance: i64 = 0;
