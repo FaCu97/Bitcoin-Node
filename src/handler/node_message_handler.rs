@@ -98,7 +98,7 @@ impl NodeMessageHandler {
         let mut nodes_handle: Vec<JoinHandle<NodeMessageHandlerResult>> = vec![];
         let cant_nodos = get_amount_of_nodes(connected_nodes.clone())?;
         let mut nodes_sender = vec![];
-        // lista de transacciones recibidas para no recibir las mismas de varios nodos
+        // Lista de transacciones recibidas para no recibir las mismas de varios nodos
         let transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>> = Arc::new(RwLock::new(Vec::new()));
         for _ in 0..cant_nodos {
             let (tx, rx) = channel();
@@ -128,7 +128,7 @@ impl NodeMessageHandler {
     }
 
     /// Recibe un vector de bytes que representa un mensaje serializado y se lo manda a cada canal que esta esperando para escribir en un nodo
-    /// De esta manera se broadcastea a todos los nodos conectados el mensaje.
+    /// De esta manera se broadcastea el mensaje a todos los nodos conectados.
     /// Devuelve Ok(()) en caso exitoso o un error ThreadChannelError en caso contrario
     pub fn broadcast_to_nodes(&self, message: Vec<u8>) -> NodeMessageHandlerResult {
         for node_sender in &self.nodes_sender {
@@ -140,8 +140,8 @@ impl NodeMessageHandler {
     }
 
     /// Se encarga de actualizar el valor del puntero finish que corta los ciclos de los nodos que estan siendo esuchados.
-    /// le hace el join a cada uno de los threads por cada nodo que estaba siendo escuchado.
-    /// A cada extremo del channel para escribir en los nodos les hace drop() para que se cierre el channel.
+    /// Hace el join en cada uno de los threads por cada nodo que estaba siendo escuchado.
+    /// A cada extremo del channel para escribir en los nodos realiza drop() para que se cierre el channel.
     /// Devuelve Ok(()) en caso de salir todo bien o Error especifico en caso contrario
     pub fn finish(&self) -> NodeMessageHandlerResult {
         *self
@@ -172,8 +172,8 @@ impl NodeMessageHandler {
 
 /// Funcion encargada de crear un thread para un nodo especifico y se encarga de realizar el loop que escucha
 /// por nuevos mensajes del nodo. En caso de ser necesario tambien escribe al nodo mensajes que le llegan por el channel.
-/// El puntero finish define cuando el programa termina y por lo tanto el ciclo de esta funcion. Devuelve el JoinHanfle del thread
-/// con lo que devuelve el loop. Ok(()) en caso de salir todo bien o NodeHandlerError en caso de algun error
+/// El puntero finish define cuando el programa termina y por lo tanto el ciclo de esta funcion. Devuelve el JoinHandle del thread
+/// con lo que devuelve el loop. Ok(()) en caso de salir todo bien o NodeHandlerError en caso de algun error.
 pub fn handle_messages_from_node(
     log_sender: LogSender,
     (tx, rx): (NodeSender, NodeReceiver),
@@ -186,11 +186,11 @@ pub fn handle_messages_from_node(
 ) -> JoinHandle<NodeMessageHandlerResult> {
     thread::spawn(move || -> NodeMessageHandlerResult {
         while !is_terminated(finish.clone()) {
-            // veo si mandaron algo para escribir
+            // Veo si mandaron algo para escribir
             if let Ok(message) = rx.try_recv() {
                 write_message_in_node(&mut node, &message)?
             }
-            //leo header y payload
+            // Leo header y payload
             let header = read_header(&mut node, finish.clone())?;
             if is_terminated(finish.clone()) {
                 break;
@@ -247,7 +247,7 @@ pub fn handle_messages_from_node(
                 }
             }
             if command_name != "inv" {
-                // no me interesa tener todos los inv en el log_message
+                // Se imprimen en el log_message todos los mensajes menos el inv
                 write_in_log(
                     log_sender.messege_log_sender.clone(),
                     format!(
@@ -284,6 +284,8 @@ pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessag
     Ok(())
 }
 
+/// Se mantiene leyendo del socket del nodo hasta recibir el header message.
+/// Devuelve el HeaderMessage o un error si falló.
 fn read_header(
     node: &mut dyn Read,
     finish: Option<Arc<RwLock<bool>>>,
@@ -305,6 +307,8 @@ fn read_header(
         .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))
 }
 
+/// Se mantiene leyendo del socket del nodo hasta recibir el payload esperado.
+/// Devuelve el la cadena de bytes del payload o un error si falló.
 fn read_payload(
     node: &mut dyn Read,
     size: usize,
