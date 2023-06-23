@@ -77,11 +77,9 @@ impl Wallet {
             println!("No hay cuentas en la wallet. No es posible realizar una transaccion!");
             return None
         }
-        let mut index = 0;
         println!("INDICES DE LAS CUENTAS");
-        for account in self.accounts.write().unwrap().iter(){
+        for (index, account) in self.accounts.read().unwrap().iter().enumerate(){
             println!("{}: {}", index, account.address);
-            index += 1;
         }
         println!();
         Some(())

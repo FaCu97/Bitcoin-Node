@@ -135,7 +135,7 @@ impl NodeMessageHandler {
         for node_sender in &self.nodes_sender {
             // si alguno de los channels esta cerrado significa que por alguna razon el nodo fallo entonces lo ignoro y pruebo broadcastear
             // en los siguientes nodos restantes
-            if let Err(_) = node_sender.send(message.clone()) {
+            if node_sender.send(message.clone()).is_err() {
                 amount_of_failed_nodes += 1;
                 continue;
             }
@@ -272,7 +272,7 @@ pub fn handle_messages_from_node(
                 );
             }
             // si ocurrio un error en el handleo salgo del ciclo
-            if let Some(_) = error {
+            if error.is_some() {
                 break;
             }    
 
