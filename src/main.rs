@@ -141,7 +141,7 @@ fn handle_input(mut wallet: Wallet) -> Result<(), GenericError> {
 
         match std::io::stdin().read_line(&mut input) {
             Ok(_) => {
-                println!("\n");
+                println!("\n\n");
                 let command = input.trim();
                 match command {
                     "exit" => {
@@ -154,6 +154,7 @@ fn handle_input(mut wallet: Wallet) -> Result<(), GenericError> {
                     }
                     "balance" => {
                         println!("balance leido correctamente! \n");
+                        handle_balance_request(&mut wallet);
                     }
                     "transaccion" => {
                         println!("transaccion leido correctamente! \n");
@@ -176,7 +177,7 @@ fn handle_input(mut wallet: Wallet) -> Result<(), GenericError> {
 }
 
 fn show_options() {
-    println!("-----------------------------------------------------------\n\n");
+    println!("\n");
     println!("INGRESE ALGUNO DE LOS SIGUIENTES COMANDOS\n");
     println!("exit: terminar el programa\n");
     println!("add account: añadir una cuenta a la wallet\n");
@@ -296,7 +297,7 @@ fn handle_add_account_request(wallet: &mut Wallet)  {
 
 
 
-fn handle_balance_request(wallet: Wallet) -> Result<(), GenericError> {
+fn handle_balance_request(wallet: &mut Wallet) {
     println!("Ingrese la cuenta para obtener el balance:");
     let mut account_input = String::new();
     match std::io::stdin().read_line(&mut account_input) {
@@ -310,7 +311,6 @@ fn handle_balance_request(wallet: Wallet) -> Result<(), GenericError> {
             println!("Error al leer la entrada: {}", error);
         }
     }
-    Ok(())
 }
 #[cfg(test)]
 mod tests {
