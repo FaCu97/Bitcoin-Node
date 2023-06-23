@@ -74,7 +74,7 @@ fn show_options() {
 /// Le pide al usuario que ingrese por terminal los datos necesarios para hacer una transaccion
 /// e intenta hacer una transaccion. En caso de error imprime por la terminal el error
 fn handle_transaccion_request(wallet: &mut Wallet) {
-    if wallet.show_indexes_of_accounts().is_none() {
+    if wallet.show_indexes_of_accounts().is_err() {
         return;
     }
     println!("INGRESE LOS SIGUIENTES DATOS PARA REALIZAR UNA TRANSACCION \n");
@@ -159,5 +159,8 @@ fn handle_add_account_request(wallet: &mut Wallet) {
 /// Muestra el balance de todas las cuentas de la wallet por pantalla
 fn handle_balance_request(wallet: &mut Wallet) {
     println!("Calculando el balance de las cuentas...\n");
-    wallet.show_accounts_balance();
+    match wallet.show_accounts_balance() {
+        Ok(_) => {}
+        Err(e) => println!("Error al leer el balance: {}", e),
+    }
 }

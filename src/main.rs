@@ -1,5 +1,5 @@
 use bitcoin::config::Config;
-use bitcoin::gtk::gtk::Gtk;
+use bitcoin::gtk::interfaz_gtk::Gtk;
 use bitcoin::handler::node_message_handler::NodeMessageHandlerError;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
@@ -11,7 +11,7 @@ use bitcoin::node::Node;
 use bitcoin::terminal_ui;
 use bitcoin::wallet::Wallet;
 use std::error::Error;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::{env, fmt};
 
 #[derive(Debug)]
@@ -72,11 +72,9 @@ fn main() -> Result<(), GenericError> {
     );
     let active_nodes = get_active_nodes_from_dns_seed(config.clone(), logsender.clone())
         .map_err(GenericError::ConnectionToDnsError)?;
-    let sockets = Handshake::handshake(config.clone(), logsender.clone(), &active_nodes)
+    let pointer_to_nodes = Handshake::handshake(config.clone(), logsender.clone(), &active_nodes)
         .map_err(GenericError::HandShakeError)?;
     // Acá iría la descarga de los headers
-
-    let pointer_to_nodes = Arc::new(RwLock::new(sockets));
 
     let headers_and_blocks =
         initial_block_download(config, logsender.clone(), pointer_to_nodes.clone()).map_err(
@@ -111,6 +109,7 @@ fn main() -> Result<(), GenericError> {
     terminal_ui(wallet);
     node.shutdown_node()
         .map_err(GenericError::NodeHandlerError)?;
+
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
         .map_err(GenericError::LoggingError)?;
 

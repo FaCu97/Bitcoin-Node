@@ -421,7 +421,8 @@ mod tests {
         assert_eq!(16u64, user_agent_bytes.decoded_value());
     }
     #[test]
-    fn get_user_agent_from_payload_bytes_returns_the_correct_string() {
+    fn get_user_agent_from_payload_bytes_returns_the_correct_string() -> Result<(), Box<dyn Error>>
+    {
         // GIVEN: Payload bytes de un mensaje version
         let payload_bytes: [u8; 102] = [
             127, 17, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 253, 244, 83, 100, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0,
@@ -431,9 +432,10 @@ mod tests {
             48, 47, 1, 0, 0, 0, 1,
         ];
         // WHEN: se ejecuta la funcion get_user_agent_from_bytes con los bytes pasados por parametro
-        let user_agent = get_user_agent_from_bytes(&payload_bytes, &mut 81, 16u64);
+        let user_agent = get_user_agent_from_bytes(&payload_bytes, &mut 81, 16u64)?;
         // THEN: el string de user_agent es el correcto
-        assert_eq!("/Satoshi:23.0.0/".to_string(), user_agent.unwrap());
+        assert_eq!("/Satoshi:23.0.0/".to_string(), user_agent);
+        Ok(())
     }
     #[test]
     fn get_start_height_from_payload_bytes_returns_the_correct_i32() {
@@ -466,17 +468,17 @@ mod tests {
         assert_eq!(true, relay);
     }
     #[test]
-    fn version_payload_to_le_bytes_returns_the_correct_bytes() {
+    fn version_payload_to_le_bytes_returns_the_correct_bytes() -> Result<(), Box<dyn Error>> {
         // GIVEN: un struct VersionPayload con todos los campos completos
         let version = 70015;
         let services: u64 = 0;
         let timestamp: i64 = 1683229476; // simulo valor para test
         let addr_recv_service: u64 = 1;
-        let socket_addr = "3.34.119.199:18333".to_string().parse().unwrap();
+        let socket_addr = "3.34.119.199:18333".to_string().parse()?;
         let addr_recv_ip = get_ipv6_address_ip(socket_addr);
         let addr_recv_port: u16 = 18333;
         let addr_trans_service: u64 = 0;
-        let addr_trans_ip = get_ipv6_address_ip("192.168.0.58:52417".to_string().parse().unwrap());
+        let addr_trans_ip = get_ipv6_address_ip("192.168.0.58:52417".to_string().parse()?);
         let addr_trans_port: u16 = 18333;
         let nonce: u64 = 7954216226337911560; // simulo valor para test
         let user_agent_bytes: CompactSizeUint = CompactSizeUint::new(16u128);
@@ -510,15 +512,18 @@ mod tests {
             48, 47, 1, 0, 0, 0, 1,
         ];
         assert_eq!(expected_bytes, version_payload_bytes);
+        Ok(())
     }
     #[test]
-    fn get_ipv6_address_ip_returns_a_correct_vector_of_16_bytes_representing_ipv6_address_ip() {
+    fn get_ipv6_address_ip_returns_a_correct_vector_of_16_bytes_representing_ipv6_address_ip(
+    ) -> Result<(), Box<dyn Error>> {
         // GIVEN: a String representing an address ip
         let add_ip = "3.34.119.199:18333".to_string();
         // WHEN: se ejecuta la funcion get_ipv6_address_ip pasandole el socket address del string
-        let ipv6_add_ip = get_ipv6_address_ip(add_ip.parse().unwrap());
+        let ipv6_add_ip = get_ipv6_address_ip(add_ip.parse()?);
         // THEN: devuelve un vector de 16 bytes que representa a la direccion ip serializada segun protocolo bitcoin
         let expected_bytes: [u8; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 3, 34, 119, 199];
         assert_eq!(expected_bytes, ipv6_add_ip);
+        Ok(())
     }
 }

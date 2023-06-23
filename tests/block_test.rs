@@ -1,11 +1,14 @@
 use std::{
     collections::HashMap,
+    error::Error,
+    io,
     sync::{Arc, RwLock},
 };
 
 use bitcoin::{
     blocks::{block::Block, block_header::BlockHeader},
     compact_size_uint::CompactSizeUint,
+    handler::node_message_handler::NodeMessageHandlerError,
     transactions::{
         outpoint::Outpoint, script::sig_script::SigScript, transaction::Transaction, tx_in::TxIn,
         tx_out::TxOut,
@@ -85,7 +88,7 @@ fn create_block_header() -> BlockHeader {
 
 #[test]
 fn test_lista_de_utxos_de_un_bloque_con_2_transacciones_tiene_largo_esperado(
-) -> Result<(), &'static str> {
+) -> Result<(), Box<dyn Error>> {
     // coinbase transaction
     // seteo de tx_outs de la coinbase
     let coinbase_values_tx_outs: Vec<i64> = vec![1000, 200, 500];
@@ -129,12 +132,17 @@ fn test_lista_de_utxos_de_un_bloque_con_2_transacciones_tiene_largo_esperado(
     };
     let pointer_to_utxo_set: UtxoSetPointer = Arc::new(RwLock::new(HashMap::new()));
 
-    block.give_me_utxos(pointer_to_utxo_set.clone());
+    block
+        .give_me_utxos(pointer_to_utxo_set.clone())
+        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
     let mut amount_utxos = 0;
     let utxo_set = match pointer_to_utxo_set.read() {
         Ok(utxo_set) => utxo_set,
-        Err(e) => {
-            return Err("Falló al leer el puntero del utxo set");
+        Err(_) => {
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                "Falló al leer el puntero del utxo set",
+            )));
         }
     };
     for utxo_tuple in utxo_set.values() {

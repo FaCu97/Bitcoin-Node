@@ -1,5 +1,6 @@
 use std::{
     error::Error,
+    io,
     sync::{Arc, RwLock},
 };
 
@@ -33,11 +34,11 @@ impl Wallet {
         amount: i64,
         fee: i64,
     ) -> Result<(), Box<dyn Error>> {
-        let transaction_hash = self.accounts.write().unwrap()[account_index].make_transaction(
-            address_receiver,
-            amount,
-            fee,
-        )?;
+        let transaction_hash: [u8; 32] = self
+            .accounts
+            .write()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?[account_index]
+            .make_transaction(address_receiver, amount, fee)?;
         self.node.broadcast_tx(transaction_hash)?;
         Ok(())
     }
@@ -51,7 +52,8 @@ impl Wallet {
     ) -> Result<(), NodeMessageHandlerError> {
         let mut account = Account::new(wif_private_key, address)
             .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
-        self.load_data(&mut account);
+        self.load_data(&mut account)
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
         self.accounts
             .write()
             .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
@@ -59,64 +61,63 @@ impl Wallet {
         Ok(())
     }
     /// Funcion que se encarga de cargar los respectivos utxos asociados a la cuenta
-    fn load_data(&self, account: &mut Account) {
+    fn load_data(&self, account: &mut Account) -> Result<(), Box<dyn Error>> {
         let address = account.get_address().clone();
-        let utxos_to_account = self.node.utxos_referenced_to_account(&address);
+        let utxos_to_account = self.node.utxos_referenced_to_account(&address)?;
         account.load_utxos(utxos_to_account);
+        Ok(())
     }
 
     /// Muestra el balance de las cuentas.
-    pub fn show_accounts_balance(&self) {
-        if self.accounts.read().unwrap().is_empty() {
+    pub fn show_accounts_balance(&self) -> Result<(), Box<dyn Error>> {
+        if self
+            .accounts
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .is_empty()
+        {
             println!("No hay cuentas en la wallet!");
         }
-        for account in self.accounts.write().unwrap().iter() {
+        for account in self
+            .accounts
+            .write()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .iter()
+        {
             println!(
                 "Cuenta: {} - Balance: {:.8} tBTC",
                 account.address,
                 account.balance() as f64 / 1e8
             );
         }
+        Ok(())
     }
 
-    /// Muestra los idices que corresponden a cada cuenta
-    pub fn show_indexes_of_accounts(&self) -> Option<()> {
-        if self.accounts.read().unwrap().is_empty() {
+    /// Muestra los indices que corresponden a cada cuenta
+    pub fn show_indexes_of_accounts(&self) -> Result<(), Box<dyn Error>> {
+        if self
+            .accounts
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .is_empty()
+        {
             println!("No hay cuentas en la wallet. No es posible realizar una transaccion!");
-            return None;
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                "No hay cuentas en la wallet. No es posible realizar una transaccion!",
+            )));
         }
         println!("INDICES DE LAS CUENTAS");
-        for (index, account) in self.accounts.read().unwrap().iter().enumerate() {
+        for (index, account) in self
+            .accounts
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .iter()
+            .enumerate()
+        {
             println!("{}: {}", index, account.address);
         }
         println!();
-        Some(())
-    }
-}
-
-/*
-#[cfg(test)]
-mod test {
-    use crate::{account::Account, node::Node, wallet::Wallet};
-    use std::{
-        error::Error,
-        sync::{Arc, RwLock},
-    };
-
-    #[test]
-    fn test_una_address_se_registra_correctamente() -> Result<(), Box<dyn Error>> {
-        let address: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
-        let private_key: String =
-            String::from("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR");
-        let blocks = Arc::new(RwLock::new(Vec::new()));
-        let headers = Arc::new(RwLock::new(Vec::new()));
-
-        let node = Node::new(Arc::new(RwLock::new(vec![])), headers, blocks);
-        let mut wallet = Wallet::new(node);
-        let account_addecd_result = wallet.add_account(private_key, address);
-
-        assert!(account_addecd_result.is_ok());
         Ok(())
     }
 }
-*/

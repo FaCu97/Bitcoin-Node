@@ -1,1 +1,1 @@
-pub mod gtk;
+pub mod interfaz_gtk;

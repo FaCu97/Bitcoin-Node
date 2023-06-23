@@ -48,7 +48,7 @@ impl Handshake {
         config: Arc<Config>,
         log_sender: LogSender,
         active_nodes: &[Ipv4Addr],
-    ) -> Result<Vec<TcpStream>, HandShakeError> {
+    ) -> Result<Arc<RwLock<Vec<TcpStream>>>, HandShakeError> {
         write_in_log(log_sender.info_log_sender.clone(), "INICIO DE HANDSHAKE");
         let lista_nodos = Arc::new(active_nodes);
         let chunk_size = (lista_nodos.len() as f64 / config.n_threads as f64).ceil() as usize;
@@ -80,19 +80,20 @@ impl Handshake {
                 .join()
                 .map_err(|err| HandShakeError::ThreadJoinError(format!("{:?}", err)))??;
         }
-        let sockets = Arc::try_unwrap(sockets_lock)
+        let cantidad_sockets = sockets_lock
+            .read()
             .map_err(|err| HandShakeError::LockError(format!("{:?}", err)))?
-            .into_inner()
-            .map_err(|err| HandShakeError::LockError(format!("{}", err)))?;
+            .len();
+
         write_in_log(
             log_sender.info_log_sender.clone(),
-            format!("{:?} nodos conectados", sockets.len()).as_str(),
+            format!("{:?} nodos conectados", cantidad_sockets).as_str(),
         );
         write_in_log(
             log_sender.info_log_sender,
             "Se completo correctamente el handshake\n",
         );
-        Ok(sockets)
+        Ok(sockets_lock)
     }
 }
 

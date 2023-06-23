@@ -1,4 +1,4 @@
-use super::message_header::HeaderMessage;
+use super::message_header::{is_terminated, HeaderMessage};
 use crate::blocks::block_header::BlockHeader;
 use crate::compact_size_uint::CompactSizeUint;
 use crate::logwriter::log_writer::{LogSender, LoggingError};
@@ -89,15 +89,6 @@ impl HeadersMessage {
         }
 
         Ok(headers)
-    }
-}
-
-/// Consulta la variable finish recibida.
-/// Devuelve true o false dependiendo de si el programa debe finalizar
-pub fn is_terminated(finish: Option<Arc<RwLock<bool>>>) -> bool {
-    match finish {
-        Some(m) => *m.read().unwrap(),
-        None => false,
     }
 }
 
