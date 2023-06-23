@@ -59,7 +59,6 @@ pub fn get_pubkey_hash_from_address(address: &str) -> Result<[u8; 20], Box<dyn E
 }
 
 /// Devuelve la clave publica comprimida (33 bytes) a partir de la privada
-
 pub fn get_pubkey_compressed(private_key: &str) -> Result<[u8; 33], Box<dyn Error>> {
     let private_key = decode_wif_private_key(private_key)?;
     let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();

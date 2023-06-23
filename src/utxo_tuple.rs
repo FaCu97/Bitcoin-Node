@@ -78,6 +78,8 @@ impl UtxoTuple {
         Self::new(self.hash, utxos_to_spend)
     }
 
+    /// Busca la utxo que corresponde al hash e indice recibido.
+    /// Devuelve su pub key script en formato bytes
     pub fn find(&self, previous_hash: [u8; 32], previous_index: usize) -> Option<&Vec<u8>> {
         if self.hash != previous_hash {
             return None;
