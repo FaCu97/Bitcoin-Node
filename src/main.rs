@@ -107,12 +107,6 @@ fn main() -> Result<(), GenericError> {
                 "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),
             )
             .map_err(GenericError::NodeHandlerError)?;
-
-        match wallet.make_transaction_index(0, "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a", 10000, 2000) {
-            Ok(_) => println!("Transaccion ok"),
-            Err(e) => println!("Error al realizar la transaccion: {}", e),
-        }
-
     */
     terminal_ui(wallet);
     node.shutdown_node()

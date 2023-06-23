@@ -17,6 +17,8 @@ pub mod transactions;
 pub mod utxo_tuple;
 pub mod wallet;
 
+/// Muestra las opciones para interactuar con el programa, espera algun comando
+/// y lo handlea o muestra un mensaje de error
 pub fn terminal_ui(mut wallet: Wallet) {
     show_options();
     loop {
@@ -57,6 +59,7 @@ pub fn terminal_ui(mut wallet: Wallet) {
     }
 }
 
+// Muestra por terminal los posibles comandos a ingresar para interactuar con la wallet
 fn show_options() {
     println!("\n");
     println!("INGRESE ALGUNO DE LOS SIGUIENTES COMANDOS\n");
@@ -68,6 +71,8 @@ fn show_options() {
     println!("-----------------------------------------------------------\n");
 }
 
+/// Le pide al usuario que ingrese por terminal los datos necesarios para hacer una transaccion
+/// e intenta hacer una transaccion. En caso de error imprime por la terminal el error
 fn handle_transaccion_request(wallet: &mut Wallet) {
     if wallet.show_indexes_of_accounts().is_none() {
         return;
@@ -97,6 +102,7 @@ fn handle_transaccion_request(wallet: &mut Wallet) {
     }
 }
 
+/// Recibe lo que se quiere pedir por terminal y espera a que se ingrese algo para poder parsearlo
 fn read_input<T: std::str::FromStr>(prompt: &str) -> Result<T, std::io::Error>
 where
     <T as std::str::FromStr>::Err: std::fmt::Display,
@@ -113,6 +119,8 @@ where
     Ok(value)
 }
 
+/// Le pide al usuario que ingrese por terminal los datos de la cuenta y la añade a la wallet. En caso de que los
+/// datos ingresados sean incorrectos, lo muestra por pantalla
 fn handle_add_account_request(wallet: &mut Wallet) {
     println!("Ingrese PRIVATE KEY en formato WIF: ");
     let mut private_key_input = String::new();
@@ -148,6 +156,7 @@ fn handle_add_account_request(wallet: &mut Wallet) {
     }
 }
 
+/// Muestra el balance de todas las cuentas de la wallet por pantalla
 fn handle_balance_request(wallet: &mut Wallet) {
     println!("Calculando el balance de las cuentas...\n");
     wallet.show_accounts_balance();
