@@ -20,7 +20,7 @@ pub fn generate_p2pkh_pk_script(pubkey_hash: &[u8]) -> Result<Vec<u8>, Box<dyn E
         )));
     }
     let mut pk_script: Vec<u8> = Vec::new();
-    pk_script.push(0x76); // OP_DUP  -> Pasar a constantes o enum
+    pk_script.push(0x76); // OP_DUP
     pk_script.push(0xA9);
     pk_script.push(20); // <bytes_to_push>: Son 20 bytes
 
@@ -32,11 +32,7 @@ pub fn generate_p2pkh_pk_script(pubkey_hash: &[u8]) -> Result<Vec<u8>, Box<dyn E
 
 /// Recibe el p2pkh_script y el sig_script.
 /// Realiza la validación y devuelve true o false
-pub fn validate(
-    _hash: &[u8],
-    p2pkh_script: &[u8],
-    sig_script: &[u8],
-) -> Result<bool, Box<dyn Error>> {
+pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> Result<bool, Box<dyn Error>> {
     // scriptSig:   <length sig>     <sig>   <length pubKey>   <pubKey>
     // <pubKey> es la publicKey comprimida SEC (33bytes) del receptor de la tx
     // Largo bytes: 1 + 71 + 1 + 33 = 106
@@ -73,9 +69,6 @@ pub fn validate(
     if p2pkh_script[24..25] != [0xAC] {
         return Ok(false);
     }
-    //    if !SigScript::verify_sig(hash, &sig_script[1..72], &sig_script[73..106])? {
-    //        return Ok(false);
-    //    }
     Ok(true)
 }
 
@@ -128,7 +121,7 @@ mod test {
             &address_decoder::get_pubkey_hash_from_address(&account.address)?,
         )?;
         let sig = SigScript::generate_sig_script(hash, &account)?;
-        let validation = p2pkh_script::validate(&hash, &p2pkh_script, sig.get_bytes())?;
+        let validation = p2pkh_script::validate(&p2pkh_script, sig.get_bytes())?;
 
         assert!(validation);
         Ok(())

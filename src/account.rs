@@ -125,7 +125,7 @@ impl Account {
         );
 
         // el mensaje cifrado creo que no hace falta chequearlo
-        unsigned_transaction.validate(&[0; 32], &utxos_to_spend)?;
+        unsigned_transaction.validate(&utxos_to_spend)?;
 
         self.add_transaction(unsigned_transaction.clone());
         Ok(unsigned_transaction.hash())

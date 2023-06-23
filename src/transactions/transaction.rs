@@ -318,11 +318,7 @@ impl Transaction {
 
     /// Valida la transacción.
     /// Ejecuta el script y devuelve error en caso de que no pase la validación.
-    pub fn validate(
-        &self,
-        hash: &[u8],
-        utxos_to_spend: &Vec<UtxoTuple>,
-    ) -> Result<(), Box<dyn Error>> {
+    pub fn validate(&self, utxos_to_spend: &Vec<UtxoTuple>) -> Result<(), Box<dyn Error>> {
         let mut p2pkh_scripts = Vec::new();
         for utxo in utxos_to_spend {
             for (txout, _) in &utxo.utxo_set {
@@ -332,11 +328,7 @@ impl Transaction {
 
         for (index, txin) in self.tx_in.iter().enumerate() {
             //txin.
-            if !p2pkh_script::validate(
-                hash,
-                p2pkh_scripts[index],
-                txin.signature_script.get_bytes(),
-            )? {
+            if !p2pkh_script::validate(p2pkh_scripts[index], txin.signature_script.get_bytes())? {
                 return Err(Box::new(std::io::Error::new(
                     io::ErrorKind::Other,
                     "El p2pkh_script no pasó la validación.",
