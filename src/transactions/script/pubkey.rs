@@ -1,7 +1,6 @@
-use std::error::Error;
-
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
+use std::error::Error;
 
 use crate::address_decoder::get_pubkey_hash_from_address;
 
@@ -17,7 +16,8 @@ impl Pubkey {
     pub fn bytes(&self) -> &Vec<u8> {
         &self.bytes
     }
-    pub fn generate_adress(&self) -> Result<String, &'static str> {
+    /// Genera la address a partir del pubkey.
+    pub fn generate_address(&self) -> Result<String, &'static str> {
         // vector que generara el adress
         let mut adress_bytes: Vec<u8> = vec![0x6f];
         let bytes = &self.bytes;
@@ -35,7 +35,6 @@ impl Pubkey {
             // se trata de una transanccion del tipo P2PKH
             adress_bytes.extend_from_slice(&bytes[3..(lenght - 2)]);
         }
-        //println!("{:?}", adress_bytes);
         let copy_adress_bytes: Vec<u8> = adress_bytes.clone();
         let checksum = Sha256::digest(Sha256::digest(copy_adress_bytes));
         adress_bytes.extend_from_slice(&checksum[..4]);
@@ -44,6 +43,7 @@ impl Pubkey {
         Ok(string)
     }
 
+    /// Genera el pubkey a partir de la address.
     pub fn generate_pubkey(address: &str) -> Result<Vec<u8>, Box<dyn Error>> {
         let pubkey_hash = get_pubkey_hash_from_address(address)?;
         let mut pk_script: Vec<u8> = Vec::new();

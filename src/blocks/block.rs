@@ -3,8 +3,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use bitcoin_hashes::{sha256d, Hash};
-
+use super::block_header::BlockHeader;
 use crate::{
     account::Account,
     compact_size_uint::CompactSizeUint,
@@ -13,8 +12,9 @@ use crate::{
     transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
 };
+use bitcoin_hashes::{sha256d, Hash};
 
-use super::block_header::BlockHeader;
+/// Representa un bloque del protocolo bitcoin.
 #[derive(Debug, Clone)]
 pub struct Block {
     pub block_header: BlockHeader,
@@ -23,6 +23,7 @@ pub struct Block {
 }
 
 impl Block {
+    /// Inicializa el Bloque con los campos recibidos.
     pub fn new(
         block_header: BlockHeader,
         txn_count: CompactSizeUint,
@@ -35,6 +36,8 @@ impl Block {
         }
     }
 
+    /// Recibe una cadena de bytes, la deserializa y devuelve el bloque.
+    /// Actualiza el offset según la cantidad de bytes que leyó de la cadena.
     pub fn unmarshalling(bytes: &Vec<u8>, offset: &mut usize) -> Result<Block, &'static str> {
         let block_header: BlockHeader = BlockHeader::unmarshalling(bytes, offset)?;
         let txn_count: CompactSizeUint = CompactSizeUint::unmarshalling(bytes, offset)?;
@@ -47,6 +50,9 @@ impl Block {
             txn,
         })
     }
+
+    /// Convierte el bloque a bytes según el protocolo bitcoin.
+    /// Guarda dichos bytes en el vector recibido por parámetro.
     fn marshalling(&self, bytes: &mut Vec<u8>) {
         self.block_header.marshalling(bytes);
         bytes.extend_from_slice(&self.txn_count.marshalling());
@@ -54,8 +60,9 @@ impl Block {
             tx.marshalling(bytes);
         }
     }
-    /// Esta funcion se encarga de validar el bloque , primero realiza la proof of work
-    /// luego realiza la proof of inclusion sobre su lista de transacciones
+
+    /// Valida el bloque. Primero realiza la proof of work y
+    /// Luego realiza la proof of inclusion sobre su lista de transacciones
     pub fn validate(&self) -> (bool, &'static str) {
         //proof of work
         if !self.block_header.validate() {
@@ -81,16 +88,17 @@ impl Block {
         (true, "El bloque es valido")
     }
 
-    /// Esta funcion se encarga de concatenar los hashes recibidos y luego hashearlos
+    /// Concatenar los hashes recibidos y luego los hashea
     fn concatenate_and_hash(first_hash: [u8; 32], second_hash: [u8; 32]) -> [u8; 32] {
         let mut hashs_concatenated: [u8; 64] = [0; 64];
         hashs_concatenated[..32].copy_from_slice(&first_hash[..32]);
         hashs_concatenated[32..(32 + 32)].copy_from_slice(&second_hash[..32]);
         *sha256d::Hash::hash(&hashs_concatenated).as_byte_array()
     }
-    /// funcion que se encarga de reducir los elementos del vector de tx_ids , agruparlos
-    /// de a pares hasearlos y guardarlos nuevamente en un vector el cual sera procesado
-    /// recursivamente hasta obtener el merkle root hash
+
+    /// Genera la raiz del merkle root a partir de los hashes de las transacciones (tx_id)
+    /// Reduce los elementos del vector de tx_id, agrupa de a pares, los hashea y guarda nuevamente
+    /// En un vector el cual sera procesado recursivamente hasta obtener el merkle root hash.
     pub fn recursive_generation_merkle_root(vector: Vec<[u8; 32]>) -> [u8; 32] {
         let vec_length: usize = vector.len();
         if vec_length == 1 {
@@ -121,6 +129,7 @@ impl Block {
         Self::recursive_generation_merkle_root(upper_level)
     }
 
+    /// Genera la raiz del merkle root
     pub fn generate_merkle_root(&self) -> [u8; 32] {
         let mut merkle_transactions: Vec<[u8; 32]> = Vec::new();
         for tx in &self.txn {
@@ -128,8 +137,9 @@ impl Block {
         }
         Self::recursive_generation_merkle_root(merkle_transactions)
     }
-    /// Esta funcion realiza la SPV , asumimos que recibimos los restantes elementos para
-    /// construir el merkle root en el siguiente orden : desde las hojas hacia la raiz
+
+    /// Esta funcion realiza la SPV. Asumimos que recibimos los restantes elementos para
+    /// construir el merkle root en el siguiente orden: desde las hojas hacia la raiz
     pub fn merkle_proof_of_inclusion(
         &self,
         transaction_to_find: [u8; 32],
@@ -143,10 +153,9 @@ impl Block {
         current_hash == self.generate_merkle_root()
     }
 
+    /// Actualiza el utxo_set recibido por parámetro.
+    /// Procesa las transacciones del bloque. Agrega las nuevas utxos y remueve las gastadas.
     pub fn give_me_utxos(&self, uxto_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>) {
-        // este vector contiene el hash de una transaccion y todas las utxos correspondientes
-        // y sus respectivas posiciones en la tx
-        //    let mut utxo_container: Vec<UtxoTuple> = Vec::new();
         for tx in &self.txn {
             if tx.is_coinbase_transaction() {
                 // como se trata de una coinbase al ser la primera tx solo se cargaran
@@ -160,11 +169,11 @@ impl Block {
                 tx.load_utxos(uxto_set.clone());
             }
         }
-        // utxo_container
     }
 
-    /// Devuelve un string que representa el hash del bloque en hexadecimal y en el formato
-    /// que se usa en la pagina https://blockstream.info/testnet/ para mostrar bloques
+    /// Devuelve un string que representa el hash del bloque en hexadecimal,
+    /// En el formato que se usan los exploradores web como
+    /// https://blockstream.info/testnet/ para mostrar bloques
     pub fn hex_hash(&self) -> String {
         let hash_as_bytes = self.block_header.hash();
         let inverted_hash: [u8; 32] = {
@@ -181,6 +190,9 @@ impl Block {
         hex_hash
     }
 
+    /// Notifica si el bloque contiene una transacción que se encontraba pendiente.
+    /// Revisa las transacciones del bloque y las compara con las transacciones pendientes
+    /// De las cuentas
     pub fn contains_pending_tx(
         &self,
         log_sender: LogSender,
