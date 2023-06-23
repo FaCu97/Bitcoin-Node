@@ -132,9 +132,11 @@ impl NodeMessageHandler {
     /// Devuelve Ok(()) en caso exitoso o un error ThreadChannelError en caso contrario
     pub fn broadcast_to_nodes(&self, message: Vec<u8>) -> NodeMessageHandlerResult {
         for node_sender in &self.nodes_sender {
-            node_sender
-                .send(message.clone())
-                .map_err(|err| NodeMessageHandlerError::ThreadChannelError(err.to_string()))?;
+            // si alguno de los channels esta cerrado significa que por alguna razon el nodo fallo entonces lo ignoro y pruebo broadcastear
+            // en los siguientes nodos restantes
+            if let Err(_) = node_sender.send(message.clone()) {
+                continue;
+            }
         }
         Ok(())
     }

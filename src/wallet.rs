@@ -20,7 +20,6 @@ impl Wallet {
             accounts: Arc::new(RwLock::new(Vec::new())),
         };
         wallet.node.set_accounts(wallet.accounts.clone())?;
-        println!("accounts added to node!\n");
         Ok(wallet)
     }
 
@@ -43,10 +42,8 @@ impl Wallet {
         amount: i64,
         fee: i64,
     ) -> Result<(), Box<dyn Error>> {
-        let transaction_hash: [u8; 32] = self.accounts.write().unwrap()[account_index]
+        self.accounts.write().unwrap()[account_index]
             .make_transaction(address_receiver, amount, fee)?;
-        println!("HASH TX: {:?}", transaction_hash);
-        self.node.broadcast_tx(transaction_hash)?;
         Ok(())
     }
 
@@ -71,6 +68,13 @@ impl Wallet {
         let address = account.get_address().clone();
         let utxos_to_account = self.node.utxos_referenced_to_account(&address);
         account.load_utxos(utxos_to_account);
+    }
+
+    /// Muestra el balance de las cuentas.
+    pub fn show_accounts_balance(&self){
+        for account in self.accounts.write().unwrap().iter(){
+            println!("Cuenta: {} - Balance: {:.8} tBTC",account.address,account.balance() as f64 / 1e8);
+        }
     }
 }
 

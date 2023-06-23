@@ -143,29 +143,29 @@ fn handle_input(mut wallet: Wallet) -> Result<(), GenericError> {
             Ok(_) => {
                 println!("\n\n");
                 let command = input.trim();
-                match command {
-                    "exit" => {
-                        println!("Cerrando nodo...\n");
-                        break;
+                if let Ok(num) = command.parse::<u32>() {
+                    match num {
+                        0 => {
+                            println!("Cerrando nodo...\n");
+                            break;
+                        }
+                        1 => {
+                            handle_add_account_request(&mut wallet);
+                        }
+                        2 => {
+                            handle_balance_request(&mut wallet);
+                        }
+                        3 => {
+                            handle_transaccion_request(&mut wallet);
+                        }
+                        _ => {
+                            println!("Número no reconocido. Inténtalo de nuevo! \n");
+                        }
                     }
-                    "add account" => {
-                        println!("add account leido correctamente! \n");
-                        handle_add_account_request(&mut wallet);
-                    }
-                    "balance" => {
-                        println!("balance leido correctamente! \n");
-                        handle_balance_request(&mut wallet);
-                    }
-                    "transaccion" => {
-                        println!("transaccion leido correctamente! \n");
-                        handle_transaccion_request(&mut wallet);
-
-                    }
-                    _ => {
-                        println!("Comando no reconocido. Inténtalo de nuevo! \n");
-                    }
+                    show_options();
+                } else {
+                    println!("Entrada inválida. Inténtalo de nuevo! \n");
                 }
-                show_options()
             }
             Err(error) => {
                 println!("Error al leer la entrada: {}", error);
@@ -179,12 +179,12 @@ fn handle_input(mut wallet: Wallet) -> Result<(), GenericError> {
 fn show_options() {
     println!("\n");
     println!("INGRESE ALGUNO DE LOS SIGUIENTES COMANDOS\n");
-    println!("exit: terminar el programa\n");
-    println!("add account: añadir una cuenta a la wallet\n");
-    println!("balance: mostrar balance de una cuenta\n");
-    println!("transaccion: hacer transaccion desde una cuenta\n");
-    println!("poI: prueba de inclusion de una transaccion en un bloque\n");
-    println!("-----------------------------------------------------------\n\n");
+    println!("0: terminar el programa");
+    println!("1: añadir una cuenta a la wallet");
+    println!("2: mostrar balance de las cuentas");
+    println!("3: hacer transaccion desde una cuenta");
+    println!("4: prueba de inclusion de una transaccion en un bloque");
+    println!("-----------------------------------------------------------\n");
 }
 
 
@@ -276,6 +276,7 @@ fn handle_add_account_request(wallet: &mut Wallet)  {
             match std::io::stdin().read_line(&mut address_input) {
                 Ok(_) => {
                     let address = address_input.trim();
+                    println!("Agregando la cuenta -- {} -- a la wallet...\n", address);
                     if let Err(err) = wallet.add_account(wif_private_key.to_string(), address.to_string()) {
                         println!("ERROR: {err}\n");
                         println!("Ocurrio un error al intentar añadir una nueva cuenta, intente de nuevo! \n");
@@ -298,19 +299,8 @@ fn handle_add_account_request(wallet: &mut Wallet)  {
 
 
 fn handle_balance_request(wallet: &mut Wallet) {
-    println!("Ingrese la cuenta para obtener el balance:");
-    let mut account_input = String::new();
-    match std::io::stdin().read_line(&mut account_input) {
-        Ok(_) => {
-            let account = account_input.trim();
-            // Lógica para obtener el balance de la cuenta especificada
-            // Puedes llamar a funciones o métodos específicos para obtener el balance
-            println!("Obteniendo el balance de la cuenta {}...", account);
-        }
-        Err(error) => {
-            println!("Error al leer la entrada: {}", error);
-        }
-    }
+    println!("Calculando el balance de las cuentas...");
+    wallet.show_accounts_balance();
 }
 #[cfg(test)]
 mod tests {

@@ -47,12 +47,20 @@ impl Account {
     pub fn load_utxos(&mut self, utxos: Vec<UtxoTuple>) {
         self.utxo_set.extend_from_slice(&utxos);
     }
+
+    /// Compara el monto recibido con el balance de la cuenta.
+    /// Devuelve true si el balance es mayor. Caso contrario false
     pub fn has_balance(&self, value: i64) -> bool {
+        self.balance() > value
+    }
+
+    /// Devuelve el balance de la cuenta
+    pub fn balance(&self) -> i64 {
         let mut balance: i64 = 0;
         for utxo in &self.utxo_set {
             balance += utxo.balance();
         }
-        balance > value
+        balance
     }
     /// Devuelve un vector con las utxos a ser gastadas en una transaccion nueva
     fn get_utxos_for_amount(&mut self, value: i64) -> Vec<UtxoTuple> {
@@ -65,7 +73,6 @@ impl Account {
                 partial_amount += self.utxo_set[position].balance();
                 utxos_to_spend.push(self.utxo_set[position].clone());
                 // No corresponde removerlas mientras la tx no está confirmada
-                // self.remove_utxo(position);
             } else {
                 utxos_to_spend
                     .push(self.utxo_set[position].utxos_to_spend(value, &mut partial_amount));
