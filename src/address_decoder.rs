@@ -137,14 +137,12 @@ pub fn decode_wif_private_key(wif_private_key: &str) -> Result<[u8; 32], Box<dyn
 #[cfg(test)]
 
 mod test {
-    use std::error::Error;
-    use std::io;
-
     use super::get_pubkey_hash_from_address;
     use crate::address_decoder::decode_wif_private_key;
     use crate::address_decoder::generate_address;
     use secp256k1::SecretKey;
     use std::error::Error;
+    use std::io;
 
     /// Genera el pubkey hash a partir de la private key
     fn generate_pubkey_hash(private_key: &[u8]) -> [u8; 20] {
