@@ -8,11 +8,12 @@ use std::{
 use bitcoin::{
     blocks::{block::Block, block_header::BlockHeader},
     compact_size_uint::CompactSizeUint,
+    custom_errors::NodeCustomErrors,
     transactions::{
         outpoint::Outpoint, script::sig_script::SigScript, transaction::Transaction, tx_in::TxIn,
         tx_out::TxOut,
     },
-    utxo_tuple::UtxoTuple, custom_errors::NodeCustomErrors,
+    utxo_tuple::UtxoTuple,
 };
 
 type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
