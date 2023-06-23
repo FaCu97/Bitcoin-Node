@@ -131,12 +131,18 @@ impl NodeMessageHandler {
     /// De esta manera se broadcastea a todos los nodos conectados el mensaje.
     /// Devuelve Ok(()) en caso exitoso o un error ThreadChannelError en caso contrario
     pub fn broadcast_to_nodes(&self, message: Vec<u8>) -> NodeMessageHandlerResult {
+        let mut amount_of_failed_nodes = 0;
         for node_sender in &self.nodes_sender {
             // si alguno de los channels esta cerrado significa que por alguna razon el nodo fallo entonces lo ignoro y pruebo broadcastear
             // en los siguientes nodos restantes
             if let Err(_) = node_sender.send(message.clone()) {
+                amount_of_failed_nodes += 1;
                 continue;
             }
+        }
+        // Si de todos los nodos, no se le pudo enviar a ninguno --> falla el broadcasting
+        if amount_of_failed_nodes == self.nodes_sender.len() {
+            return Err(NodeMessageHandlerError::ThreadChannelError("Todos los channels cerrados, no se pudo boradcastear tx".to_string()))
         }
         Ok(())
     }
