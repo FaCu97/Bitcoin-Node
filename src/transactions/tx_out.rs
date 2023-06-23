@@ -8,6 +8,7 @@ use crate::{
 };
 
 use super::{script::pubkey::Pubkey, transaction::Transaction};
+/// Representa la estructura TxOut del protocolo bitcoin
 #[derive(Debug, PartialEq, Clone)]
 pub struct TxOut {
     value: i64,                       // Number of satoshis to spend
@@ -16,6 +17,7 @@ pub struct TxOut {
 }
 
 impl TxOut {
+    /// Inicializa el TxOut según los parámetros recibidos.
     pub fn new(value: i64, pk_script_bytes: CompactSizeUint, pk_script: Vec<u8>) -> Self {
         TxOut {
             value,
@@ -46,6 +48,10 @@ impl TxOut {
             pk_script: Pubkey::new(pk_script),
         })
     }
+
+    /// Recibe un vector de bytes que contiene los txout y un offset indicando la posicion donde empiezan.
+    /// Devuelve un vector de txout completando los campos según los bytes leidos en caso de que todo este bien
+    /// y un string indicando el error cuando algo falla. Actualiza el offset
     pub fn unmarshalling_txouts(
         bytes: &Vec<u8>,
         amount_txout: u64,
@@ -60,6 +66,8 @@ impl TxOut {
         Ok(tx_out_list)
     }
 
+    /// Serializa el TxOut a bytes según el protocolo bitcoin.
+    /// Los guarda en el vector recibido por parámetro.
     pub fn marshalling(&self, bytes: &mut Vec<u8>) {
         let value_bytes = self.value.to_le_bytes();
         bytes.extend_from_slice(&value_bytes[0..8]);
@@ -68,13 +76,16 @@ impl TxOut {
         bytes.extend_from_slice(self.pk_script.bytes());
     }
 
+    /// Devuelve el valor del TxOut
     pub fn value(&self) -> i64 {
         self.value
     }
 
-    pub fn get_adress(&self) -> Result<String, &'static str> {
-        self.pk_script.generate_adress()
+    /// Obtiene la address del receptor del TxOut
+    pub fn get_address(&self) -> Result<String, &'static str> {
+        self.pk_script.generate_address()
     }
+    /// Devuelve el pub key script
     pub fn get_pub_key_script(&self) -> &Vec<u8> {
         self.pk_script.bytes()
     }
@@ -100,7 +111,7 @@ impl TxOut {
                 .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
                 .contains(&tx)
             {
-                let tx_asociate_address = match self.get_adress() {
+                let tx_asociate_address = match self.get_address() {
                     Ok(address) => address,
                     Err(e) => e.to_string(),
                 };

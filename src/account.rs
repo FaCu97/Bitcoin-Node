@@ -9,7 +9,9 @@ use crate::transactions::transaction::Transaction;
 use crate::utxo_tuple::UtxoTuple;
 #[derive(Debug, Clone)]
 
+/// Representa una cuenta bitcoin
 /// Guarda la address comprimida y la private key (comprimida o no)
+/// También guarda las utxos de la cuenta, transacciones pendientes y confirmadas
 pub struct Account {
     pub private_key: String,
     pub address: String,
@@ -38,14 +40,18 @@ impl Account {
     pub fn get_pubkey_compressed(&self) -> Result<[u8; 33], Box<dyn Error>> {
         address_decoder::get_pubkey_compressed(&self.private_key)
     }
+    /// Devuelve la private key decodificada en formato bytes.
     pub fn get_private_key(&self) -> Result<[u8; 32], Box<dyn Error>> {
         address_decoder::decode_wif_private_key(self.private_key.as_str())
     }
+
+    /// Devuelve la dirección de la cuenta
     pub fn get_address(&self) -> &String {
         &self.address
     }
+    /// Guarda los utxos en la cuenta
     pub fn load_utxos(&mut self, utxos: Vec<UtxoTuple>) {
-        self.utxo_set.extend_from_slice(&utxos);
+        self.utxo_set = utxos;
     }
 
     /// Compara el monto recibido con el balance de la cuenta.
@@ -62,7 +68,7 @@ impl Account {
         }
         balance
     }
-    /// Devuelve un vector con las utxos a ser gastadas en una transaccion nueva
+    /// Devuelve un vector con las utxos a ser gastadas en una transaccion nueva, según el monto recibido.
     fn get_utxos_for_amount(&mut self, value: i64) -> Vec<UtxoTuple> {
         let mut utxos_to_spend = Vec::new();
         let mut partial_amount: i64 = 0;
@@ -83,11 +89,12 @@ impl Account {
         utxos_to_spend
     }
 
+    /// Agrega la transacción a la lista de transacciones pendientes.
     fn add_transaction(&self, transaction: Transaction) {
         let mut aux = self.pending_transactions.write().unwrap();
         aux.push(transaction);
     }
-    /// Realiza la transaccion con el monto recibido , devuelve el hash de dicha transaccion
+    /// Realiza la transaccion con el monto recibido, devuelve el hash de dicha transaccion
     /// para que el nodo envie dicho hash a lo restantes nodos de la red
     pub fn make_transaction(
         &mut self,
@@ -106,7 +113,7 @@ impl Account {
                 ),
             )));
         }
-        // sabemos que tenemos monto para realizar la transaccion , ahora debemos obtener las utxos
+        // Sabemos que tenemos monto para realizar la transaccion , ahora debemos obtener las utxos
         // que utilizaremos para gastar
         let utxos_to_spend: Vec<UtxoTuple> = self.get_utxos_for_amount(amount + fee);
         let change_address: &str = self.address.as_str();
@@ -122,7 +129,7 @@ impl Account {
         unsigned_transaction.marshalling(&mut bytes);
 
         // el mensaje cifrado creo que no hace falta chequearlo
-        unsigned_transaction.validate(&[0; 32], &utxos_to_spend)?;
+        unsigned_transaction.validate(&utxos_to_spend)?;
 
         self.add_transaction(unsigned_transaction.clone());
         Ok(unsigned_transaction.hash())
@@ -142,6 +149,7 @@ impl Account {
         self.utxo_set = account_utxo_set;
     }
 }
+/// Convierte la cadena de bytes a hexadecimal y la devuelve
 pub fn bytes_to_hex_string(bytes: &[u8]) -> String {
     let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
 
@@ -151,19 +159,28 @@ pub fn bytes_to_hex_string(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod test {
 
+    use crate::account::Account;
     use std::{
         error::Error,
+        io,
         sync::{Arc, RwLock},
     };
 
-    use hex;
+    /// Convierte el str recibido en hexadecimal, a bytes
+    fn string_to_33_bytes(input: &str) -> Result<[u8; 33], Box<dyn Error>> {
+        if input.len() != 66 {
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                "El string recibido es inválido. No tiene el largo correcto",
+            )));
+        }
 
-    use crate::account::Account;
-
-    fn string_to_33_bytes(input: &str) -> Result<[u8; 33], hex::FromHexError> {
-        let bytes = hex::decode(input)?;
         let mut result = [0; 33];
-        result.copy_from_slice(&bytes[..33]);
+        for i in 0..33 {
+            let byte_str = &input[i * 2..i * 2 + 2];
+            result[i] = u8::from_str_radix(byte_str, 16)?;
+        }
+
         Ok(result)
     }
 

@@ -24,6 +24,8 @@ use super::node_message_handler::NodeMessageHandlerError;
 type NodeMessageHandlerResult = Result<(), NodeMessageHandlerError>;
 type NodeSender = Sender<Vec<u8>>;
 
+const START_STRING: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
+
 /*
 ***************************************************************************
 ****************************** HANDLERS ***********************************
@@ -153,7 +155,7 @@ pub fn handle_block_message(
     Ok(())
 }
 
-/// recieves a NodeSender and the payload of the inv message and creates the inventories to ask for the incoming
+/// Recieves a NodeSender and the payload of the inv message and creates the inventories to ask for the incoming
 /// txs the node sent via inv. Returns error in case of failure or Ok(())
 pub fn handle_inv_message(
     tx: NodeSender,
@@ -189,10 +191,10 @@ pub fn handle_inv_message(
 }
 
 /// Recibe un NodeSender y un payload y manda por el channel el pong message correspondiente para que se escriba por el nodo
-/// y quede respondido el ping. Devuelve Ok(()) en caso de que se pueda enviar bien por el channel o Error de channel en caso contrario
+/// y quede respondido el ping. Devuelve Ok(()) en caso de que se pueda enviar bien por el channel o Error de channel en caso contrario.
 pub fn handle_ping_message(tx: NodeSender, payload: &[u8]) -> NodeMessageHandlerResult {
     let header = HeaderMessage {
-        start_string: [0x0b, 0x11, 0x09, 0x07],
+        start_string: START_STRING,
         command_name: "pong".to_string(),
         payload_size: payload.len() as u32,
         checksum: get_checksum(payload),
@@ -225,7 +227,7 @@ pub fn handle_tx_message(
 ***************************************************************************
 */
 
-/// Receives the inventories with the tx and the sender to write in the node. sends the getdata message to ask for the tx
+/// Receives the inventories with the tx and the sender to write in the node. Sends the getdata message to ask for the tx
 fn ask_for_incoming_tx(tx: NodeSender, inventories: Vec<Inventory>) -> NodeMessageHandlerResult {
     let get_data_message = GetDataMessage::new(inventories);
     let get_data_message_bytes = get_data_message.marshalling();
@@ -234,8 +236,8 @@ fn ask_for_incoming_tx(tx: NodeSender, inventories: Vec<Inventory>) -> NodeMessa
     Ok(())
 }
 
-/// Recibe un bloque a agregar a la cadena de bloques y el Arc apuntando a la cadena de bloques y lo agrega.
-/// Devuelve Ok(()) en caso de poder agregarlo correctamente o error del tipo NodeHandlerError en caso de no poder
+/// Recibe un bloque a agregar a la cadena y el puntero Arc apuntando a la cadena de bloques y lo agrega.
+/// Devuelve Ok(()) en caso de poder agregarlo correctamente o error del tipo NodeHandlerError en caso de no poder.
 fn include_new_block(
     log_sender: LogSender,
     block: Block,

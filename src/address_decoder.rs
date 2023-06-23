@@ -59,7 +59,6 @@ pub fn get_pubkey_hash_from_address(address: &str) -> Result<[u8; 20], Box<dyn E
 }
 
 /// Devuelve la clave publica comprimida (33 bytes) a partir de la privada
-
 pub fn get_pubkey_compressed(private_key: &str) -> Result<[u8; 33], Box<dyn Error>> {
     let private_key = decode_wif_private_key(private_key)?;
     let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
@@ -138,15 +137,12 @@ pub fn decode_wif_private_key(wif_private_key: &str) -> Result<[u8; 32], Box<dyn
 #[cfg(test)]
 
 mod test {
-    use std::error::Error;
-
     use super::get_pubkey_hash_from_address;
-    use crate::account;
-    use crate::account::bytes_to_hex_string;
     use crate::address_decoder::decode_wif_private_key;
     use crate::address_decoder::generate_address;
-    use crate::address_decoder::get_pubkey_compressed;
     use secp256k1::SecretKey;
+    use std::error::Error;
+    use std::io;
 
     /// Genera el pubkey hash a partir de la private key
     fn generate_pubkey_hash(private_key: &[u8]) -> [u8; 20] {
@@ -160,10 +156,21 @@ mod test {
         super::hash_160(&public_key_compressed)
     }
 
-    fn string_to_32_bytes(input: &str) -> Result<[u8; 32], hex::FromHexError> {
-        let bytes = hex::decode(input)?;
+    /// Convierte el str recibido en hexadecimal, a bytes
+    fn string_to_32_bytes(input: &str) -> Result<[u8; 32], Box<dyn Error>> {
+        if input.len() != 64 {
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                "El string recibido es inválido. No tiene el largo correcto",
+            )));
+        }
+
         let mut result = [0; 32];
-        result.copy_from_slice(&bytes[..32]);
+        for i in 0..32 {
+            let byte_str = &input[i * 2..i * 2 + 2];
+            result[i] = u8::from_str_radix(byte_str, 16)?;
+        }
+
         Ok(result)
     }
 
