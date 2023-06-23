@@ -1,14 +1,17 @@
 #[derive(Clone, Debug, PartialEq)]
+/// Representa un entero de largo variable según se utiliza en el protocolo bitcoin.
 pub struct CompactSizeUint {
     bytes: Vec<u8>,
 }
 
 impl CompactSizeUint {
+    /// Crea el CompactSize según el número recibido
     pub fn new(value: u128) -> Self {
         CompactSizeUint {
             bytes: Self::generate_compact_size_uint(value),
         }
     }
+    /// Genera los bytes del compact size segpun el número recibido.
     fn generate_compact_size_uint(value: u128) -> Vec<u8> {
         if (253..=0xffff).contains(&value) {
             return Self::get_compact_size_uint(0xfd, 3, value);
@@ -22,10 +25,11 @@ impl CompactSizeUint {
         vec![value as u8]
     }
 
+    /// Devuelve el CompactSize en formato bytes
     pub fn value(&self) -> &Vec<u8> {
         &self.bytes
     }
-
+    /// Devuelve el CompactSize decodificado en formato u64
     pub fn decoded_value(&self) -> u64 {
         let mut bytes: [u8; 8] = [0; 8];
         bytes[0] = self.bytes[0];
@@ -44,6 +48,7 @@ impl CompactSizeUint {
         u64::from_le_bytes(bytes)
     }
 
+    /// Arma la cadena de bytes del compact size, según los parámetros recibidos
     fn get_compact_size_uint(first_byte: u8, bytes_amount: u8, value: u128) -> Vec<u8> {
         let mut bytes: Vec<u8> = Vec::new();
         bytes.push(first_byte);
@@ -59,11 +64,15 @@ impl CompactSizeUint {
         bytes
     }
 
+    /// Serializa el CompactSize a bytes y los devuelve
     pub fn marshalling(&self) -> Vec<u8> {
         let mut bytes = vec![];
         bytes.extend(self.value());
         bytes
     }
+
+    /// Deserializa el CompactSize según los bytes recibidos y lo devuelve.
+    /// Actualiza el offset.
     pub fn unmarshalling(
         bytes: &[u8],
         offset: &mut usize,

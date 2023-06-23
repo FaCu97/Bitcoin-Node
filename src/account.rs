@@ -9,7 +9,9 @@ use crate::transactions::transaction::Transaction;
 use crate::utxo_tuple::UtxoTuple;
 #[derive(Debug, Clone)]
 
+/// Representa una cuenta bitcoin
 /// Guarda la address comprimida y la private key (comprimida o no)
+/// También guarda las utxos de la cuenta, transacciones pendientes y confirmadas
 pub struct Account {
     pub private_key: String,
     pub address: String,
@@ -38,14 +40,18 @@ impl Account {
     pub fn get_pubkey_compressed(&self) -> Result<[u8; 33], Box<dyn Error>> {
         address_decoder::get_pubkey_compressed(&self.private_key)
     }
+    /// Devuelve la private key decodificada en formato bytes.
     pub fn get_private_key(&self) -> Result<[u8; 32], Box<dyn Error>> {
         address_decoder::decode_wif_private_key(self.private_key.as_str())
     }
+
+    /// Devuelve la dirección de la cuenta
     pub fn get_address(&self) -> &String {
         &self.address
     }
+    /// Guarda los utxos en la cuenta
     pub fn load_utxos(&mut self, utxos: Vec<UtxoTuple>) {
-        self.utxo_set.extend_from_slice(&utxos);
+        self.utxo_set = utxos;
     }
     pub fn has_balance(&self, value: i64) -> bool {
         let mut balance: i64 = 0;
@@ -54,7 +60,7 @@ impl Account {
         }
         balance > value
     }
-    /// Devuelve un vector con las utxos a ser gastadas en una transaccion nueva
+    /// Devuelve un vector con las utxos a ser gastadas en una transaccion nueva, según el monto recibido.
     fn get_utxos_for_amount(&mut self, value: i64) -> Vec<UtxoTuple> {
         let mut utxos_to_spend = Vec::new();
         let mut partial_amount: i64 = 0;
@@ -65,7 +71,6 @@ impl Account {
                 partial_amount += self.utxo_set[position].balance();
                 utxos_to_spend.push(self.utxo_set[position].clone());
                 // No corresponde removerlas mientras la tx no está confirmada
-                // self.remove_utxo(position);
             } else {
                 utxos_to_spend
                     .push(self.utxo_set[position].utxos_to_spend(value, &mut partial_amount));
@@ -76,11 +81,12 @@ impl Account {
         utxos_to_spend
     }
 
+    /// Agrega la transacción a la lista de transacciones pendientes.
     fn add_transaction(&self, transaction: Transaction) {
         let mut aux = self.pending_transactions.write().unwrap();
         aux.push(transaction);
     }
-    /// Realiza la transaccion con el monto recibido , devuelve el hash de dicha transaccion
+    /// Realiza la transaccion con el monto recibido, devuelve el hash de dicha transaccion
     /// para que el nodo envie dicho hash a lo restantes nodos de la red
     pub fn make_transaction(
         &mut self,
@@ -99,7 +105,7 @@ impl Account {
                 ),
             )));
         }
-        // sabemos que tenemos monto para realizar la transaccion , ahora debemos obtener las utxos
+        // Sabemos que tenemos monto para realizar la transaccion , ahora debemos obtener las utxos
         // que utilizaremos para gastar
         let utxos_to_spend: Vec<UtxoTuple> = self.get_utxos_for_amount(amount + fee);
         let change_address: &str = self.address.as_str();
@@ -119,7 +125,7 @@ impl Account {
         );
 
         // el mensaje cifrado creo que no hace falta chequearlo
-        unsigned_transaction.validate(&[0; 32], &utxos_to_spend)?;
+        unsigned_transaction.validate(&utxos_to_spend)?;
 
         self.add_transaction(unsigned_transaction.clone());
         Ok(unsigned_transaction.hash())
@@ -139,6 +145,7 @@ impl Account {
         self.utxo_set = account_utxo_set;
     }
 }
+/// Convierte la cadena de bytes a hexadecimal y la devuelve
 pub fn bytes_to_hex_string(bytes: &[u8]) -> String {
     let hex_chars: Vec<String> = bytes.iter().map(|byte| format!("{:02x}", byte)).collect();
 

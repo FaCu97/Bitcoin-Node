@@ -58,6 +58,9 @@ impl HeadersMessage {
         Ok(headers)
     }
 
+    /// Esta funcion se utiliza para guardar en disco los headers recibidos.
+    /// Lee los headers recibidos del stream y los escribe en el file recibido,
+    /// en el mismo formato en que se leen del stream.
     pub fn read_from_node_and_write_to_file(
         log_sender: LogSender,
         stream: &mut TcpStream,
@@ -78,7 +81,6 @@ impl HeadersMessage {
         let headers = Self::unmarshalling(&vec)?;
 
         // imprimo en el archivo
-        //   println!("TAMAÑO: {:?}", vec.len());
         if let Err(err) = file.write_all(&vec) {
             println!(
                 "Error al escribir en el archivo de headers, {}",
@@ -90,6 +92,8 @@ impl HeadersMessage {
     }
 }
 
+/// Consulta la variable finish recibida.
+/// Devuelve true o false dependiendo de si el programa debe finalizar
 pub fn is_terminated(finish: Option<Arc<RwLock<bool>>>) -> bool {
     match finish {
         Some(m) => *m.read().unwrap(),
@@ -164,7 +168,7 @@ mod tests {
         assert_eq!(received_block_header.time, expected_block_header.time);
         assert_eq!(received_block_header.n_bits, expected_block_header.n_bits);
         assert_eq!(received_block_header.nonce, expected_block_header.nonce);
-        //assert_eq!(received_block_header.hash, expected_block_header.hash);
+        assert_eq!(received_block_header.hash(), expected_block_header.hash());
         Ok(())
     }
 
@@ -201,7 +205,7 @@ mod tests {
         assert_eq!(received_block_header.time, expected_block_header.time);
         assert_eq!(received_block_header.n_bits, expected_block_header.n_bits);
         assert_eq!(received_block_header.nonce, expected_block_header.nonce);
-        //assert_eq!(received_block_header.hash, expected_block_header.hash);
+        assert_eq!(received_block_header.hash(), expected_block_header.hash());
         Ok(())
     }
 }

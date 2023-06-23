@@ -54,12 +54,12 @@ impl Node {
             peers_handler,
         })
     }
-    /// funcion para validar un bloque
+    /// Validar el bloque recibido
     pub fn block_validation(block: Block) -> (bool, &'static str) {
         block.validate()
     }
 
-    /// funcion que cargara las utxos asociadas a la respectiva cuenta
+    /// Devuelve las utxos asociadas a la address recibida.
     pub fn utxos_referenced_to_account(&self, address: &str) -> Vec<UtxoTuple> {
         let mut account_utxo_set: Vec<UtxoTuple> = Vec::new();
         for utxo in self.utxo_set.read().unwrap().values() {
@@ -77,7 +77,7 @@ impl Node {
         self.peers_handler.finish()
     }
 
-    /// funcion que muestra si una transaccion se encuentra en un determinado bloque
+    /// Funcion que muestra si una transaccion se encuentra en un determinado bloque
     pub fn merkle_proof_of_inclusion(
         transaction: Transaction,
         block: Block,
@@ -86,7 +86,7 @@ impl Node {
         block.merkle_proof_of_inclusion(transaction.hash(), vector_hash)
     }
 
-    /// recibe un vector de bytes que representa a la raw format transaction para se enviada por
+    /// Recibe un vector de bytes que representa a la raw format transaction para se enviada por
     /// la red a todos los nodos conectados
     pub fn broadcast_tx(&self, raw_tx: [u8; 32]) -> Result<(), NodeMessageHandlerError> {
         let inventories = vec![Inventory::new_tx(raw_tx)];
@@ -108,7 +108,7 @@ impl Node {
     }
 }
 
-///Funcion que se encarga de generar la lista de utxos
+/// Funcion que se encarga de generar la lista de utxos
 fn generate_utxo_set(
     block_chain: &Arc<RwLock<Vec<Block>>>,
     utxo_set: UtxoSetPointer,
