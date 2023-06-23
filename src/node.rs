@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    error::Error,
     net::TcpStream,
     sync::{Arc, RwLock},
 };
@@ -60,9 +61,17 @@ impl Node {
     }
 
     /// Devuelve las utxos asociadas a la address recibida.
-    pub fn utxos_referenced_to_account(&self, address: &str) -> Vec<UtxoTuple> {
+    pub fn utxos_referenced_to_account(
+        &self,
+        address: &str,
+    ) -> Result<Vec<UtxoTuple>, Box<dyn Error>> {
         let mut account_utxo_set: Vec<UtxoTuple> = Vec::new();
-        for utxo in self.utxo_set.read().unwrap().values() {
+        for utxo in self
+            .utxo_set
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .values()
+        {
             let aux_utxo = utxo.referenced_utxos(address);
             let utxo_to_push = match aux_utxo {
                 Some(value) => value,
@@ -70,7 +79,7 @@ impl Node {
             };
             account_utxo_set.push(utxo_to_push);
         }
-        account_utxo_set
+        Ok(account_utxo_set)
     }
     /// Se encarga de llamar a la funcion finish() del peers_handler del nodo
     pub fn shutdown_node(&self) -> Result<(), NodeMessageHandlerError> {
@@ -118,7 +127,9 @@ fn generate_utxo_set(
         .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
 
     for block in block_chain_lock.iter() {
-        block.give_me_utxos(utxo_set.clone());
+        block
+            .give_me_utxos(utxo_set.clone())
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
     }
     Ok(utxo_set)
 }

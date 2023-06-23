@@ -1,4 +1,5 @@
 use bitcoin_hashes::{sha256d, Hash};
+use std::error::Error;
 use std::io::{self, Read, Write};
 use std::net::TcpStream;
 use std::str::Utf8Error;
@@ -6,6 +7,7 @@ use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use std::vec;
 
+use crate::handler::node_message_handler::NodeMessageHandlerError;
 use crate::logwriter::log_writer::{write_in_log, LogSender};
 
 const START_STRING_TESTNET: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
@@ -91,7 +93,7 @@ impl HeaderMessage {
         mut stream: &mut TcpStream,
         command_name: String,
         finish: Option<Arc<RwLock<bool>>>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
+    ) -> Result<Self, Box<dyn Error>> {
         if command_name == *"block" {
             // will wait a minimum of two more seconds for the stalling node to send the block.
             // If the block still hasn’t arrived, Bitcoin Core will disconnect from the stalling

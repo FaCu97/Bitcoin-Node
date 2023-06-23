@@ -160,21 +160,36 @@ impl Transaction {
     }
 
     /// Revisa los inputs de la transacción y remueve las utxos que fueron gastadas
-    pub fn remove_utxos(&self, utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>) {
+    pub fn remove_utxos(
+        &self,
+        utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+    ) -> Result<(), Box<dyn Error>> {
         // Si la tx gasta un output existente en nuestro utxo_set, lo removemos
         for txin in &self.tx_in {
             let txid = &txin.get_previous_output_hash();
             let output_index = txin.get_previous_output_index();
-            if utxo_set.read().unwrap().contains_key(txid) {
-                if let Some(utxo) = utxo_set.write().unwrap().get_mut(txid) {
+            if utxo_set
+                .read()
+                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                .contains_key(txid)
+            {
+                if let Some(utxo) = utxo_set
+                    .write()
+                    .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                    .get_mut(txid)
+                {
                     utxo.remove_utxo(output_index);
                 }
             }
         }
+        Ok(())
     }
 
     /// Genera el UtxoTuple y lo guarda en el utxo_set
-    pub fn load_utxos(&self, utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>) {
+    pub fn load_utxos(
+        &self,
+        utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+    ) -> Result<(), Box<dyn Error>> {
         let hash = self.hash();
         let mut utxos_and_index = Vec::new();
         for (position, utxo) in self.tx_out.iter().enumerate() {
@@ -182,7 +197,11 @@ impl Transaction {
             utxos_and_index.push(utxo_and_index);
         }
         let utxo_tuple = UtxoTuple::new(hash, utxos_and_index);
-        utxo_set.write().unwrap().insert(hash, utxo_tuple);
+        utxo_set
+            .write()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .insert(hash, utxo_tuple);
+        Ok(())
     }
 
     /// Devuelve un string que representa el hash de la transaccion en hexadecimal y en el formato

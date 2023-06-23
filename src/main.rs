@@ -10,7 +10,7 @@ use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
 use bitcoin::wallet::Wallet;
 use std::error::Error;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::{env, fmt};
 
 #[derive(Debug)]
@@ -71,11 +71,9 @@ fn main() -> Result<(), GenericError> {
     );
     let active_nodes = get_active_nodes_from_dns_seed(config.clone(), logsender.clone())
         .map_err(GenericError::ConnectionToDnsError)?;
-    let sockets = Handshake::handshake(config.clone(), logsender.clone(), &active_nodes)
+    let pointer_to_nodes = Handshake::handshake(config.clone(), logsender.clone(), &active_nodes)
         .map_err(GenericError::HandShakeError)?;
     // Acá iría la descarga de los headers
-
-    let pointer_to_nodes = Arc::new(RwLock::new(sockets));
 
     let headers_and_blocks =
         initial_block_download(config, logsender.clone(), pointer_to_nodes.clone()).map_err(

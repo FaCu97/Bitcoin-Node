@@ -145,15 +145,15 @@ mod test {
     use std::io;
 
     /// Genera el pubkey hash a partir de la private key
-    fn generate_pubkey_hash(private_key: &[u8]) -> [u8; 20] {
+    fn generate_pubkey_hash(private_key: &[u8]) -> Result<[u8; 20], Box<dyn Error>> {
         let secp: secp256k1::Secp256k1<secp256k1::All> = secp256k1::Secp256k1::new();
-        let key: SecretKey = SecretKey::from_slice(private_key).unwrap();
+        let key: SecretKey = SecretKey::from_slice(private_key)?;
         let public_key: secp256k1::PublicKey = secp256k1::PublicKey::from_secret_key(&secp, &key);
         //  se aplica RIPEMD160(SHA256(ECDSA(public_key)))
         let public_key_compressed = public_key.serialize();
 
         // Aplica hash160
-        super::hash_160(&public_key_compressed)
+        Ok(super::hash_160(&public_key_compressed))
     }
 
     /// Convierte el str recibido en hexadecimal, a bytes
@@ -224,7 +224,7 @@ mod test {
         let address: &str = "mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV";
         let private_key: &str = "cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR";
         let private_key_bytes = decode_wif_private_key(private_key)?;
-        let pubkey_hash_expected = generate_pubkey_hash(&private_key_bytes);
+        let pubkey_hash_expected = generate_pubkey_hash(&private_key_bytes)?;
         let pubkey_hash_generated = get_pubkey_hash_from_address(address)?;
         assert_eq!(pubkey_hash_expected, pubkey_hash_generated);
         Ok(())

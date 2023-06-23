@@ -49,7 +49,10 @@ impl Wallet {
         amount: i64,
         fee: i64,
     ) -> Result<(), Box<dyn Error>> {
-        let transaction_hash: [u8; 32] = self.accounts.write().unwrap()[account_index]
+        let transaction_hash: [u8; 32] = self
+            .accounts
+            .write()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?[account_index]
             .make_transaction(address_receiver, amount, fee)?;
         println!("HASH TX: {:?}", transaction_hash);
         self.node.broadcast_tx(transaction_hash)?;
@@ -65,7 +68,8 @@ impl Wallet {
     ) -> Result<(), NodeMessageHandlerError> {
         let mut account = Account::new(wif_private_key, address)
             .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
-        self.load_data(&mut account);
+        self.load_data(&mut account)
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
         self.accounts
             .write()
             .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
@@ -73,10 +77,11 @@ impl Wallet {
         Ok(())
     }
     /// Funcion que se encarga de cargar los respectivos utxos asociados a la cuenta
-    fn load_data(&self, account: &mut Account) {
+    fn load_data(&self, account: &mut Account) -> Result<(), Box<dyn Error>> {
         let address = account.get_address().clone();
-        let utxos_to_account = self.node.utxos_referenced_to_account(&address);
+        let utxos_to_account = self.node.utxos_referenced_to_account(&address)?;
         account.load_utxos(utxos_to_account);
+        Ok(())
     }
 }
 

@@ -143,7 +143,9 @@ pub fn handle_block_message(
             include_new_header(log_sender.clone(), new_block.block_header, headers)?;
             include_new_block(log_sender.clone(), new_block.clone(), blocks)?;
             new_block.contains_pending_tx(log_sender, accounts.clone())?;
-            new_block.give_me_utxos(utxo_set.clone());
+            new_block
+                .give_me_utxos(utxo_set.clone())
+                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
             update_accounts_utxo_set(accounts, utxo_set)?;
         }
     } else {
@@ -310,7 +312,9 @@ fn update_accounts_utxo_set(
         .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
 
     for account_lock in accounts_inner_lock.iter_mut() {
-        account_lock.set_utxos(utxo_set.clone());
+        account_lock
+            .set_utxos(utxo_set.clone())
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
     }
     Ok(())
 }

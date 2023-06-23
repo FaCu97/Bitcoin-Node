@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 use crate::address_decoder;
+use crate::handler::node_message_handler::NodeMessageHandlerError;
 use crate::transactions::transaction::Transaction;
 use crate::utxo_tuple::UtxoTuple;
 #[derive(Debug, Clone)]
@@ -82,9 +83,13 @@ impl Account {
     }
 
     /// Agrega la transacción a la lista de transacciones pendientes.
-    fn add_transaction(&self, transaction: Transaction) {
-        let mut aux = self.pending_transactions.write().unwrap();
+    fn add_transaction(&self, transaction: Transaction) -> Result<(), Box<dyn Error>> {
+        let mut aux = self
+            .pending_transactions
+            .write()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
         aux.push(transaction);
+        Ok(())
     }
     /// Realiza la transaccion con el monto recibido, devuelve el hash de dicha transaccion
     /// para que el nodo envie dicho hash a lo restantes nodos de la red
@@ -127,14 +132,21 @@ impl Account {
         // el mensaje cifrado creo que no hace falta chequearlo
         unsigned_transaction.validate(&utxos_to_spend)?;
 
-        self.add_transaction(unsigned_transaction.clone());
+        self.add_transaction(unsigned_transaction.clone())?;
         Ok(unsigned_transaction.hash())
     }
 
     /// Recibe el utxo_set, lo recorre y setea el utxo_set de la cuenta.
-    pub fn set_utxos(&mut self, utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>) {
+    pub fn set_utxos(
+        &mut self,
+        utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+    ) -> Result<(), Box<dyn Error>> {
         let mut account_utxo_set: Vec<UtxoTuple> = Vec::new();
-        for utxo in utxo_set.read().unwrap().values() {
+        for utxo in utxo_set
+            .read()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .values()
+        {
             let aux_utxo = utxo.referenced_utxos(&self.address);
             let utxo_to_push = match aux_utxo {
                 Some(value) => value,
@@ -143,6 +155,7 @@ impl Account {
             account_utxo_set.push(utxo_to_push);
         }
         self.utxo_set = account_utxo_set;
+        Ok(())
     }
 }
 /// Convierte la cadena de bytes a hexadecimal y la devuelve
@@ -220,8 +233,7 @@ mod test {
         };
         let expected_pubkey = string_to_33_bytes(
             "0345EC0AA86BAF64ED626EE86B4A76C12A92D5F6DD1C1D6E4658E26666153DAFA6",
-        )
-        .unwrap();
+        )?;
         assert_eq!(user.get_pubkey_compressed()?, expected_pubkey);
         Ok(())
     }

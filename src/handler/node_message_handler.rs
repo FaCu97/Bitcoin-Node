@@ -2,7 +2,7 @@ use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
     logwriter::log_writer::{write_in_log, LogSender},
-    messages::{headers_message::is_terminated, message_header::HeaderMessage},
+    messages::{message_header::is_terminated, message_header::HeaderMessage},
     utxo_tuple::UtxoTuple,
 };
 use std::{

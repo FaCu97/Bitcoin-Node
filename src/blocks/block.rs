@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    error::Error,
     sync::{Arc, RwLock},
 };
 
@@ -155,20 +156,24 @@ impl Block {
 
     /// Actualiza el utxo_set recibido por parámetro.
     /// Procesa las transacciones del bloque. Agrega las nuevas utxos y remueve las gastadas.
-    pub fn give_me_utxos(&self, uxto_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>) {
+    pub fn give_me_utxos(
+        &self,
+        uxto_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+    ) -> Result<(), Box<dyn Error>> {
         for tx in &self.txn {
             if tx.is_coinbase_transaction() {
                 // como se trata de una coinbase al ser la primera tx solo se cargaran
                 // las utxos de esta transaccion
-                tx.load_utxos(uxto_set.clone());
+                tx.load_utxos(uxto_set.clone())?;
             } else {
                 //primero removemos las utxos que usa esta tx
-                tx.remove_utxos(uxto_set.clone());
+                tx.remove_utxos(uxto_set.clone())?;
                 //luego cargamos las utxos de esta tx para que en la siguiente iteracion
                 //se remuevan aquellas con son usadas
-                tx.load_utxos(uxto_set.clone());
+                tx.load_utxos(uxto_set.clone())?;
             }
         }
+        Ok(())
     }
 
     /// Devuelve un string que representa el hash del bloque en hexadecimal,
