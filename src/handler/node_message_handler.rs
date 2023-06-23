@@ -15,7 +15,7 @@ use std::{
         mpsc::{channel, Receiver, Sender},
         Arc, Mutex, RwLock,
     },
-    thread::{self, JoinHandle},
+    thread::{self, JoinHandle}, mem,
 };
 
 use super::message_handlers::{
@@ -71,7 +71,7 @@ type NodeBlocksData = (Arc<RwLock<Vec<BlockHeader>>>, Arc<RwLock<Vec<Block>>>);
 /// Struct para controlar todos los nodos conectados al nuestro. Escucha permanentemente
 /// a estos y decide que hacer con los mensajes que llegan y con los que tiene que escribir
 pub struct NodeMessageHandler {
-    nodes_handle: Arc<Mutex<Vec<JoinHandle<NodeMessageHandlerResult>>>>,
+    nodes_handle: Arc<Mutex<Vec<JoinHandle<()>>>>,
     nodes_sender: Vec<NodeSender>,
     finish: Arc<RwLock<bool>>,
 }
@@ -95,7 +95,7 @@ impl NodeMessageHandler {
             "Empiezo a escuchar por nuevos bloques y transaccciones",
         );
         let finish = Arc::new(RwLock::new(false));
-        let mut nodes_handle: Vec<JoinHandle<NodeMessageHandlerResult>> = vec![];
+        let mut nodes_handle: Vec<JoinHandle<()>> = vec![];
         let cant_nodos = get_amount_of_nodes(connected_nodes.clone())?;
         let mut nodes_sender = vec![];
         // lista de transacciones recibidas para no recibir las mismas de varios nodos
@@ -156,6 +156,31 @@ impl NodeMessageHandler {
             .finish
             .write()
             .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))? = true;
+        
+        let handles: Vec<JoinHandle<()>> = {
+            let mut locked_handles = self.nodes_handle.lock().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+            mem::take(&mut *locked_handles)
+        };
+        
+        for handle in handles {
+            handle.join().map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))?;
+        }
+        /* 
+        let cant_nodos = self
+            .nodes_handle
+            .lock()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .len();
+        for _ in 0..cant_nodos {
+            let mut nodes_handle = self.nodes_handle.lock().map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+            let join_handle = nodes_handle.pop().ok_or("Error, no hay mas join handles para hace join!\n")
+            .map_err(|err| NodeMessageHandlerError::CanNotRead(err.to_string()))?;
+            join_handle.join().map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))?;
+        }  
+        */  
+       
+        
+        /* 
         let cant_nodos = self
             .nodes_handle
             .lock()
@@ -171,6 +196,7 @@ impl NodeMessageHandler {
                 .join()
                 .map_err(|err| NodeMessageHandlerError::ThreadJoinError(format!("{:?}", err)))??;
         }
+        */
         for node_sender in self.nodes_sender.clone() {
             drop(node_sender);
         }
@@ -191,8 +217,8 @@ pub fn handle_messages_from_node(
     utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
     mut node: TcpStream,
     finish: Option<Arc<RwLock<bool>>>,
-) -> JoinHandle<NodeMessageHandlerResult> {
-    thread::spawn(move || -> NodeMessageHandlerResult {
+) -> JoinHandle<()> {
+    thread::spawn(move || {
         // si ocurre algun error se guarda en esta variable
         let mut error: Option<NodeMessageHandlerError> = None;
         while !is_terminated(finish.clone()) {
@@ -267,10 +293,8 @@ pub fn handle_messages_from_node(
         }
     
         if let Some(err) = error {
-            println!("Nodo {:?} desconectado. {}", node.peer_addr(), err);
-        }
-    
-        Ok(())
+            write_in_log(log_sender.error_log_sender, format!("NODO {:?} DESCONECTADO!!. {}", node.peer_addr(), err).as_str());
+        }    
     })
 }
 
