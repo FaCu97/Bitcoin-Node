@@ -155,19 +155,28 @@ pub fn bytes_to_hex_string(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod test {
 
+    use crate::account::Account;
     use std::{
         error::Error,
+        io,
         sync::{Arc, RwLock},
     };
 
-    use hex;
+    /// Convierte el str recibido en hexadecimal, a bytes
+    fn string_to_33_bytes(input: &str) -> Result<[u8; 33], Box<dyn Error>> {
+        if input.len() != 66 {
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                "El string recibido es inválido. No tiene el largo correcto",
+            )));
+        }
 
-    use crate::account::Account;
-
-    fn string_to_33_bytes(input: &str) -> Result<[u8; 33], hex::FromHexError> {
-        let bytes = hex::decode(input)?;
         let mut result = [0; 33];
-        result.copy_from_slice(&bytes[..33]);
+        for i in 0..33 {
+            let byte_str = &input[i * 2..i * 2 + 2];
+            result[i] = u8::from_str_radix(byte_str, 16)?;
+        }
+
         Ok(result)
     }
 

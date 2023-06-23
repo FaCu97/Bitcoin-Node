@@ -142,6 +142,7 @@ mod test {
     use crate::address_decoder::generate_address;
     use secp256k1::SecretKey;
     use std::error::Error;
+    use std::io;
 
     /// Genera el pubkey hash a partir de la private key
     fn generate_pubkey_hash(private_key: &[u8]) -> [u8; 20] {
@@ -155,10 +156,21 @@ mod test {
         super::hash_160(&public_key_compressed)
     }
 
-    fn string_to_32_bytes(input: &str) -> Result<[u8; 32], hex::FromHexError> {
-        let bytes = hex::decode(input)?;
+    /// Convierte el str recibido en hexadecimal, a bytes
+    fn string_to_32_bytes(input: &str) -> Result<[u8; 32], Box<dyn Error>> {
+        if input.len() != 64 {
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                "El string recibido es inválido. No tiene el largo correcto",
+            )));
+        }
+
         let mut result = [0; 32];
-        result.copy_from_slice(&bytes[..32]);
+        for i in 0..32 {
+            let byte_str = &input[i * 2..i * 2 + 2];
+            result[i] = u8::from_str_radix(byte_str, 16)?;
+        }
+
         Ok(result)
     }
 
