@@ -21,7 +21,6 @@ use crate::{
 
 use crate::custom_errors::NodeCustomErrors;
 
-
 type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;
 type NodeSender = Sender<Vec<u8>>;
 

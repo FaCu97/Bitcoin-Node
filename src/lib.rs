@@ -5,6 +5,7 @@ pub mod address_decoder;
 pub mod blocks;
 pub mod compact_size_uint;
 pub mod config;
+pub mod custom_errors;
 pub mod gtk;
 pub mod handler;
 pub mod handshake;
@@ -16,7 +17,6 @@ pub mod node;
 pub mod transactions;
 pub mod utxo_tuple;
 pub mod wallet;
-pub mod custom_errors;
 
 /// Muestra las opciones para interactuar con el programa, espera algun comando
 /// y lo handlea o muestra un mensaje de error

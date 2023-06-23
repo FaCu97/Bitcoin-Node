@@ -4,7 +4,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use crate::{account::Account, node::Node, custom_errors::NodeCustomErrors};
+use crate::{account::Account, custom_errors::NodeCustomErrors, node::Node};
 #[derive(Debug, Clone)]
 
 pub struct Wallet {

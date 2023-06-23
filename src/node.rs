@@ -8,11 +8,12 @@ use std::{
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
-    handler::node_message_handler::{NodeMessageHandler},
+    custom_errors::NodeCustomErrors,
+    handler::node_message_handler::NodeMessageHandler,
     logwriter::log_writer::LogSender,
     messages::inventory::{inv_mershalling, Inventory},
     transactions::transaction::Transaction,
-    utxo_tuple::UtxoTuple, custom_errors::NodeCustomErrors,
+    utxo_tuple::UtxoTuple,
 };
 
 type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;

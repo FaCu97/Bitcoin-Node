@@ -8,9 +8,8 @@ use std::{
 use bitcoin_hashes::{sha256, sha256d, Hash};
 
 use crate::{
-    account::Account, compact_size_uint::CompactSizeUint,
-    logwriter::log_writer::LogSender,
-    utxo_tuple::UtxoTuple, custom_errors::NodeCustomErrors,
+    account::Account, compact_size_uint::CompactSizeUint, custom_errors::NodeCustomErrors,
+    logwriter::log_writer::LogSender, utxo_tuple::UtxoTuple,
 };
 
 use super::{

@@ -8,9 +8,10 @@ use super::block_header::BlockHeader;
 use crate::{
     account::Account,
     compact_size_uint::CompactSizeUint,
+    custom_errors::NodeCustomErrors,
     logwriter::log_writer::{write_in_log, LogSender},
     transactions::transaction::Transaction,
-    utxo_tuple::UtxoTuple, custom_errors::NodeCustomErrors,
+    utxo_tuple::UtxoTuple,
 };
 use bitcoin_hashes::{sha256d, Hash};
 

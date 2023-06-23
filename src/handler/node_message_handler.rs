@@ -1,27 +1,27 @@
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
+    custom_errors::NodeCustomErrors,
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{message_header::is_terminated, message_header::HeaderMessage},
-    utxo_tuple::UtxoTuple, custom_errors::NodeCustomErrors,
+    utxo_tuple::UtxoTuple,
 };
 use std::{
     collections::HashMap,
     io::{self, Read, Write},
+    mem,
     net::TcpStream,
     sync::{
         mpsc::{channel, Receiver, Sender},
         Arc, Mutex, RwLock,
     },
-    thread::{self, JoinHandle}, mem,
+    thread::{self, JoinHandle},
 };
 
 use super::message_handlers::{
     handle_block_message, handle_getdata_message, handle_headers_message, handle_inv_message,
     handle_ping_message, handle_tx_message,
 };
-
-
 
 type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;
 type NodeSender = Sender<Vec<u8>>;
@@ -120,7 +120,10 @@ impl NodeMessageHandler {
             .write()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))? = true;
         let handles: Vec<JoinHandle<()>> = {
-            let mut locked_handles = self.nodes_handle.lock().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
+            let mut locked_handles = self
+                .nodes_handle
+                .lock()
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
             mem::take(&mut *locked_handles)
         };
         for handle in handles {
@@ -339,9 +342,7 @@ fn get_last_node(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<TcpStream, NodeCu
 }
 
 /// Recibe un Arc apuntando a un vector de TcpStream y devuelve el largo del vector
-fn get_amount_of_nodes(
-    nodes: Arc<RwLock<Vec<TcpStream>>>,
-) -> Result<usize, NodeCustomErrors> {
+fn get_amount_of_nodes(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<usize, NodeCustomErrors> {
     let amount_of_nodes = nodes
         .read()
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?

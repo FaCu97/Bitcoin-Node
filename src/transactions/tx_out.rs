@@ -3,7 +3,8 @@ use std::sync::{Arc, RwLock};
 use crate::{
     account::Account,
     compact_size_uint::CompactSizeUint,
-    logwriter::log_writer::{write_in_log, LogSender}, custom_errors::NodeCustomErrors,
+    custom_errors::NodeCustomErrors,
+    logwriter::log_writer::{write_in_log, LogSender},
 };
 
 use super::{script::pubkey::Pubkey, transaction::Transaction};
