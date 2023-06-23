@@ -1,5 +1,5 @@
 use bitcoin::config::Config;
-use bitcoin::gtk::gtk::Gtk;
+use bitcoin::gtk::interfaz_gtk::Gtk;
 use bitcoin::handler::node_message_handler::NodeMessageHandlerError;
 use bitcoin::handshake::{HandShakeError, Handshake};
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
@@ -109,6 +109,7 @@ fn main() -> Result<(), GenericError> {
     terminal_ui(wallet);
     node.shutdown_node()
         .map_err(GenericError::NodeHandlerError)?;
+
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
         .map_err(GenericError::LoggingError)?;
 
