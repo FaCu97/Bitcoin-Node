@@ -5,6 +5,7 @@ pub mod address_decoder;
 pub mod blocks;
 pub mod compact_size_uint;
 pub mod config;
+pub mod custom_errors;
 pub mod gtk;
 pub mod handler;
 pub mod handshake;

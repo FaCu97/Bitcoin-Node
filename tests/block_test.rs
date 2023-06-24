@@ -8,7 +8,7 @@ use std::{
 use bitcoin::{
     blocks::{block::Block, block_header::BlockHeader},
     compact_size_uint::CompactSizeUint,
-    handler::node_message_handler::NodeMessageHandlerError,
+    custom_errors::NodeCustomErrors,
     transactions::{
         outpoint::Outpoint, script::sig_script::SigScript, transaction::Transaction, tx_in::TxIn,
         tx_out::TxOut,
@@ -134,7 +134,7 @@ fn test_lista_de_utxos_de_un_bloque_con_2_transacciones_tiene_largo_esperado(
 
     block
         .give_me_utxos(pointer_to_utxo_set.clone())
-        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
     let mut amount_utxos = 0;
     let utxo_set = match pointer_to_utxo_set.read() {
         Ok(utxo_set) => utxo_set,
