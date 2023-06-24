@@ -11,7 +11,6 @@ use crate::{
     handler::node_message_handler::{NodeMessageHandler, NodeMessageHandlerError},
     logwriter::log_writer::LogSender,
     messages::inventory::{inv_mershalling, Inventory},
-    transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
 };
 

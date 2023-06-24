@@ -10,6 +10,7 @@ impl MerkleTree {
             hashes: Self::generate_merkle_tree(hashes),
         }
     }
+    /// Sirve para generar los distintos niveles del arbol
     fn recursive_generation_merkle_root(
         vector: Vec<[u8; 32]>,
         merkle_tree: &mut Vec<Vec<[u8; 32]>>,
@@ -49,6 +50,8 @@ impl MerkleTree {
         Self::recursive_generation_merkle_root(upper_level, merkle_tree)
     }
 
+    /// Crea el merkle tree a partir del vector de hashes recibidos , dentro llama a una
+    /// funcion recursiva para generar el arbol
     fn generate_merkle_tree(txs: &Vec<[u8; 32]>) -> Vec<Vec<[u8; 32]>> {
         let mut merkle_transactions: Vec<[u8; 32]> = Vec::new();
         let mut merkle_tree: Vec<Vec<[u8; 32]>> = Vec::new();
