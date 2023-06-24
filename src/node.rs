@@ -86,15 +86,6 @@ impl Node {
         self.peers_handler.finish()
     }
 
-    /// Funcion que muestra si una transaccion se encuentra en un determinado bloque
-    pub fn merkle_proof_of_inclusion(
-        transaction: Transaction,
-        block: Block,
-        vector_hash: Vec<[u8; 32]>,
-    ) -> bool {
-        block.merkle_proof_of_inclusion(transaction.hash(), vector_hash)
-    }
-
     /// Recibe un vector de bytes que representa a la raw format transaction para se enviada por
     /// la red a todos los nodos conectados
     pub fn broadcast_tx(&self, raw_tx: [u8; 32]) -> Result<(), NodeMessageHandlerError> {
