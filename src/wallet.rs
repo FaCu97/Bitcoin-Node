@@ -4,7 +4,13 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use crate::{account::Account, custom_errors::NodeCustomErrors, node::Node};
+use crate::{
+    account::Account,
+    blocks::utils_block::{make_merkle_proof, string_to_bytes},
+    custom_errors::NodeCustomErrors,
+    node::Node,
+};
+
 #[derive(Debug, Clone)]
 
 pub struct Wallet {
@@ -119,5 +125,27 @@ impl Wallet {
         }
         println!();
         Ok(())
+    }
+
+    /// Solicita al nodo la proof of inclusion de la transacción
+    /// Recibe el hash de la transacción y del bloque en que se encuentra.
+    /// Evalúa la POI y devuelve true o false
+    pub fn tx_proof_of_inclusion(
+        &self,
+        block_hash_hex: String,
+        tx_hash_hex: String,
+    ) -> Result<bool, Box<dyn Error>> {
+        let mut block_hash: [u8; 32] = string_to_bytes(&block_hash_hex)?;
+        let mut tx_hash: [u8; 32] = string_to_bytes(&tx_hash_hex)?;
+        block_hash.reverse();
+        tx_hash.reverse();
+
+        let poi = self.node.merkle_proof_of_inclusion(&block_hash, &tx_hash)?;
+
+        let hashes = match poi {
+            Some(value) => value,
+            None => return Ok(false),
+        };
+        Ok(make_merkle_proof(&hashes, &tx_hash))
     }
 }

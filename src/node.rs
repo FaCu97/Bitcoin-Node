@@ -1,10 +1,3 @@
-use std::{
-    collections::HashMap,
-    error::Error,
-    net::TcpStream,
-    sync::{Arc, RwLock},
-};
-
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
@@ -12,12 +5,21 @@ use crate::{
     handler::node_message_handler::NodeMessageHandler,
     logwriter::log_writer::LogSender,
     messages::inventory::{inv_mershalling, Inventory},
-    transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
+};
+use std::{
+    collections::HashMap,
+    error::Error,
+    io,
+    net::TcpStream,
+    sync::{Arc, RwLock},
 };
 
 type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
+type MerkleProofOfInclusionResult = Result<Option<Vec<([u8; 32], bool)>>, NodeCustomErrors>;
 
+/// Almacena la blockchain y el utxo set. Mantiene referencias a las cuentas y los nodos conectados.
+/// Inicializa también el NodeMessageHandler que es quien realiza la comunicación con los nodos.
 #[derive(Debug, Clone)]
 pub struct Node {
     pub connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
@@ -87,15 +89,6 @@ impl Node {
         self.peers_handler.finish()
     }
 
-    /// Funcion que muestra si una transaccion se encuentra en un determinado bloque
-    pub fn merkle_proof_of_inclusion(
-        transaction: Transaction,
-        block: Block,
-        vector_hash: Vec<[u8; 32]>,
-    ) -> bool {
-        block.merkle_proof_of_inclusion(transaction.hash(), vector_hash)
-    }
-
     /// Recibe un vector de bytes que representa a la raw format transaction para se enviada por
     /// la red a todos los nodos conectados
     pub fn broadcast_tx(&self, raw_tx: [u8; 32]) -> Result<(), NodeCustomErrors> {
@@ -115,6 +108,32 @@ impl Node {
             .write()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))? = accounts;
         Ok(())
+    }
+
+    /// Realiza la merkle proof of inclusion, delega la creacion del merkle tree al nodo, para
+    /// que luego el merkle tree genere la proof of inclusion,devuelve error en caso de no encontrar
+    /// el hash block, en caso de exito devuelve un option
+    pub fn merkle_proof_of_inclusion(
+        &self,
+        block_hash: &[u8; 32],
+        tx_hash: &[u8; 32],
+    ) -> MerkleProofOfInclusionResult {
+        let block_chain = self
+            .block_chain
+            .write()
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
+        let mut index = block_chain.len() - 1;
+        while index > 0 {
+            if block_chain[index].is_same_block(block_hash) {
+                return Ok(block_chain[index].merkle_proof_of_inclusion(tx_hash));
+            }
+            index -= 1;
+        }
+        Err(Box::new(std::io::Error::new(
+            io::ErrorKind::Other,
+            "No se encontró el bloque",
+        )))
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
     }
 }
 

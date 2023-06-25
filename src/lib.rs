@@ -44,6 +44,9 @@ pub fn terminal_ui(mut wallet: Wallet) {
                         3 => {
                             handle_transaccion_request(&mut wallet);
                         }
+                        4 => {
+                            handle_poi_request(&mut wallet);
+                        }
                         _ => {
                             println!("Número no reconocido. Inténtalo de nuevo! \n");
                         }
@@ -163,5 +166,43 @@ fn handle_balance_request(wallet: &mut Wallet) {
     match wallet.show_accounts_balance() {
         Ok(_) => {}
         Err(e) => println!("Error al leer el balance: {}", e),
+    }
+}
+fn handle_poi_request(wallet: &mut Wallet) {
+    println!("Ingrese el hash del bloque: ");
+    let mut block_hash_input = String::new();
+    match std::io::stdin().read_line(&mut block_hash_input) {
+        Ok(_) => {
+            let block_hash = block_hash_input.trim();
+            println!("Ingrese el hash de la transacción: ");
+            let mut txid_input = String::new();
+            match std::io::stdin().read_line(&mut txid_input) {
+                Ok(_) => {
+                    let txid = txid_input.trim();
+                    println!("Realizando la proof of inclusion ...\n");
+
+                    let poi = match wallet
+                        .tx_proof_of_inclusion(block_hash.to_string(), txid.to_string())
+                    {
+                        Err(err) => {
+                            println!("ERROR: {err}\n");
+                            println!("Ocurrio un error al realizar la proof of inclusion, intente de nuevo! \n");
+                            return;
+                        }
+                        Ok(poi) => poi,
+                    };
+                    match poi {
+                        true => println!("La transacción se encuentra en el bloque."),
+                        false => println!("La transacción no se encuentra en el bloque."),
+                    }
+                }
+                Err(error) => {
+                    println!("Error al leer la entrada: {}", error);
+                }
+            }
+        }
+        Err(error) => {
+            println!("Error al leer la entrada: {}", error);
+        }
     }
 }
