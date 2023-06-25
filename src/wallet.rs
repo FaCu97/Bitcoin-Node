@@ -40,6 +40,7 @@ impl Wallet {
         amount: i64,
         fee: i64,
     ) -> Result<(), Box<dyn Error>> {
+        validate_transaction_data(self.accounts.clone(), account_index, amount, fee)?;
         let transaction_hash: [u8; 32] = self
             .accounts
             .write()
@@ -148,4 +149,30 @@ impl Wallet {
         };
         Ok(make_merkle_proof(&hashes, &tx_hash))
     }
+}
+
+fn validate_transaction_data(
+    accounts: Arc<RwLock<Vec<Account>>>,
+    account_index: usize,
+    amount: i64,
+    fee: i64,
+) -> Result<(), Box<dyn Error>> {
+    let accounts_len = accounts
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .len();
+    if accounts_len < account_index {
+        return Err(Box::new(std::io::Error::new(
+            io::ErrorKind::Other,
+            "El indice ingresado es incorrecto.",
+        )));
+    }
+
+    if (amount + fee) <= 0 {
+        return Err(Box::new(std::io::Error::new(
+            io::ErrorKind::Other,
+            "El monto a gastar debe ser mayor a cero.",
+        )));
+    }
+    Ok(())
 }
