@@ -124,14 +124,14 @@ where
 }
 
 /// Le pide al usuario que ingrese por terminal los datos de la cuenta y la añade a la wallet. En caso de que los
-/// datos ingresados sean incorrectos, lo muestra por pantalla
+/// datos ingresados sean incorrectos, lo muestra por pantalla.
 fn handle_add_account_request(wallet: &mut Wallet) {
     println!("Ingrese PRIVATE KEY en formato WIF: ");
     let mut private_key_input = String::new();
     match std::io::stdin().read_line(&mut private_key_input) {
         Ok(_) => {
             let wif_private_key = private_key_input.trim();
-            println!("Ingrese la ADDRESS de la cuenta: ");
+            println!("Ingrese la ADDRESS COMPRIMIDA de la cuenta: ");
             let mut address_input = String::new();
             match std::io::stdin().read_line(&mut address_input) {
                 Ok(_) => {
@@ -168,6 +168,9 @@ fn handle_balance_request(wallet: &mut Wallet) {
         Err(e) => println!("Error al leer el balance: {}", e),
     }
 }
+
+/// Le pide al usuario que ingrese por terminal los hash de bloque y transaccion para realizar la prueba de inclusión. En caso de que los
+/// datos ingresados sean incorrectos, lo muestra por pantalla
 fn handle_poi_request(wallet: &mut Wallet) {
     println!("Ingrese el hash del bloque: ");
     let mut block_hash_input = String::new();
