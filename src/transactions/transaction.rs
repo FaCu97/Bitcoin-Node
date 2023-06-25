@@ -8,9 +8,8 @@ use std::{
 use bitcoin_hashes::{sha256, sha256d, Hash};
 
 use crate::{
-    account::Account, compact_size_uint::CompactSizeUint,
-    handler::node_message_handler::NodeMessageHandlerError, logwriter::log_writer::LogSender,
-    utxo_tuple::UtxoTuple,
+    account::Account, compact_size_uint::CompactSizeUint, custom_errors::NodeCustomErrors,
+    logwriter::log_writer::LogSender, utxo_tuple::UtxoTuple,
 };
 
 use super::{
@@ -170,12 +169,12 @@ impl Transaction {
             let output_index = txin.get_previous_output_index();
             if utxo_set
                 .read()
-                .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                 .contains_key(txid)
             {
                 if let Some(utxo) = utxo_set
                     .write()
-                    .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+                    .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                     .get_mut(txid)
                 {
                     utxo.remove_utxo(output_index);
@@ -199,7 +198,7 @@ impl Transaction {
         let utxo_tuple = UtxoTuple::new(hash, utxos_and_index);
         utxo_set
             .write()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .insert(hash, utxo_tuple);
         Ok(())
     }
@@ -228,7 +227,7 @@ impl Transaction {
         &self,
         log_sender: LogSender,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
-    ) -> Result<(), NodeMessageHandlerError> {
+    ) -> Result<(), NodeCustomErrors> {
         for tx_out in self.tx_out.clone() {
             tx_out.involves_user_account(log_sender.clone(), accounts.clone(), self.clone())?;
         }

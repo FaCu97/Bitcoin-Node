@@ -4,12 +4,14 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+
 use crate::{
     account::Account,
     blocks::utils_block::{make_merkle_proof, string_to_bytes},
     handler::node_message_handler::NodeMessageHandlerError,
     node::Node,
 };
+
 #[derive(Debug, Clone)]
 
 pub struct Wallet {
@@ -19,7 +21,7 @@ pub struct Wallet {
 }
 
 impl Wallet {
-    pub fn new(node: Node) -> Result<Self, NodeMessageHandlerError> {
+    pub fn new(node: Node) -> Result<Self, NodeCustomErrors> {
         let mut wallet = Wallet {
             node,
             current_account_index: 0,
@@ -42,7 +44,7 @@ impl Wallet {
         let transaction_hash: [u8; 32] = self
             .accounts
             .write()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?[account_index]
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[account_index]
             .make_transaction(address_receiver, amount, fee)?;
         self.node.broadcast_tx(transaction_hash)?;
         Ok(())
@@ -54,14 +56,14 @@ impl Wallet {
         &mut self,
         wif_private_key: String,
         address: String,
-    ) -> Result<(), NodeMessageHandlerError> {
+    ) -> Result<(), NodeCustomErrors> {
         let mut account = Account::new(wif_private_key, address)
-            .map_err(|err| NodeMessageHandlerError::UnmarshallingError(err.to_string()))?;
+            .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
         self.load_data(&mut account)
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
         self.accounts
             .write()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .push(account);
         Ok(())
     }
@@ -78,7 +80,7 @@ impl Wallet {
         if self
             .accounts
             .read()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .is_empty()
         {
             println!("No hay cuentas en la wallet!");
@@ -86,7 +88,7 @@ impl Wallet {
         for account in self
             .accounts
             .write()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .iter()
         {
             println!(
@@ -103,7 +105,7 @@ impl Wallet {
         if self
             .accounts
             .read()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .is_empty()
         {
             println!("No hay cuentas en la wallet. No es posible realizar una transaccion!");
@@ -116,7 +118,7 @@ impl Wallet {
         for (index, account) in self
             .accounts
             .read()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .iter()
             .enumerate()
         {

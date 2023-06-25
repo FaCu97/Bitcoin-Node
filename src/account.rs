@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 use crate::address_decoder;
-use crate::handler::node_message_handler::NodeMessageHandlerError;
+use crate::custom_errors::NodeCustomErrors;
 use crate::transactions::transaction::Transaction;
 use crate::utxo_tuple::UtxoTuple;
 #[derive(Debug, Clone)]
@@ -95,7 +95,7 @@ impl Account {
         let mut aux = self
             .pending_transactions
             .write()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
         aux.push(transaction);
         Ok(())
     }
@@ -148,7 +148,7 @@ impl Account {
         let mut account_utxo_set: Vec<UtxoTuple> = Vec::new();
         for utxo in utxo_set
             .read()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .values()
         {
             let aux_utxo = utxo.referenced_utxos(&self.address);
