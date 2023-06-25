@@ -169,7 +169,7 @@ fn handle_balance_request(wallet: &mut Wallet) {
     }
 }
 fn handle_poi_request(wallet: &mut Wallet) {
-    println!("Ingrese la el hash del bloque: ");
+    println!("Ingrese el hash del bloque: ");
     let mut block_hash_input = String::new();
     match std::io::stdin().read_line(&mut block_hash_input) {
         Ok(_) => {
