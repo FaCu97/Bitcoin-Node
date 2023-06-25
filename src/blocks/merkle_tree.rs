@@ -138,7 +138,7 @@ mod test {
 
     ///genera un vector de [u8;32] que representa cada hash asociado a un transaccion
     /// de la testnet
-    fn generate_hashes() -> Vec<[u8; 32]> {
+    fn generate_hashes() -> Result<Vec<[u8; 32]>, Box<dyn Error>> {
         let string_hashes: Vec<&str> = vec![
             "3bec0ba7b6a530a33d6f5cec64947ca2bc9c7f15dc7b73a33311203a7c53e629",
             "c03c2aa43ba796a6d381106416acd7b8dc5f8305de3cbf4c659b2bf8bfed0f18",
@@ -148,11 +148,11 @@ mod test {
         ];
         let mut bytes_hashes: Vec<[u8; 32]> = vec![];
         for string in string_hashes {
-            let mut vec = string_to_bytes(string).unwrap();
+            let mut vec = string_to_bytes(string)?;
             vec.reverse();
             bytes_hashes.push(vec);
         }
-        bytes_hashes
+        Ok(bytes_hashes)
     }
 
     /// Convierte el str recibido en hexadecimal, a bytes
@@ -174,57 +174,67 @@ mod test {
     }
 
     #[test]
-    fn merkle_root_se_genera_corectamente_con_transacciones_de_testnet() {
-        let bytes_hashes: Vec<[u8; 32]> = generate_hashes();
+    fn merkle_root_se_genera_corectamente_con_transacciones_de_testnet(
+    ) -> Result<(), Box<dyn Error>> {
+        let bytes_hashes: Vec<[u8; 32]> = generate_hashes()?;
         let mut merkle_root_expected: [u8; 32] =
-            string_to_bytes("50c77c783a4188784c28c135b1f6e37c977931fcadcdeecd8e4130f7c1916d54")
-                .unwrap();
+            string_to_bytes("50c77c783a4188784c28c135b1f6e37c977931fcadcdeecd8e4130f7c1916d54")?;
         merkle_root_expected.reverse();
         let merkle_tree: MerkleTree = MerkleTree::new(&bytes_hashes);
         assert_eq!(merkle_tree.get_merkle_root(), merkle_root_expected);
+        Ok(())
     }
 
     #[test]
-    fn se_genera_correctamente_una_merkle_proof_of_inclusion_con_tx_en_posicion_impar() {
-        let txs: Vec<[u8; 32]> = generate_hashes();
+    fn se_genera_correctamente_una_merkle_proof_of_inclusion_con_tx_en_posicion_impar(
+    ) -> Result<(), Box<dyn Error>> {
+        let txs: Vec<[u8; 32]> = generate_hashes()?;
         let mut tx_id_to_find =
-            string_to_bytes("c03c2aa43ba796a6d381106416acd7b8dc5f8305de3cbf4c659b2bf8bfed0f18")
-                .unwrap();
+            string_to_bytes("c03c2aa43ba796a6d381106416acd7b8dc5f8305de3cbf4c659b2bf8bfed0f18")?;
         tx_id_to_find.reverse();
         let merkle_tree: MerkleTree = MerkleTree::new(&txs);
 
-        let hashes: Vec<([u8; 32], bool)> = merkle_tree
-            .merkle_proof_of_inclusion(tx_id_to_find)
-            .unwrap();
+        let option: Option<Vec<([u8; 32], bool)>> =
+            merkle_tree.merkle_proof_of_inclusion(tx_id_to_find);
+        let hashes = match option {
+            Some(value) => value,
+            None => return Err("la tx no se encuentra en el merkle tree".into()),
+        };
         assert!(make_merkle_proof(&hashes, &tx_id_to_find));
+        Ok(())
     }
 
     #[test]
-    fn se_genera_correctamente_una_merkle_proof_of_inclusion_con_tx_en_posicion_par() {
-        let txs: Vec<[u8; 32]> = generate_hashes();
+    fn se_genera_correctamente_una_merkle_proof_of_inclusion_con_tx_en_posicion_par(
+    ) -> Result<(), Box<dyn Error>> {
+        let txs: Vec<[u8; 32]> = generate_hashes()?;
         let mut tx_id_to_find =
-            string_to_bytes("3bec0ba7b6a530a33d6f5cec64947ca2bc9c7f15dc7b73a33311203a7c53e629")
-                .unwrap();
+            string_to_bytes("3bec0ba7b6a530a33d6f5cec64947ca2bc9c7f15dc7b73a33311203a7c53e629")?;
         tx_id_to_find.reverse();
         let merkle_tree: MerkleTree = MerkleTree::new(&txs);
 
-        let hashes: Vec<([u8; 32], bool)> = merkle_tree
-            .merkle_proof_of_inclusion(tx_id_to_find)
-            .unwrap();
-        assert!(make_merkle_proof(&hashes, &tx_id_to_find))
+        let option: Option<Vec<([u8; 32], bool)>> =
+            merkle_tree.merkle_proof_of_inclusion(tx_id_to_find);
+        let hashes = match option {
+            Some(value) => value,
+            None => return Err("la tx no se encuentra en el merkle tree".into()),
+        };
+        assert!(make_merkle_proof(&hashes, &tx_id_to_find));
+        Ok(())
     }
 
     #[test]
-    fn merkle_proof_of_inclusion_devuelve_none_al_no_encontrar_la_tx_a_buscar() {
-        let txs: Vec<[u8; 32]> = generate_hashes();
+    fn merkle_proof_of_inclusion_devuelve_none_al_no_encontrar_la_tx_a_buscar(
+    ) -> Result<(), Box<dyn Error>> {
+        let txs: Vec<[u8; 32]> = generate_hashes()?;
         let mut tx_id_to_find =
-            string_to_bytes("3bec0ba7b6a530a3346f5cec64947ca2bc9c7f15dc7b73a33311203a7c53e629")
-                .unwrap();
+            string_to_bytes("3bec0ba7b6a530a3346f5cec64947ca2bc9c7f15dc7b73a33311203a7c53e629")?;
         tx_id_to_find.reverse();
         let merkle_tree: MerkleTree = MerkleTree::new(&txs);
 
         let hashes: Option<Vec<([u8; 32], bool)>> =
             merkle_tree.merkle_proof_of_inclusion(tx_id_to_find);
-        assert!(hashes.is_none())
+        assert!(hashes.is_none());
+        Ok(())
     }
 }

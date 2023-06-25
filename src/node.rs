@@ -16,6 +16,7 @@ use crate::{
 };
 
 type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
+type MerkleProofOfInclusionResult = Result<Option<Vec<([u8; 32], bool)>>, NodeMessageHandlerError>;
 
 #[derive(Debug, Clone)]
 pub struct Node {
@@ -112,7 +113,7 @@ impl Node {
         &self,
         block_hash: &[u8; 32],
         tx_hash: &[u8; 32],
-    ) -> Result<Option<Vec<([u8; 32], bool)>>, NodeMessageHandlerError> {
+    ) -> MerkleProofOfInclusionResult {
         let block_chain = self
             .block_chain
             .write()
@@ -124,11 +125,11 @@ impl Node {
             }
             index -= 1;
         }
-        return Err(Box::new(std::io::Error::new(
+        Err(Box::new(std::io::Error::new(
             io::ErrorKind::Other,
             "No se encontró el bloque",
         )))
-        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
     }
 }
 
