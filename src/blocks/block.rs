@@ -4,7 +4,9 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use super::{block_header::BlockHeader, utils_block::concatenate_and_hash};
+use super::{
+    block_header::BlockHeader, merkle_tree::MerkleTree, utils_block::concatenate_and_hash,
+};
 use crate::{
     account::Account,
     compact_size_uint::CompactSizeUint,
@@ -126,6 +128,9 @@ impl Block {
         }
         Self::recursive_generation_merkle_root(merkle_transactions)
     }
+    pub fn is_same_block(&self, block_id: &[u8; 32]) -> bool {
+        self.block_header.hash() == *block_id
+    }
 
     /// Actualiza el utxo_set recibido por parámetro.
     /// Procesa las transacciones del bloque. Agrega las nuevas utxos y remueve las gastadas.
@@ -147,6 +152,17 @@ impl Block {
             }
         }
         Ok(())
+    }
+    pub fn merkle_proof_of_inclusion(
+        &self,
+        tx_id_to_find: &[u8; 32],
+    ) -> Option<Vec<([u8; 32], bool)>> {
+        let mut hashes: Vec<[u8; 32]> = Vec::new();
+        for tx in &self.txn {
+            hashes.push(tx.hash());
+        }
+        let merkle_tree = MerkleTree::new(&hashes);
+        merkle_tree.merkle_proof_of_inclusion(*tx_id_to_find)
     }
 
     /// Devuelve un string que representa el hash del bloque en hexadecimal,

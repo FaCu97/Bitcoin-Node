@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     error::Error,
+    io,
     net::TcpStream,
     sync::{Arc, RwLock},
 };
@@ -104,6 +105,30 @@ impl Node {
             .write()
             .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))? = accounts;
         Ok(())
+    }
+
+    ///
+    pub fn merkle_proof_of_inclusion(
+        &self,
+        block_hash: &[u8; 32],
+        tx_hash: &[u8; 32],
+    ) -> Result<Option<Vec<([u8; 32], bool)>>, NodeMessageHandlerError> {
+        let block_chain = self
+            .block_chain
+            .write()
+            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+        let mut index = block_chain.len() - 1;
+        while index > 0 {
+            if block_chain[index].is_same_block(block_hash) {
+                return Ok(block_chain[index].merkle_proof_of_inclusion(tx_hash));
+            }
+            index -= 1;
+        }
+        return Err(Box::new(std::io::Error::new(
+            io::ErrorKind::Other,
+            "No se encontró el bloque",
+        )))
+        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
     }
 }
 
