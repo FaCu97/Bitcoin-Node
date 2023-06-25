@@ -16,7 +16,7 @@ use std::{
 };
 
 type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
-type MerkleProofOfInclusionResult = Result<Option<Vec<([u8; 32], bool)>>, NodeMessageHandlerError>;
+type MerkleProofOfInclusionResult = Result<Option<Vec<([u8; 32], bool)>>, NodeCustomErrors>;
 
 /// Almacena la blockchain y el utxo set. Mantiene referencias a las cuentas y los nodos conectados.
 /// Inicializa también el NodeMessageHandler que es quien realiza la comunicación con los nodos.
@@ -121,7 +121,7 @@ impl Node {
         let block_chain = self
             .block_chain
             .write()
-            .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?;
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
         let mut index = block_chain.len() - 1;
         while index > 0 {
             if block_chain[index].is_same_block(block_hash) {
@@ -133,7 +133,7 @@ impl Node {
             io::ErrorKind::Other,
             "No se encontró el bloque",
         )))
-        .map_err(|err| NodeMessageHandlerError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
     }
 }
 

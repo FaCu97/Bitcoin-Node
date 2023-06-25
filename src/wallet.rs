@@ -4,11 +4,10 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-
 use crate::{
     account::Account,
     blocks::utils_block::{make_merkle_proof, string_to_bytes},
-    handler::node_message_handler::NodeMessageHandlerError,
+    custom_errors::NodeCustomErrors,
     node::Node,
 };
 
