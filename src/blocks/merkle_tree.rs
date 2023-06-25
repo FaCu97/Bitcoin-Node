@@ -1,5 +1,7 @@
 use super::utils_block::concatenate_and_hash;
 
+/// Almacena los hashes correspondientes para generar el merkle tree
+/// esta en orden invertido el primer nivel son las hojas , el ultimo es la raiz
 pub struct MerkleTree {
     hashes: Vec<Vec<[u8; 32]>>,
 }
@@ -30,7 +32,7 @@ impl MerkleTree {
             }
             current_position += 1;
         }
-        // si el largo del vector es impar el ultimo elelmento debe concatenarse consigo
+        // Si el largo del vector es impar el ultimo elelmento debe concatenarse consigo
         // mismo y luego aplicarse la funcion de hash
         if (vec_length % 2) != 0 {
             upper_level.push(concatenate_and_hash(
@@ -113,7 +115,7 @@ impl MerkleTree {
             }
             index += 1;
         }
-        // si no se encuentra retorna  None
+        // Si no se encuentra retorna None
         if tx_id_not_finded {
             return None;
         }
@@ -136,7 +138,7 @@ mod test {
 
     use crate::blocks::{merkle_tree::MerkleTree, utils_block::make_merkle_proof};
 
-    ///genera un vector de [u8;32] que representa cada hash asociado a un transaccion
+    /// Genera un vector de [u8;32] que representa cada hash asociado a un transaccion
     /// de la testnet
     fn generate_hashes() -> Result<Vec<[u8; 32]>, Box<dyn Error>> {
         let string_hashes: Vec<&str> = vec![

@@ -1,11 +1,3 @@
-use std::{
-    collections::HashMap,
-    error::Error,
-    io,
-    net::TcpStream,
-    sync::{Arc, RwLock},
-};
-
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
@@ -14,10 +6,19 @@ use crate::{
     messages::inventory::{inv_mershalling, Inventory},
     utxo_tuple::UtxoTuple,
 };
+use std::{
+    collections::HashMap,
+    error::Error,
+    io,
+    net::TcpStream,
+    sync::{Arc, RwLock},
+};
 
 type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
 type MerkleProofOfInclusionResult = Result<Option<Vec<([u8; 32], bool)>>, NodeMessageHandlerError>;
 
+/// Almacena la blockchain y el utxo set. Mantiene referencias a las cuentas y los nodos conectados.
+/// Inicializa también el NodeMessageHandler que es quien realiza la comunicación con los nodos.
 #[derive(Debug, Clone)]
 pub struct Node {
     pub connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
@@ -108,7 +109,9 @@ impl Node {
         Ok(())
     }
 
-    ///
+    /// Realiza la merkle proof of inclusion, delega la creacion del merkle tree al nodo, para
+    /// que luego el merkle tree genere la proof of inclusion,devuelve error en caso de no encontrar
+    /// el hash block, en caso de exito devuelve un option
     pub fn merkle_proof_of_inclusion(
         &self,
         block_hash: &[u8; 32],
