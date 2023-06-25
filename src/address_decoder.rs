@@ -4,7 +4,10 @@ use k256::sha2::Sha256;
 use secp256k1::SecretKey;
 use std::error::Error;
 use std::io;
+
 const UNCOMPRESSED_WIF_LEN: usize = 51;
+const COMPRESSED_WIF_LEN: usize = 52;
+const ADDRESS_LEN: usize = 34;
 
 /// Recibe la private key en bytes.
 /// Devuelve la address comprimida
@@ -70,6 +73,12 @@ pub fn get_pubkey_compressed(private_key: &str) -> Result<[u8; 33], Box<dyn Erro
 /// Recibe una bitcoin address.
 /// Revisa el checksum y devuelve error si es inválida.
 pub fn validate_address(address: &str) -> Result<(), Box<dyn Error>> {
+    if address.len() != ADDRESS_LEN {
+        return Err(Box::new(std::io::Error::new(
+            io::ErrorKind::Other,
+            "La cantidad de caracteres de la address es inválida.",
+        )));
+    }
     // validacion checksum: evita errores de tipeo en la address
     // Calcular el checksum (doble hash SHA-256) del hash extendido
     let address_decoded_bytes = bs58::decode(address).into_vec()?;
@@ -106,13 +115,14 @@ pub fn validate_address_private_key(
 /// Recibe la WIF private key, ya sea en formato comprimido o no comprimido.
 /// Devuelve la private key en bytes
 pub fn decode_wif_private_key(wif_private_key: &str) -> Result<[u8; 32], Box<dyn Error>> {
+    if wif_private_key.len() < UNCOMPRESSED_WIF_LEN || wif_private_key.len() > COMPRESSED_WIF_LEN {
+        return Err(Box::new(std::io::Error::new(
+            io::ErrorKind::Other,
+            "No se pudo decodificar la WIF private key. La cantidad de caracteres de la private key es inválida.",
+        )));
+    }
     // Decodificar la clave privada en formato WIF
-    let decoded_result = bs58::decode(wif_private_key).into_vec();
-    let decoded = match decoded_result {
-        Ok(decoded) => decoded,
-        Err(err) => return Err(Box::new(std::io::Error::new(io::ErrorKind::Other, err))),
-    };
-
+    let decoded = bs58::decode(wif_private_key).into_vec()?;
     let mut vector = vec![];
     if wif_private_key.len() == UNCOMPRESSED_WIF_LEN {
         vector.extend_from_slice(&decoded[1..&decoded.len() - 4]);
