@@ -20,6 +20,7 @@ pub struct Wallet {
 }
 
 impl Wallet {
+    /// Crea la wallet. Inicializa el nodo con la referencia de las cuentas de la wallet
     pub fn new(node: Node) -> Result<Self, NodeCustomErrors> {
         let mut wallet = Wallet {
             node,
