@@ -131,7 +131,7 @@ fn handle_add_account_request(wallet: &mut Wallet) {
     match std::io::stdin().read_line(&mut private_key_input) {
         Ok(_) => {
             let wif_private_key = private_key_input.trim();
-            println!("Ingrese la ADDRESS de la cuenta: ");
+            println!("Ingrese la ADDRESS COMPRIMIDA de la cuenta: ");
             let mut address_input = String::new();
             match std::io::stdin().read_line(&mut address_input) {
                 Ok(_) => {

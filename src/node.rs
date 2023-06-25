@@ -133,7 +133,7 @@ impl Node {
             io::ErrorKind::Other,
             "No se encontró el bloque",
         )))
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?
     }
 }
 
