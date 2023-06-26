@@ -116,9 +116,3 @@ fn main() -> Result<(), GenericError> {
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-
-    #[test]
-    fn test_archivo_configuracion() {}
-}
