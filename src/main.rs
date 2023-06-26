@@ -75,7 +75,6 @@ fn main() -> Result<(), GenericError> {
     let pointer_to_nodes = Handshake::handshake(config.clone(), logsender.clone(), &active_nodes)
         .map_err(GenericError::HandShakeError)?;
     // Acá iría la descarga de los headers
-
     let headers_and_blocks =
         initial_block_download(config, logsender.clone(), pointer_to_nodes.clone()).map_err(
             |err| {
@@ -87,25 +86,9 @@ fn main() -> Result<(), GenericError> {
             },
         )?;
     let (headers, blocks) = headers_and_blocks;
-
     let node = Node::new(logsender.clone(), pointer_to_nodes, headers, blocks)
         .map_err(GenericError::NodeHandlerError)?;
     let wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
-
-    /*
-        wallet
-            .add_account(
-                "cSqmqW48wCeoUF8FCJvVsqUGwcvir27bKWCFj1MTFszFdn2Dduim".to_string(),
-                "mocD12x6BV3qK71FwG98h5VWZ4qVsbaoi9".to_string(),
-            )
-            .map_err(GenericError::NodeHandlerError)?;
-        wallet
-            .add_account(
-                "cSVpNr93PCFhizA9ELgnmkwRxycL1bn6vx1WBJ7SmE8ve9Aq1PzZ".to_string(),
-                "mmkNBGEEzj7ePpDii91zgUXi3i3Hgkpi9a".to_string(),
-            )
-            .map_err(GenericError::NodeHandlerError)?;
-    */
     terminal_ui(wallet);
     node.shutdown_node()
         .map_err(GenericError::NodeHandlerError)?;
