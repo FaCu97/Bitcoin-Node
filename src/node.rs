@@ -128,8 +128,10 @@ impl Node {
             }
             index -= 1;
         }
-       
-        return NodeCustomErrors::OtherError("No se encontro el bloque".to_string())
+
+        Err(NodeCustomErrors::OtherError(
+            "No se encontro el bloque".to_string(),
+        ))
     }
 }
 
