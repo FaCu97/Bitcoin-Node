@@ -11,6 +11,7 @@ pub enum NodeCustomErrors {
     CanNotRead(String),
     ThreadChannelError(String),
     UnmarshallingError(String),
+    OtherError(String),
 }
 
 impl fmt::Display for NodeCustomErrors {
@@ -34,6 +35,9 @@ impl fmt::Display for NodeCustomErrors {
             }
             NodeCustomErrors::UnmarshallingError(msg) => {
                 write!(f, "Can not unmarshall bytes Error: {}", msg)
+            }
+            NodeCustomErrors::OtherError(msg) => {
+                write!(f, "Error: {}", msg)
             }
         }
     }
