@@ -169,7 +169,9 @@ pub fn handle_messages_from_node(
                 }
                 Ok(header) => header,
             };
-
+            if is_terminated(finish.clone()) {
+                break;
+            }
             let payload =
                 match read_payload(&mut node, header.payload_size as usize) {
                     Ok(payload) => payload,
