@@ -172,14 +172,13 @@ pub fn handle_messages_from_node(
             if is_terminated(finish.clone()) {
                 break;
             }
-            let payload =
-                match read_payload(&mut node, header.payload_size as usize) {
-                    Ok(payload) => payload,
-                    Err(err) => {
-                        error = Some(err);
-                        break;
-                    }
-                };
+            let payload = match read_payload(&mut node, header.payload_size as usize) {
+                Ok(payload) => payload,
+                Err(err) => {
+                    error = Some(err);
+                    break;
+                }
+            };
 
             let command_name = get_header_command_name_as_str(header.command_name.as_str());
 
@@ -292,23 +291,20 @@ pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessag
 
 /// Se mantiene leyendo del socket del nodo hasta recibir el header message.
 /// Devuelve el HeaderMessage o un error si falló.
-fn read_header(
-    node: &mut dyn Read,
-) -> Result<HeaderMessage, NodeCustomErrors> {
+fn read_header(node: &mut dyn Read) -> Result<HeaderMessage, NodeCustomErrors> {
     let mut buffer_num = [0; 24];
-    node.read_exact(&mut buffer_num).map_err(|err| NodeCustomErrors::ReadNodeError(err.to_string()))?; 
+    node.read_exact(&mut buffer_num)
+        .map_err(|err| NodeCustomErrors::ReadNodeError(err.to_string()))?;
     HeaderMessage::from_le_bytes(buffer_num)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))
 }
 
 /// Se mantiene leyendo del socket del nodo hasta recibir el payload esperado.
 /// Devuelve el la cadena de bytes del payload o un error si falló.
-fn read_payload(
-    node: &mut dyn Read,
-    size: usize,
-) -> Result<Vec<u8>, NodeCustomErrors> {
+fn read_payload(node: &mut dyn Read, size: usize) -> Result<Vec<u8>, NodeCustomErrors> {
     let mut payload_buffer_num: Vec<u8> = vec![0; size];
-    node.read_exact(&mut payload_buffer_num).map_err(|err| NodeCustomErrors::ReadNodeError(err.to_string()))?; 
+    node.read_exact(&mut payload_buffer_num)
+        .map_err(|err| NodeCustomErrors::ReadNodeError(err.to_string()))?;
     Ok(payload_buffer_num)
 }
 

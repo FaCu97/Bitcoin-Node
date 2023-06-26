@@ -96,4 +96,3 @@ fn main() -> Result<(), GenericError> {
 
     Ok(())
 }
-
