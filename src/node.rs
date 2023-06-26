@@ -10,7 +10,6 @@ use crate::{
 use std::{
     collections::HashMap,
     error::Error,
-    io,
     net::TcpStream,
     sync::{Arc, RwLock},
 };
@@ -129,11 +128,8 @@ impl Node {
             }
             index -= 1;
         }
-        Err(Box::new(std::io::Error::new(
-            io::ErrorKind::Other,
-            "No se encontró el bloque",
-        )))
-        .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?
+       
+        return NodeCustomErrors::OtherError("No se encontro el bloque".to_string())
     }
 }
 
