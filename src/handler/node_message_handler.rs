@@ -8,7 +8,7 @@ use crate::{
 };
 use std::{
     collections::HashMap,
-    io::{self, Read, Write},
+    io::{Read, Write},
     mem,
     net::TcpStream,
     sync::{
@@ -162,7 +162,7 @@ pub fn handle_messages_from_node(
                     break;
                 }
             }
-            let header = match read_header(&mut node, finish.clone()) {
+            let header = match read_header(&mut node) {
                 Err(err) => {
                     error = Some(err);
                     break;
@@ -171,7 +171,7 @@ pub fn handle_messages_from_node(
             };
 
             let payload =
-                match read_payload(&mut node, header.payload_size as usize, finish.clone()) {
+                match read_payload(&mut node, header.payload_size as usize) {
                     Ok(payload) => payload,
                     Err(err) => {
                         error = Some(err);
@@ -292,21 +292,9 @@ pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessag
 /// Devuelve el HeaderMessage o un error si falló.
 fn read_header(
     node: &mut dyn Read,
-    finish: Option<Arc<RwLock<bool>>>,
 ) -> Result<HeaderMessage, NodeCustomErrors> {
     let mut buffer_num = [0; 24];
-    while !is_terminated(finish.clone()) {
-        match node.read_exact(&mut buffer_num) {
-            Ok(_) => break, // Lectura exitosa, salimos del bucle
-            //Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => continue, // No hay suficientes datos disponibles, continuar esperando
-            Err(err) => return Err(NodeCustomErrors::ReadNodeError(err.to_string())), // Error inesperado, devolverlo
-        }
-    }
-    if is_terminated(finish) {
-        // devuelvo un error cualquiera para que no falle en la funcion en la que se llama a read_header
-        // y de esta manera cortar bien el ciclo while
-        return Err(NodeCustomErrors::OtherError("Se termina el programa, desconecto al nodo".to_string()));
-    }
+    node.read_exact(&mut buffer_num).map_err(|err| NodeCustomErrors::ReadNodeError(err.to_string()))?; 
     HeaderMessage::from_le_bytes(buffer_num)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))
 }
@@ -316,16 +304,9 @@ fn read_header(
 fn read_payload(
     node: &mut dyn Read,
     size: usize,
-    finish: Option<Arc<RwLock<bool>>>,
 ) -> Result<Vec<u8>, NodeCustomErrors> {
     let mut payload_buffer_num: Vec<u8> = vec![0; size];
-    while !is_terminated(finish.clone()) {
-        match node.read_exact(&mut payload_buffer_num) {
-            Ok(_) => break, // Lectura exitosa, salimos del bucle
-            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => continue, // No hay suficientes datos disponibles, continuar esperando
-            Err(err) => return Err(NodeCustomErrors::ReadNodeError(err.to_string())), // Error inesperado, devolverlo
-        }
-    }
+    node.read_exact(&mut payload_buffer_num).map_err(|err| NodeCustomErrors::ReadNodeError(err.to_string()))?; 
     Ok(payload_buffer_num)
 }
 
