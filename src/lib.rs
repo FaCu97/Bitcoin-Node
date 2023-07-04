@@ -17,6 +17,7 @@ pub mod node;
 pub mod transactions;
 pub mod utxo_tuple;
 pub mod wallet;
+pub mod server;
 
 /// Muestra las opciones para interactuar con el programa, espera algun comando
 /// y lo handlea o muestra un mensaje de error
