@@ -1,0 +1,45 @@
+
+
+.start-button{
+    background: transparent;
+    color: #eceeea;
+    font-size: 100px;
+    border: 0;
+    font-style: italic;
+    font-weight: bold;
+    font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+}
+
+
+.start-button:hover{
+    color: rgb(249, 231, 130);
+}
+
+.progress-bar{
+    color: white;
+    font-size: large;
+}
+
+.input-user{
+    border-radius: 20px;
+    border: 1px solid #454F5C;
+    background-color: #252A3A;
+}
+
+.switcher{
+    font-size: 30px;
+    color: #393740
+}
+
+.separator{
+    background: black;
+    border: 2px solid rgb(32, 32, 30);
+}
+
+.frames{
+    background-color:#1E222F;
+    font-size: 30px;
+}
+.font-send{
+    font-size: 70px;
+}
