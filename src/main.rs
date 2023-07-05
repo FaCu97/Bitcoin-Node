@@ -77,15 +77,14 @@ fn main() -> Result<(), GenericError> {
         .map_err(GenericError::HandShakeError)?;
     // Acá iría la descarga de los headers
     let headers_and_blocks =
-        initial_block_download(config.clone(), logsender.clone(), pointer_to_nodes.clone()).map_err(
-            |err| {
+        initial_block_download(config.clone(), logsender.clone(), pointer_to_nodes.clone())
+            .map_err(|err| {
                 write_in_log(
                     logsender.error_log_sender.clone(),
                     format!("Error al descargar los bloques: {}", err).as_str(),
                 );
                 GenericError::DownloadError(err)
-            },
-        )?;
+            })?;
     let (headers, blocks) = headers_and_blocks;
     let mut node = Node::new(logsender.clone(), pointer_to_nodes, headers, blocks)
         .map_err(GenericError::NodeHandlerError)?;
@@ -94,7 +93,8 @@ fn main() -> Result<(), GenericError> {
     terminal_ui(wallet);
     node.shutdown_node()
         .map_err(GenericError::NodeHandlerError)?;
-    server.shutdown_server()
+    server
+        .shutdown_server()
         .map_err(GenericError::NodeHandlerError)?;
 
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)

@@ -10,7 +10,7 @@ use std::{
 use crate::{
     config::Config,
     custom_errors::NodeCustomErrors,
-    logwriter::log_writer::{LogSender, write_in_log},
+    logwriter::log_writer::{write_in_log, LogSender},
     messages::{
         message_header::{read_verack_message, write_verack_message},
         version_message::{get_version_message, VersionMessage},
@@ -31,11 +31,7 @@ pub struct NodeServer {
 
 impl NodeServer {
     /// Crea un nuevo servidor de nodo en un thread aparte encargado de eso
-    pub fn new(
-        config: Arc<Config>,
-        log_sender: LogSender,
-        node: &mut Node,
-    ) -> NodeServer {
+    pub fn new(config: Arc<Config>, log_sender: LogSender, node: &mut Node) -> NodeServer {
         let (sender, rx) = mpsc::channel();
         let address = get_socket(LOCALHOST.to_string(), config.testnet_port);
         let mut node_clone = node.clone();
@@ -43,7 +39,7 @@ impl NodeServer {
             spawn(move || Self::listen(config, log_sender.clone(), &mut node_clone, address, rx));
         NodeServer { sender, handle }
     }
- 
+
     /// Escucha por conexiones entrantes y las maneja
     /// Si llega un mensaje por el channel, sigifica que debe dejar de escuchar y cortar el bucle
     /// Devuelve un error si ocurre alguno que no sea del tipo WouldBlock
@@ -59,11 +55,17 @@ impl NodeServer {
         let amount_of_connections = 0;
         //listener.set_nonblocking(true).unwrap();
         println!("Empiezo a esuchar por conecciones entrantes!\n");
-        write_in_log(log_sender.info_log_sender.clone(), "Empiezo a esuchar por conecciones entrantes!");
+        write_in_log(
+            log_sender.info_log_sender.clone(),
+            "Empiezo a esuchar por conecciones entrantes!",
+        );
         for stream in listener.incoming() {
             // recibio un mensaje para frenar
             if rx.try_recv().is_ok() {
-                write_in_log(log_sender.info_log_sender, "Dejo de escuchar por conexiones entrantes!");
+                write_in_log(
+                    log_sender.info_log_sender,
+                    "Dejo de escuchar por conexiones entrantes!",
+                );
                 break;
             }
             match stream {
@@ -72,7 +74,14 @@ impl NodeServer {
                         break;
                     }
                     println!("RECIBO NUEVA CONEXION ENTRANTE!\n");
-                    write_in_log(log_sender.info_log_sender.clone(), format!("Recibo nueva conexion entrante --{:?}--", stream.peer_addr()).as_str());
+                    write_in_log(
+                        log_sender.info_log_sender.clone(),
+                        format!(
+                            "Recibo nueva conexion entrante --{:?}--",
+                            stream.peer_addr()
+                        )
+                        .as_str(),
+                    );
                     Self::handle_incoming_connection(
                         config.clone(),
                         log_sender.clone(),
@@ -113,7 +122,10 @@ impl NodeServer {
         write_verack_message(&mut stream)
             .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
         println!("HANDSHAKE REALIZADO CON EXITO!\n");
-        write_in_log(log_sender.info_log_sender.clone(), format!("Handshake con nodo {:?} realizado con exito!", socket_addr).as_str());
+        write_in_log(
+            log_sender.info_log_sender.clone(),
+            format!("Handshake con nodo {:?} realizado con exito!", socket_addr).as_str(),
+        );
         // AGREGAR LA CONEXION AL NODO
         node.add_connection(log_sender, stream)?;
         Ok(())
@@ -122,7 +134,9 @@ impl NodeServer {
     /// Le indica al servidor que deje de escuchar por conexiones entrantes
     /// Envia por el channel un string (puede ser cualquiera) y le idica al thread que deje de escuchar en el bucle
     pub fn shutdown_server(self) -> Result<(), NodeCustomErrors> {
-        self.sender.send("finish".to_string()).map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+        self.sender
+            .send("finish".to_string())
+            .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
         self.handle.join().map_err(|_| {
             NodeCustomErrors::ThreadJoinError(
                 "Error al hacer join al thread del servidor que esucha".to_string(),

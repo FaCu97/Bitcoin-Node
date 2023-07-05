@@ -143,28 +143,33 @@ impl NodeMessageHandler {
     /// Se le pasa como parametro el canal por el cual se va a comunicar con el nodo
     /// y el socket del nodo que se quiere agregar
     /// Devuelve Ok(()) en caso de salir todo bien o Error especifico en caso contrario
-    pub fn add_connection(&mut self, log_sender: LogSender, 
+    pub fn add_connection(
+        &mut self,
+        log_sender: LogSender,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         blocks: Arc<RwLock<Vec<Block>>>,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
-        connection: TcpStream) 
-        -> NodeMessageHandlerResult {
+        connection: TcpStream,
+    ) -> NodeMessageHandlerResult {
         let (tx, rx) = channel();
         self.nodes_sender.push(tx.clone());
         println!(
             "Nodo -{:?}- Escuchando por nuevos bloques...\n NUEVA CONECCION AGREGADA!!!",
             connection.peer_addr()
         );
-        self.nodes_handle.lock().unwrap().push(handle_messages_from_node(
-            log_sender,
-            (tx, rx),
-            (headers, blocks),
-            self.transactions_recieved.clone(),
-            (accounts, utxo_set),
-            connection,
-            None,
-        ));
+        self.nodes_handle
+            .lock()
+            .unwrap()
+            .push(handle_messages_from_node(
+                log_sender,
+                (tx, rx),
+                (headers, blocks),
+                self.transactions_recieved.clone(),
+                (accounts, utxo_set),
+                connection,
+                None,
+            ));
         Ok(())
     }
 }
