@@ -34,10 +34,9 @@ impl NodeServer {
         config: Arc<Config>,
         log_sender: LogSender,
         node: &mut Node,
-        port: u16,
     ) -> NodeServer {
         let (sender, rx) = mpsc::channel();
-        let address = get_socket(LOCALHOST.to_string(), port);
+        let address = get_socket(LOCALHOST.to_string(), config.testnet_port);
         let mut node_clone = node.clone();
         let handle =
             spawn(move || Self::listen(config, log_sender.clone(), &mut node_clone, address, rx));

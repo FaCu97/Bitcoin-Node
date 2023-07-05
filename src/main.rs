@@ -8,6 +8,7 @@ use bitcoin::logwriter::log_writer::{
 };
 use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
 use bitcoin::node::Node;
+use bitcoin::server::NodeServer;
 use bitcoin::terminal_ui;
 use bitcoin::wallet::Wallet;
 use std::error::Error;
@@ -76,7 +77,7 @@ fn main() -> Result<(), GenericError> {
         .map_err(GenericError::HandShakeError)?;
     // Acá iría la descarga de los headers
     let headers_and_blocks =
-        initial_block_download(config, logsender.clone(), pointer_to_nodes.clone()).map_err(
+        initial_block_download(config.clone(), logsender.clone(), pointer_to_nodes.clone()).map_err(
             |err| {
                 write_in_log(
                     logsender.error_log_sender.clone(),
@@ -86,9 +87,10 @@ fn main() -> Result<(), GenericError> {
             },
         )?;
     let (headers, blocks) = headers_and_blocks;
-    let node = Node::new(logsender.clone(), pointer_to_nodes, headers, blocks)
+    let mut node = Node::new(logsender.clone(), pointer_to_nodes, headers, blocks)
         .map_err(GenericError::NodeHandlerError)?;
     let wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
+    NodeServer::new(config, logsender.clone(), &mut node);
     terminal_ui(wallet);
     node.shutdown_node()
         .map_err(GenericError::NodeHandlerError)?;
