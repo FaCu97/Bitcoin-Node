@@ -56,6 +56,7 @@ impl NodeServer {
     ) -> Result<(), NodeCustomErrors> {
         let address = format!("{}:{}", address.ip(), address.port());
         let listener: TcpListener = TcpListener::bind(&address).unwrap();
+        let amount_of_connections = 0;
         //listener.set_nonblocking(true).unwrap();
         for stream in listener.incoming() {
             // recibio un mensaje para frenar
@@ -64,6 +65,9 @@ impl NodeServer {
             }
             match stream {
                 Ok(stream) => {
+                    if amount_of_connections >= config.max_connections_to_server {
+                        continue;
+                    }
                     Self::handle_incoming_connection(
                         config.clone(),
                         log_sender.clone(),
