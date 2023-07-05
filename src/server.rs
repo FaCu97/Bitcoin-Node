@@ -63,7 +63,7 @@ impl NodeServer {
         for stream in listener.incoming() {
             // recibio un mensaje para frenar
             if rx.try_recv().is_ok() {
-                write_in_log(log_sender.info_log_sender.clone(), "Dejo de escuchar por conexiones entrantes!");
+                write_in_log(log_sender.info_log_sender, "Dejo de escuchar por conexiones entrantes!");
                 break;
             }
             match stream {
