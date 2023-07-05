@@ -2,7 +2,7 @@ use std::{sync::mpsc::{Sender, self, Receiver}, thread::{JoinHandle, spawn}, net
 
 
 
-use crate::{custom_errors::NodeCustomErrors, node::Node};
+use crate::{custom_errors::NodeCustomErrors, node::Node, logwriter::log_writer::LogSender};
 
 const LOCALHOST: &str = "127.0.0.1";
 
@@ -16,16 +16,17 @@ pub struct NodeServer {
 }
 
 impl NodeServer {
-    pub fn new(port: u16) -> NodeServer {
+    pub fn new(log_sender: LogSender, node: &mut Node, port: u16) -> NodeServer {
         let (sender, rx) = mpsc::channel();
         let address = get_socket(LOCALHOST.to_string(), port);
+        let mut node_clone = node.clone();
         let handle = spawn(move || {
-            Self::listen(address, rx)
+            Self::listen(log_sender.clone(), &mut node_clone, address, rx)
         });
-        NodeServer { sender, handle}
+        NodeServer { sender, handle }
     }
 
-    fn listen(address: SocketAddr, rx: Receiver<NodeServerMessage>) -> Result<(), NodeCustomErrors> {
+    fn listen(log_sender: LogSender, node: &mut Node,address: SocketAddr, rx: Receiver<NodeServerMessage>) -> Result<(), NodeCustomErrors> {
         let address = format!("{}:{}", address.ip(), address.port());
         let listener: TcpListener = TcpListener::bind(&address).unwrap();
         listener.set_nonblocking(true).unwrap();
@@ -36,7 +37,7 @@ impl NodeServer {
             }
             match stream {
                 Ok(stream) => {
-                    Self::handle_incoming_connection(stream)?;
+                    Self::handle_incoming_connection(log_sender.clone(), node, stream)?;
                 } 
                 Err(ref err) if err.kind() == std::io::ErrorKind::WouldBlock => {
                     // This doesen't mean an error ocurred, there just wasn't a connection at the moment
@@ -49,8 +50,10 @@ impl NodeServer {
     }
 
 
-    fn handle_incoming_connection(stream: TcpStream) -> Result<(), NodeCustomErrors> {
-
+    fn handle_incoming_connection(log_sender: LogSender, node: &mut Node, stream: TcpStream) -> Result<(), NodeCustomErrors> {
+        // REALIZAR EL HANDSHAKE
+        
+        node.add_connection(log_sender, stream)?;        
         Ok(())
     }
 
@@ -67,3 +70,5 @@ fn get_socket(ip: String, port: u16) -> SocketAddr {
     let ip: IpAddr = ip.parse::<IpAddr>().unwrap();
     SocketAddr::new(ip, port)
 }
+
+
