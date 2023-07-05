@@ -35,6 +35,7 @@ type PointerToAccountsPointer = Arc<RwLock<Arc<RwLock<Vec<Account>>>>>;
 pub struct NodeMessageHandler {
     nodes_handle: Arc<Mutex<Vec<JoinHandle<()>>>>,
     nodes_sender: Vec<NodeSender>,
+    transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>>,
     finish: Arc<RwLock<bool>>,
 }
 
@@ -84,6 +85,7 @@ impl NodeMessageHandler {
         Ok(NodeMessageHandler {
             nodes_handle: nodes_handle_mutex,
             nodes_sender,
+            transactions_recieved,
             finish,
         })
     }
@@ -134,6 +136,31 @@ impl NodeMessageHandler {
         for node_sender in self.nodes_sender.clone() {
             drop(node_sender);
         }
+        Ok(())
+    }
+
+    pub fn add_connection(&mut self, log_sender: LogSender, 
+        headers: Arc<RwLock<Vec<BlockHeader>>>,
+        blocks: Arc<RwLock<Vec<Block>>>,
+        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
+        utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+        connection: TcpStream) 
+        -> NodeMessageHandlerResult {
+        let (tx, rx) = channel();
+        self.nodes_sender.push(tx.clone());
+        println!(
+            "Nodo -{:?}- Escuchando por nuevos bloques...\n",
+            connection.peer_addr()
+        );
+        self.nodes_handle.lock().unwrap().push(handle_messages_from_node(
+            log_sender.clone(),
+            (tx, rx),
+            (headers, blocks),
+            self.transactions_recieved.clone(),
+            (accounts, utxo_set),
+            connection,
+            None,
+        ));
         Ok(())
     }
 }
