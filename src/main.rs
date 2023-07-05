@@ -90,9 +90,11 @@ fn main() -> Result<(), GenericError> {
     let mut node = Node::new(logsender.clone(), pointer_to_nodes, headers, blocks)
         .map_err(GenericError::NodeHandlerError)?;
     let wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
-    NodeServer::new(config, logsender.clone(), &mut node);
+    let server = NodeServer::new(config, logsender.clone(), &mut node);
     terminal_ui(wallet);
     node.shutdown_node()
+        .map_err(GenericError::NodeHandlerError)?;
+    server.shutdown_server()
         .map_err(GenericError::NodeHandlerError)?;
 
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
