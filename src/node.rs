@@ -134,9 +134,20 @@ impl Node {
         ))
     }
 
-
-    pub fn add_connection(&mut self, log_sender: LogSender, connection: TcpStream) -> Result<(), NodeCustomErrors> {
-        self.peers_handler.add_connection(log_sender, self.headers.clone(), self.block_chain.clone(), self.accounts.clone(), self.utxo_set.clone(), connection)
+    /// Se encarga de llamar a la funcion add_connection del peers_handler del nodo
+    pub fn add_connection(
+        &mut self,
+        log_sender: LogSender,
+        connection: TcpStream,
+    ) -> Result<(), NodeCustomErrors> {
+        self.peers_handler.add_connection(
+            log_sender,
+            self.headers.clone(),
+            self.block_chain.clone(),
+            self.accounts.clone(),
+            self.utxo_set.clone(),
+            connection,
+        )
     }
 }
 
