@@ -133,6 +133,22 @@ impl Node {
             "No se encontro el bloque".to_string(),
         ))
     }
+
+    /// Se encarga de llamar a la funcion add_connection del peers_handler del nodo
+    pub fn add_connection(
+        &mut self,
+        log_sender: LogSender,
+        connection: TcpStream,
+    ) -> Result<(), NodeCustomErrors> {
+        self.peers_handler.add_connection(
+            log_sender,
+            self.headers.clone(),
+            self.block_chain.clone(),
+            self.accounts.clone(),
+            self.utxo_set.clone(),
+            connection,
+        )
+    }
 }
 
 /// Funcion que se encarga de generar la lista de utxos
