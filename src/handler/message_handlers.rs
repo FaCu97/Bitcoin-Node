@@ -72,6 +72,7 @@ pub fn handle_getdata_message(
     payload: &[u8],
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
 ) -> Result<(), NodeCustomErrors> {
+    // idea: mover a GetDataPayload, que devuelva una lista de inventories
     let mut offset: usize = 0;
     let count = CompactSizeUint::unmarshalling(payload, &mut offset)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
@@ -79,6 +80,7 @@ pub fn handle_getdata_message(
         let mut inventory_bytes = vec![0; 36];
         inventory_bytes.copy_from_slice(&payload[offset..(offset + 36)]);
         let inv = Inventory::from_le_bytes(&inventory_bytes);
+        // MSG_TX == 1
         if inv.type_identifier == 1 {
             for account in &*accounts
                 .read()
@@ -96,6 +98,12 @@ pub fn handle_getdata_message(
                     }
                 }
             }
+        }
+        //  MSG_BLOCK == 2
+        if inv.type_identifier == 2 {
+            let block_hash = inv.hash;
+            // buscar el bloque en la blockchain
+            // enviar el mensaje block
         }
     }
     Ok(())
