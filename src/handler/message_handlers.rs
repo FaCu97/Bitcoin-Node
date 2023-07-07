@@ -1,6 +1,8 @@
 use std::{
     collections::HashMap,
     sync::{mpsc::Sender, Arc, RwLock},
+    thread,
+    time::Duration,
 };
 
 use crate::{
@@ -70,6 +72,7 @@ pub fn handle_getdata_message(
     log_sender: LogSender,
     node_sender: NodeSender,
     payload: &[u8],
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
 ) -> Result<(), NodeCustomErrors> {
     // idea: mover a GetDataPayload, que devuelva una lista de inventories
@@ -103,9 +106,25 @@ pub fn handle_getdata_message(
         if inv.type_identifier == 2 {
             let block_hash = inv.hash;
             // buscar el bloque en la blockchain
-            // crear un hashmap con los bloques de la blockchain en ibd
-            // enviar el mensaje block
+            match blocks
+                .read()
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+                .get(&block_hash)
+            {
+                Some(block) => {
+                    write_block_message(log_sender.clone(), node_sender.clone(), block)?;
+                    thread::sleep(Duration::from_millis(100));
+                }
+                None => {
+                    // imprimir en el log que no se encontro el bloque
+                    write_in_log(
+                        log_sender.error_log_sender.clone(),
+                        "No se encontro el bloque en la blockchain",
+                    );
+                }
+            }
         }
+        offset += 36;
     }
     Ok(())
 }
@@ -129,6 +148,32 @@ fn write_tx_message(
     write_in_log(
         log_sender.info_log_sender,
         format!("transaccion {:?} enviada", tx.hex_hash()).as_str(),
+    );
+    Ok(())
+}
+/// Recibe un NodeSender y un bloque y se encarga de mandar por el channel el mensaje block con el bloque pasado por parametro
+fn write_block_message(
+    log_sender: LogSender,
+    node_sender: NodeSender,
+    block: &Block,
+) -> Result<(), NodeCustomErrors> {
+    let mut block_payload = vec![];
+    block.marshalling(&mut block_payload);
+    let header = HeaderMessage::new("block".to_string(), Some(&block_payload));
+    //    println!(
+    //        "TAMAÑO BLOCK_MESSAGE_HEADER: {}",
+    //        header.to_le_bytes().len().to_string()
+    //    );
+    //    println!("TAMAÑO BLOCK_PAYLOAD: {}", block_payload.len().to_string());
+    let mut block_message = vec![];
+    block_message.extend_from_slice(&header.to_le_bytes());
+    block_message.extend_from_slice(&block_payload);
+    node_sender
+        .send(block_message)
+        .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+    write_in_log(
+        log_sender.info_log_sender,
+        format!("bloque {:?} enviado", block.hex_hash()).as_str(),
     );
     Ok(())
 }

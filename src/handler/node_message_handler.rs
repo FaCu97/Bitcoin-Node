@@ -234,6 +234,7 @@ pub fn handle_messages_from_node(
                         log_sender.clone(),
                         tx.clone(),
                         &payload,
+                        blocks.clone(),
                         accounts.clone(),
                     )
                 }),
@@ -322,8 +323,8 @@ fn get_header_command_name_as_str(command: &str) -> &str {
 pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessageHandlerResult {
     node.write_all(message)
         .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
-    node.flush()
-        .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
+    //   node.flush()
+    //       .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
     Ok(())
 }
 
