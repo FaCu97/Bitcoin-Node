@@ -103,6 +103,7 @@ pub fn handle_getdata_message(
         if inv.type_identifier == 2 {
             let block_hash = inv.hash;
             // buscar el bloque en la blockchain
+            // crear un hashmap con los bloques de la blockchain en ibd
             // enviar el mensaje block
         }
     }
@@ -138,7 +139,7 @@ pub fn handle_block_message(
     log_sender: LogSender,
     payload: &[u8],
     headers: Arc<RwLock<Vec<BlockHeader>>>,
-    blocks: Arc<RwLock<Vec<Block>>>,
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
 ) -> NodeMessageHandlerResult {
@@ -251,7 +252,7 @@ fn ask_for_incoming_tx(tx: NodeSender, inventories: Vec<Inventory>) -> NodeMessa
 fn include_new_block(
     log_sender: LogSender,
     block: Block,
-    blocks: Arc<RwLock<Vec<Block>>>,
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
 ) -> NodeMessageHandlerResult {
     println!("\nRECIBO NUEVO BLOQUE: {} \n", block.hex_hash());
     write_in_log(
@@ -261,7 +262,7 @@ fn include_new_block(
     blocks
         .write()
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .push(block);
+        .insert(block.hash(), block);
     Ok(())
 }
 

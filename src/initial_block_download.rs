@@ -7,6 +7,7 @@ use crate::messages::{
     getheaders_message::GetHeadersMessage, headers_message::HeadersMessage, inventory::Inventory,
 };
 use chrono::{TimeZone, Utc};
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
@@ -67,7 +68,10 @@ impl Error for DownloadError {}
 const CANTIDAD_HEADERS_EN_DISCO: usize = 2300000;
 const ALTURA_PRIMER_BLOQUE_A_DESCARGAR: usize = 2428000;
 const ALTURA_PRIMER_BLOQUE: usize = 2428246;
-type HeadersBlocksTuple = (Arc<RwLock<Vec<BlockHeader>>>, Arc<RwLock<Vec<Block>>>);
+type HeadersBlocksTuple = (
+    Arc<RwLock<Vec<BlockHeader>>>,
+    Arc<RwLock<HashMap<[u8; 32], Block>>>,
+);
 
 /// Searches for the block headers that matches the defined timestamp defined by config.
 /// If it is found, returns them and set the boolean to true.
@@ -331,7 +335,7 @@ fn download_blocks(
     config: Arc<Config>,
     log_sender: LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-    blocks: Arc<RwLock<Vec<Block>>>,
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     rx: Receiver<Vec<BlockHeader>>,
     tx: Sender<Vec<BlockHeader>>,
@@ -433,10 +437,10 @@ fn download_blocks_single_thread(
     block_headers: Vec<BlockHeader>,
     mut node: TcpStream,
     tx: Sender<Vec<BlockHeader>>,
-    blocks_pointer_clone: Arc<RwLock<Vec<Block>>>,
+    blocks_pointer_clone: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     nodes_pointer_clone: Arc<RwLock<Vec<TcpStream>>>,
 ) -> DownloadResult {
-    let mut current_blocks: Vec<Block> = Vec::new();
+    let mut current_blocks: HashMap<[u8; 32], Block> = HashMap::new();
     // el thread recibe 250 bloques
     let block_headers_thread = block_headers.clone();
     write_in_log(
@@ -472,7 +476,10 @@ fn download_blocks_single_thread(
             Err(DownloadError::ReadNodeError(_)) => return Ok(()),
             Err(error) => return Err(error),
         };
-        current_blocks.extend(received_blocks);
+
+        for block in received_blocks.into_iter() {
+            current_blocks.insert(block.hash(), block);
+        }
     }
     blocks_pointer_clone
         .write()
@@ -601,7 +608,7 @@ pub fn initial_block_download(
     )
     .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))?;
 
-    let blocks: Vec<Block> = vec![];
+    let blocks: HashMap<[u8; 32], Block> = HashMap::new();
     let pointer_to_blocks = Arc::new(RwLock::new(blocks));
     // channel to comunicate headers download thread with blocks download thread
     let (tx, rx) = channel();

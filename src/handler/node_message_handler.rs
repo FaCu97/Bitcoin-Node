@@ -26,7 +26,10 @@ use super::message_handlers::{
 type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;
 type NodeSender = Sender<Vec<u8>>;
 type NodeReceiver = Receiver<Vec<u8>>;
-type NodeBlocksData = (Arc<RwLock<Vec<BlockHeader>>>, Arc<RwLock<Vec<Block>>>);
+type NodeBlocksData = (
+    Arc<RwLock<Vec<BlockHeader>>>,
+    Arc<RwLock<HashMap<[u8; 32], Block>>>,
+);
 type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
 type PointerToAccountsPointer = Arc<RwLock<Arc<RwLock<Vec<Account>>>>>;
 #[derive(Debug, Clone)]
@@ -48,7 +51,7 @@ impl NodeMessageHandler {
     pub fn new(
         log_sender: LogSender,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
-        blocks: Arc<RwLock<Vec<Block>>>,
+        blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
@@ -147,7 +150,7 @@ impl NodeMessageHandler {
         &mut self,
         log_sender: LogSender,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
-        blocks: Arc<RwLock<Vec<Block>>>,
+        blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
         connection: TcpStream,
