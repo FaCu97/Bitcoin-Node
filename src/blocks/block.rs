@@ -55,7 +55,7 @@ impl Block {
 
     /// Convierte el bloque a bytes según el protocolo bitcoin.
     /// Guarda dichos bytes en el vector recibido por parámetro.
-    fn marshalling(&self, bytes: &mut Vec<u8>) {
+    pub fn marshalling(&self, bytes: &mut Vec<u8>) {
         self.block_header.marshalling(bytes);
         bytes.extend_from_slice(&self.txn_count.marshalling());
         for tx in &self.txn {
@@ -244,6 +244,10 @@ impl Block {
         }
 
         Ok(())
+    }
+
+    pub fn hash(&self) -> [u8; 32] {
+        self.block_header.hash()
     }
 }
 

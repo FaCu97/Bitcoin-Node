@@ -1,6 +1,8 @@
 use std::{
     collections::HashMap,
     sync::{mpsc::Sender, Arc, RwLock},
+    thread,
+    time::Duration,
 };
 
 use crate::{
@@ -70,8 +72,10 @@ pub fn handle_getdata_message(
     log_sender: LogSender,
     node_sender: NodeSender,
     payload: &[u8],
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
 ) -> Result<(), NodeCustomErrors> {
+    // idea: mover a GetDataPayload, que devuelva una lista de inventories
     let mut offset: usize = 0;
     let count = CompactSizeUint::unmarshalling(payload, &mut offset)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
@@ -79,6 +83,7 @@ pub fn handle_getdata_message(
         let mut inventory_bytes = vec![0; 36];
         inventory_bytes.copy_from_slice(&payload[offset..(offset + 36)]);
         let inv = Inventory::from_le_bytes(&inventory_bytes);
+        // MSG_TX == 1
         if inv.type_identifier == 1 {
             for account in &*accounts
                 .read()
@@ -97,6 +102,29 @@ pub fn handle_getdata_message(
                 }
             }
         }
+        //  MSG_BLOCK == 2
+        if inv.type_identifier == 2 {
+            let block_hash = inv.hash;
+            // buscar el bloque en la blockchain
+            match blocks
+                .read()
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+                .get(&block_hash)
+            {
+                Some(block) => {
+                    write_block_message(log_sender.clone(), node_sender.clone(), block)?;
+                    thread::sleep(Duration::from_millis(100));
+                }
+                None => {
+                    // imprimir en el log que no se encontro el bloque
+                    write_in_log(
+                        log_sender.error_log_sender.clone(),
+                        "No se encontro el bloque en la blockchain",
+                    );
+                }
+            }
+        }
+        offset += 36;
     }
     Ok(())
 }
@@ -123,6 +151,32 @@ fn write_tx_message(
     );
     Ok(())
 }
+/// Recibe un NodeSender y un bloque y se encarga de mandar por el channel el mensaje block con el bloque pasado por parametro
+fn write_block_message(
+    log_sender: LogSender,
+    node_sender: NodeSender,
+    block: &Block,
+) -> Result<(), NodeCustomErrors> {
+    let mut block_payload = vec![];
+    block.marshalling(&mut block_payload);
+    let header = HeaderMessage::new("block".to_string(), Some(&block_payload));
+    //    println!(
+    //        "TAMAÑO BLOCK_MESSAGE_HEADER: {}",
+    //        header.to_le_bytes().len().to_string()
+    //    );
+    //    println!("TAMAÑO BLOCK_PAYLOAD: {}", block_payload.len().to_string());
+    let mut block_message = vec![];
+    block_message.extend_from_slice(&header.to_le_bytes());
+    block_message.extend_from_slice(&block_payload);
+    node_sender
+        .send(block_message)
+        .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+    write_in_log(
+        log_sender.info_log_sender,
+        format!("bloque {:?} enviado", block.hex_hash()).as_str(),
+    );
+    Ok(())
+}
 
 /// Deserializa el payload del mensaje blocks y en caso de que el bloque es valido y todavia no este incluido, agrega el header a la cadena de headers
 /// y el bloque a la cadena de bloques. Se fija si alguna transaccion del bloque involucra a alguna de las cuentas del programa.
@@ -130,7 +184,7 @@ pub fn handle_block_message(
     log_sender: LogSender,
     payload: &[u8],
     headers: Arc<RwLock<Vec<BlockHeader>>>,
-    blocks: Arc<RwLock<Vec<Block>>>,
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
 ) -> NodeMessageHandlerResult {
@@ -243,7 +297,7 @@ fn ask_for_incoming_tx(tx: NodeSender, inventories: Vec<Inventory>) -> NodeMessa
 fn include_new_block(
     log_sender: LogSender,
     block: Block,
-    blocks: Arc<RwLock<Vec<Block>>>,
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
 ) -> NodeMessageHandlerResult {
     println!("\nRECIBO NUEVO BLOQUE: {} \n", block.hex_hash());
     write_in_log(
@@ -253,7 +307,7 @@ fn include_new_block(
     blocks
         .write()
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .push(block);
+        .insert(block.hash(), block);
     Ok(())
 }
 

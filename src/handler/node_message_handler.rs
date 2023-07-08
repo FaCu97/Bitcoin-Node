@@ -26,7 +26,10 @@ use super::message_handlers::{
 type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;
 type NodeSender = Sender<Vec<u8>>;
 type NodeReceiver = Receiver<Vec<u8>>;
-type NodeBlocksData = (Arc<RwLock<Vec<BlockHeader>>>, Arc<RwLock<Vec<Block>>>);
+type NodeBlocksData = (
+    Arc<RwLock<Vec<BlockHeader>>>,
+    Arc<RwLock<HashMap<[u8; 32], Block>>>,
+);
 type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
 type PointerToAccountsPointer = Arc<RwLock<Arc<RwLock<Vec<Account>>>>>;
 #[derive(Debug, Clone)]
@@ -48,7 +51,7 @@ impl NodeMessageHandler {
     pub fn new(
         log_sender: LogSender,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
-        blocks: Arc<RwLock<Vec<Block>>>,
+        blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
@@ -147,7 +150,7 @@ impl NodeMessageHandler {
         &mut self,
         log_sender: LogSender,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
-        blocks: Arc<RwLock<Vec<Block>>>,
+        blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
         connection: TcpStream,
@@ -231,6 +234,7 @@ pub fn handle_messages_from_node(
                         log_sender.clone(),
                         tx.clone(),
                         &payload,
+                        blocks.clone(),
                         accounts.clone(),
                     )
                 }),
@@ -319,8 +323,8 @@ fn get_header_command_name_as_str(command: &str) -> &str {
 pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessageHandlerResult {
     node.write_all(message)
         .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
-    node.flush()
-        .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
+    //   node.flush()
+    //       .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
     Ok(())
 }
 
