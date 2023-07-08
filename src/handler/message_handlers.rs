@@ -79,6 +79,8 @@ pub fn handle_getdata_message(
     let mut offset: usize = 0;
     let count = CompactSizeUint::unmarshalling(payload, &mut offset)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
+
+    let mut message_to_send: Vec<u8> = Vec::new();
     for _ in 0..count.decoded_value() as usize {
         let mut inventory_bytes = vec![0; 36];
         inventory_bytes.copy_from_slice(&payload[offset..(offset + 36)]);
@@ -112,11 +114,15 @@ pub fn handle_getdata_message(
                 .get(&block_hash)
             {
                 Some(block) => {
-                    write_block_message(log_sender.clone(), node_sender.clone(), block)?;
-                    thread::sleep(Duration::from_millis(100));
+                    message_to_send.extend_from_slice(&get_block_message(
+                        log_sender.clone(),
+                        node_sender.clone(),
+                        block,
+                    )?);
                 }
                 None => {
-                    // imprimir en el log que no se encontro el bloque
+                    // enviar mensaje notfound
+
                     write_in_log(
                         log_sender.error_log_sender.clone(),
                         "No se encontro el bloque en la blockchain",
@@ -126,6 +132,9 @@ pub fn handle_getdata_message(
         }
         offset += 36;
     }
+    node_sender
+        .send(message_to_send)
+        .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
     Ok(())
 }
 
@@ -151,31 +160,24 @@ fn write_tx_message(
     );
     Ok(())
 }
-/// Recibe un NodeSender y un bloque y se encarga de mandar por el channel el mensaje block con el bloque pasado por parametro
-fn write_block_message(
+
+// Devuelve el mensaje de tipo block con el bloque pasado por parametro
+fn get_block_message(
     log_sender: LogSender,
     node_sender: NodeSender,
     block: &Block,
-) -> Result<(), NodeCustomErrors> {
+) -> Result<Vec<u8>, NodeCustomErrors> {
     let mut block_payload = vec![];
     block.marshalling(&mut block_payload);
     let header = HeaderMessage::new("block".to_string(), Some(&block_payload));
-    //    println!(
-    //        "TAMAÑO BLOCK_MESSAGE_HEADER: {}",
-    //        header.to_le_bytes().len().to_string()
-    //    );
-    //    println!("TAMAÑO BLOCK_PAYLOAD: {}", block_payload.len().to_string());
     let mut block_message = vec![];
     block_message.extend_from_slice(&header.to_le_bytes());
     block_message.extend_from_slice(&block_payload);
-    node_sender
-        .send(block_message)
-        .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
     write_in_log(
         log_sender.info_log_sender,
-        format!("bloque {:?} enviado", block.hex_hash()).as_str(),
+        format!("Mensaje block generado {:?}", block.hex_hash()).as_str(),
     );
-    Ok(())
+    Ok(block_message)
 }
 
 /// Deserializa el payload del mensaje blocks y en caso de que el bloque es valido y todavia no este incluido, agrega el header a la cadena de headers
