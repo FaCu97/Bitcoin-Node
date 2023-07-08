@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use crate::{compact_size_uint::CompactSizeUint, messages::inventory::Inventory};
 
 /// Representa el mensaje Inv del protocolo bitcoin.
@@ -41,6 +43,22 @@ fn get_data_payload_bytes(count: &CompactSizeUint, inventories: &Vec<Inventory>)
         getdata_payload_bytes.extend(inventory.to_le_bytes());
     }
     getdata_payload_bytes
+}
+
+/// Recibe el payload del mensaje getdata en una cadena de bytes y devuelve un vector de Inventory
+pub fn unmarshalling(payload: &[u8]) -> Result<Vec<Inventory>, Box<dyn Error>> {
+    const INV_SIZE: usize = 36;
+    let mut offset: usize = 0;
+    let count = CompactSizeUint::unmarshalling(payload, &mut offset)?;
+    let mut inventories: Vec<Inventory> = Vec::new();
+    for _ in 0..count.decoded_value() as usize {
+        let mut inventory_bytes = vec![0; INV_SIZE];
+        inventory_bytes.copy_from_slice(&payload[offset..(offset + INV_SIZE)]);
+        let inv = Inventory::from_le_bytes(&inventory_bytes);
+        inventories.push(inv);
+        offset += INV_SIZE; // tamaño del inventory
+    }
+    Ok(inventories)
 }
 #[cfg(test)]
 mod tests {

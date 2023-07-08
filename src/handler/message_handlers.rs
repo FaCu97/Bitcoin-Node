@@ -1,8 +1,6 @@
 use std::{
     collections::HashMap,
     sync::{mpsc::Sender, Arc, RwLock},
-    thread,
-    time::Duration,
 };
 
 use crate::{
@@ -11,11 +9,12 @@ use crate::{
     compact_size_uint::CompactSizeUint,
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
-        block_message::BlockMessage,
+        block_message::{get_block_message, BlockMessage},
         get_data_message::GetDataMessage,
         headers_message::HeadersMessage,
         inventory::Inventory,
         message_header::{get_checksum, HeaderMessage},
+        payload::get_data_payload::unmarshalling,
     },
     transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
@@ -76,16 +75,13 @@ pub fn handle_getdata_message(
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
 ) -> Result<(), NodeCustomErrors> {
     // idea: mover a GetDataPayload, que devuelva una lista de inventories
-    let mut offset: usize = 0;
-    let count = CompactSizeUint::unmarshalling(payload, &mut offset)
+    let mut message_to_send: Vec<u8> = Vec::new();
+
+    let inventories = unmarshalling(payload)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
 
-    let mut message_to_send: Vec<u8> = Vec::new();
-    for _ in 0..count.decoded_value() as usize {
-        let mut inventory_bytes = vec![0; 36];
-        inventory_bytes.copy_from_slice(&payload[offset..(offset + 36)]);
-        let inv = Inventory::from_le_bytes(&inventory_bytes);
-        // MSG_TX == 1
+    for inv in inventories {
+        //  MSG_TX == 1
         if inv.type_identifier == 1 {
             for account in &*accounts
                 .read()
@@ -99,7 +95,15 @@ pub fn handle_getdata_message(
                     .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                 {
                     if tx.hash() == inv.hash {
-                        write_tx_message(log_sender.clone(), node_sender.clone(), tx)?;
+                        // mover get_tx_message a otro módulo?
+                        let tx_message = get_tx_message(tx);
+                        node_sender
+                            .send(tx_message)
+                            .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+                        write_in_log(
+                            log_sender.clone().info_log_sender,
+                            format!("transaccion {:?} enviada", tx.hex_hash()).as_str(),
+                        );
                     }
                 }
             }
@@ -114,23 +118,21 @@ pub fn handle_getdata_message(
                 .get(&block_hash)
             {
                 Some(block) => {
-                    message_to_send.extend_from_slice(&get_block_message(
-                        log_sender.clone(),
-                        node_sender.clone(),
-                        block,
-                    )?);
+                    message_to_send.extend_from_slice(&get_block_message(block));
                 }
                 None => {
                     // enviar mensaje notfound
 
                     write_in_log(
                         log_sender.error_log_sender.clone(),
-                        "No se encontro el bloque en la blockchain",
+                        &format!(
+                            "No se encontro el bloque en la blockchain: {}",
+                            crate::account::bytes_to_hex_string(&inv.hash)
+                        ),
                     );
                 }
             }
         }
-        offset += 36;
     }
     node_sender
         .send(message_to_send)
@@ -138,46 +140,16 @@ pub fn handle_getdata_message(
     Ok(())
 }
 
-/// Recibe un NodeSender y una tx y se encarga de mandar por el channel el mensaje tx con la transaccion pasada por parametro
-/// para ser escrita al nodo conectado. Devuelve Ok(()) si salio todo bien NodeCustomErrors en caso contrario
-fn write_tx_message(
-    log_sender: LogSender,
-    node_sender: NodeSender,
-    tx: &Transaction,
-) -> Result<(), NodeCustomErrors> {
+// Devuelve el mensaje tx según la transacción recibida
+fn get_tx_message(tx: &Transaction) -> Vec<u8> {
     let mut tx_payload = vec![];
     tx.marshalling(&mut tx_payload);
     let header = HeaderMessage::new("tx".to_string(), Some(&tx_payload));
     let mut tx_message = vec![];
     tx_message.extend_from_slice(&header.to_le_bytes());
     tx_message.extend_from_slice(&tx_payload);
-    node_sender
-        .send(tx_message)
-        .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
-    write_in_log(
-        log_sender.info_log_sender,
-        format!("transaccion {:?} enviada", tx.hex_hash()).as_str(),
-    );
-    Ok(())
-}
 
-// Devuelve el mensaje de tipo block con el bloque pasado por parametro
-fn get_block_message(
-    log_sender: LogSender,
-    node_sender: NodeSender,
-    block: &Block,
-) -> Result<Vec<u8>, NodeCustomErrors> {
-    let mut block_payload = vec![];
-    block.marshalling(&mut block_payload);
-    let header = HeaderMessage::new("block".to_string(), Some(&block_payload));
-    let mut block_message = vec![];
-    block_message.extend_from_slice(&header.to_le_bytes());
-    block_message.extend_from_slice(&block_payload);
-    write_in_log(
-        log_sender.info_log_sender,
-        format!("Mensaje block generado {:?}", block.hex_hash()).as_str(),
-    );
-    Ok(block_message)
+    tx_message
 }
 
 /// Deserializa el payload del mensaje blocks y en caso de que el bloque es valido y todavia no este incluido, agrega el header a la cadena de headers
