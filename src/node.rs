@@ -126,13 +126,11 @@ impl Node {
         let block_option = block_chain.get(block_hash);
 
         match block_option {
-            Some(block) => return Ok(block.merkle_proof_of_inclusion(tx_hash)),
-            None => {
-                return Err(NodeCustomErrors::OtherError(
-                    "No se encontro el bloque".to_string(),
-                ))
-            }
-        };
+            Some(block) => Ok(block.merkle_proof_of_inclusion(tx_hash)),
+            None => Err(NodeCustomErrors::OtherError(
+                "No se encontro el bloque".to_string(),
+            )),
+        }
     }
 
     /// Se encarga de llamar a la funcion add_connection del peers_handler del nodo
