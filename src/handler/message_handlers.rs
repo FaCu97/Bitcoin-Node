@@ -14,6 +14,7 @@ use crate::{
         headers_message::HeadersMessage,
         inventory::Inventory,
         message_header::{get_checksum, HeaderMessage},
+        notfound_message::get_notfound_message,
         payload::get_data_payload::unmarshalling,
     },
     transactions::transaction::Transaction,
@@ -80,6 +81,8 @@ pub fn handle_getdata_message(
     let inventories = unmarshalling(payload)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
 
+    let mut notfound_inventories: Vec<Inventory> = Vec::new();
+
     for inv in inventories {
         //  MSG_TX == 1
         if inv.type_identifier == 1 {
@@ -121,8 +124,6 @@ pub fn handle_getdata_message(
                     message_to_send.extend_from_slice(&get_block_message(block));
                 }
                 None => {
-                    // enviar mensaje notfound
-
                     write_in_log(
                         log_sender.error_log_sender.clone(),
                         &format!(
@@ -130,9 +131,14 @@ pub fn handle_getdata_message(
                             crate::account::bytes_to_hex_string(&inv.hash)
                         ),
                     );
+                    notfound_inventories.push(inv);
                 }
             }
         }
+    }
+    if !notfound_inventories.is_empty() {
+        let notfound_message = get_notfound_message(notfound_inventories);
+        message_to_send.extend_from_slice(&notfound_message);
     }
     node_sender
         .send(message_to_send)
