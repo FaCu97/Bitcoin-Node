@@ -1,5 +1,3 @@
-use gtk::STYLE_CLASS_LEFT;
-
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
