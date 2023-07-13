@@ -60,7 +60,7 @@ pub fn get_version_message(
 ) -> Result<VersionMessage, Box<dyn Error>> {
     let version_payload = get_version_payload(config, socket_addr, local_ip_addr)?;
     let version_header = HeaderMessage {
-        start_string: config.testnet_start_string,
+        start_string: config.start_string,
         command_name: "version".to_string(),
         payload_size: version_payload.to_le_bytes().len() as u32,
         checksum: get_checksum(&version_payload.to_le_bytes()),

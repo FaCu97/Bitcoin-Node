@@ -134,7 +134,7 @@ fn connect_to_node(
     log_sender: &LogSender,
     node_ip: &Ipv4Addr,
 ) -> Result<TcpStream, Box<dyn Error>> {
-    let socket_addr = SocketAddr::new((*node_ip).into(), config.testnet_port);
+    let socket_addr = SocketAddr::new((*node_ip).into(), config.net_port);
     let mut stream: TcpStream =
         TcpStream::connect_timeout(&socket_addr, Duration::from_secs(config.connect_timeout))?;
     let local_ip_addr = stream.local_addr()?;

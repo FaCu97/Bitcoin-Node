@@ -61,10 +61,6 @@ impl fmt::Display for DownloadError {
 
 impl Error for DownloadError {}
 
-// cambiar esta constante y borrar el archivo first_headers.csv (si existe) para ver cambios
-const CANTIDAD_HEADERS_EN_DISCO: usize = 2300000;
-const ALTURA_PRIMER_BLOQUE_A_DESCARGAR: usize = 2428000;
-const ALTURA_PRIMER_BLOQUE: usize = 2428246;
 type HeadersBlocksTuple = (
     Arc<RwLock<Vec<BlockHeader>>>,
     Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -155,7 +151,7 @@ fn download_headers_from_node(
             .read()
             .map_err(|err| DownloadError::LockError(err.to_string()))?
             .len()
-            == ALTURA_PRIMER_BLOQUE_A_DESCARGAR
+            == (config.height_first_block_to_download / 2000) * 2000
         {
             // Si no lo encuentra devuelve un error vacío, creo que esto está mal.
             let first_block_headers_to_download = search_first_header_block_to_download(
@@ -414,7 +410,8 @@ fn download_blocks(
             .read()
             .map_err(|err| DownloadError::LockError(err.to_string()))?
             .len();
-        let bloques_a_descargar = cantidad_headers_descargados - ALTURA_PRIMER_BLOQUE + 1;
+        let bloques_a_descargar =
+            cantidad_headers_descargados - config.height_first_block_to_download + 1;
         if bloques_descargados == bloques_a_descargar {
             write_in_log(&log_sender.info_log_sender, format!("Se terminaron de descargar todos los bloques correctamente! BLOQUES DESCARGADOS: {}\n", bloques_descargados).as_str());
             return Ok(());
@@ -757,7 +754,7 @@ fn download_first_headers(
     Ok(())
 }
 
-/// Downloads the first 2.3 million headers from the node.
+/// Downloads the first headers (specified in configuration file) from the node.
 /// Returns an error if something fails
 fn download_initial_headers_from_node(
     config: &Arc<Config>,
@@ -778,7 +775,7 @@ fn download_initial_headers_from_node(
         .read()
         .map_err(|err| DownloadError::LockError(err.to_string()))?
         .len()
-        < CANTIDAD_HEADERS_EN_DISCO
+        < config.headers_in_disk
     {
         println!(
             "{:?}",

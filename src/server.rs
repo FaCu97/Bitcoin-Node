@@ -38,7 +38,7 @@ impl NodeServer {
         node: &mut Node,
     ) -> Result<NodeServer, NodeCustomErrors> {
         let (sender, rx) = mpsc::channel();
-        let address = get_socket(LOCALHOST.to_string(), config.testnet_port)?;
+        let address = get_socket(LOCALHOST.to_string(), config.net_port)?;
         let mut node_clone = node.clone();
         let log_sender_clone = log_sender.clone();
         let config = config.clone();

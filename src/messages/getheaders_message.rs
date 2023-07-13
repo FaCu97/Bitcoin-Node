@@ -41,7 +41,7 @@ impl GetHeadersMessage {
             stop_hash,
         };
         let header_of_getheaders = HeaderMessage {
-            start_string: config.testnet_start_string,
+            start_string: config.start_string,
             command_name: "getheaders".to_string(),
             payload_size: getheaders_payload.to_le_bytes().len() as u32,
             checksum: get_checksum(&getheaders_payload.to_le_bytes()),

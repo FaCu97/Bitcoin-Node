@@ -28,7 +28,7 @@ pub fn get_active_nodes_from_dns_seed(
 ) -> Result<Vec<Ipv4Addr>, ConnectionToDnsError> {
     let mut node_ips = Vec::new();
     let host = config.dns_seed.clone();
-    let port = config.dns_port;
+    let port = config.net_port;
 
     let addrs = (host, port)
         .to_socket_addrs()
