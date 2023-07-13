@@ -16,12 +16,12 @@ impl Pubkey {
     }
     /// Genera la address a partir del pubkey.
     pub fn generate_address(&self) -> Result<String, &'static str> {
-        // vector que generara el adress
+        // vector que generara el address
         let mut adress_bytes: Vec<u8> = vec![0x6f];
         let bytes = &self.bytes;
         let lenght: usize = bytes.len();
         if lenght <= 3 {
-            return Err("el campo pubkey no tiene el largo esperado");
+            return Err("El campo pubkey no tiene el largo esperado");
         }
 
         let first_byte = self.bytes[0];
