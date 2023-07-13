@@ -163,7 +163,7 @@ impl NodeMessageHandler {
         );
         self.nodes_handle
             .lock()
-            .unwrap()
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .push(handle_messages_from_node(
                 log_sender,
                 (tx, rx),

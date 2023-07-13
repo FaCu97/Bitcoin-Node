@@ -23,6 +23,7 @@ pub enum GenericError {
     ConnectionToDnsError(ConnectionToDnsError),
     LoggingError(LoggingError),
     NodeHandlerError(NodeCustomErrors),
+    NodeServerError(NodeCustomErrors),
 }
 
 impl fmt::Display for GenericError {
@@ -38,6 +39,7 @@ impl fmt::Display for GenericError {
             GenericError::NodeHandlerError(msg) => {
                 write!(f, "NODE MESSAGE LISTENER AND WRITER ERROR: {}", msg)
             }
+            GenericError::NodeServerError(msg) => write!(f, "NODE SERVER ERROR: {}", msg),
         }
     }
 }
@@ -89,7 +91,7 @@ fn main() -> Result<(), GenericError> {
     let mut node = Node::new(logsender.clone(), pointer_to_nodes, headers, blocks)
         .map_err(GenericError::NodeHandlerError)?;
     let wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
-    let server = NodeServer::new(config, logsender.clone(), &mut node);
+    let server = NodeServer::new(config, logsender.clone(), &mut node).map_err(GenericError::NodeServerError)?;
     terminal_ui(wallet);
     node.shutdown_node()
         .map_err(GenericError::NodeHandlerError)?;

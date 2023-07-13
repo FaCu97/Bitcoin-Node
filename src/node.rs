@@ -1,4 +1,3 @@
-use gtk::STYLE_CLASS_LEFT;
 
 use crate::{
     account::Account,

@@ -1,5 +1,7 @@
 use std::{error::Error, fmt};
 
+
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 /// Representa los distintos errores genericos que pueden llegar a ocurrir
 /// durante el programa
@@ -11,6 +13,7 @@ pub enum NodeCustomErrors {
     CanNotRead(String),
     ThreadChannelError(String),
     UnmarshallingError(String),
+    SocketError(String),
     OtherError(String),
 }
 
@@ -38,6 +41,9 @@ impl fmt::Display for NodeCustomErrors {
             }
             NodeCustomErrors::OtherError(msg) => {
                 write!(f, "Error: {}", msg)
+            }
+            NodeCustomErrors::SocketError(msg) => {
+                write!(f, "Socket-TcpStream Error: {}", msg)
             }
         }
     }
