@@ -1,3 +1,4 @@
+use super::script_opcodes::ScriptOpcodes;
 use crate::address_decoder;
 use std::error::Error;
 use std::io;
@@ -20,8 +21,8 @@ pub fn generate_p2pkh_pk_script(pubkey_hash: &[u8]) -> Result<Vec<u8>, Box<dyn E
         )));
     }
     let mut pk_script: Vec<u8> = Vec::new();
-    pk_script.push(0x76); // OP_DUP
-    pk_script.push(0xA9);
+    pk_script.push(ScriptOpcodes::OP_DUP);
+    pk_script.push(ScriptOpcodes::OP_HASH160);
     pk_script.push(20); // <bytes_to_push>: Son 20 bytes
 
     pk_script.extend_from_slice(pubkey_hash);
@@ -43,12 +44,12 @@ pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> Result<bool, Box<dyn 
         .copy_from_slice(&sig_script[length_sig as usize + 2..length_sig as usize + 35]);
 
     // 1) Chequeo que el primer comando sea OP_DUP (0x76)
-    if p2pkh_script[0..1] != [0x76] {
+    if p2pkh_script[0..1] != [ScriptOpcodes::OP_DUP] {
         return Ok(false);
     }
 
     // 2) Chequeo que el siguiente comando sea OP_HASH_160 (0xA9)
-    if p2pkh_script[1..2] != [0xA9] {
+    if p2pkh_script[1..2] != [ScriptOpcodes::OP_HASH160] {
         return Ok(false);
     }
 
@@ -56,7 +57,7 @@ pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> Result<bool, Box<dyn 
     let ripemd160_hash = address_decoder::hash_160(&sig_script_pubkey);
 
     // 4) Chequeo que el siguiente comando sea OP_EQUALVERIFY (0x88)
-    if p2pkh_script[23..24] != [0x88] {
+    if p2pkh_script[23..24] != [ScriptOpcodes::OP_EQUALVERIFY] {
         return Ok(false);
     }
 
@@ -66,7 +67,7 @@ pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> Result<bool, Box<dyn 
     }
 
     // 6) Chequeo que el siguiente comando sea OP_CHECKSIG (0xAC)
-    if p2pkh_script[24..25] != [0xAC] {
+    if p2pkh_script[24..25] != [ScriptOpcodes::OP_CHECKSIG] {
         return Ok(false);
     }
     Ok(true)

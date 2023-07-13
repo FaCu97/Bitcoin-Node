@@ -4,13 +4,7 @@ use std::error::Error;
 
 use crate::address_decoder::get_pubkey_hash_from_address;
 
-struct ScriptOpcode;
-impl ScriptOpcode {
-    pub const OP_DUP: u8 = 0x76;
-    pub const OP_HASH160: u8 = 0xA9;
-    pub const OP_EQUALVERIFY: u8 = 0x88;
-    pub const OP_CHECKSIG: u8 = 0xAC;
-}
+use super::script_opcodes::ScriptOpcodes;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Pubkey {
@@ -39,7 +33,7 @@ impl Pubkey {
             // se trata de una transanccion del tipo P2WPKH
             adress_bytes.extend_from_slice(&bytes[2..lenght]);
         }
-        if first_byte == 0x76 {
+        if first_byte == ScriptOpcodes::OP_DUP {
             // se trata de una transanccion del tipo P2PKH
             adress_bytes.extend_from_slice(&bytes[3..(lenght - 2)]);
         }
@@ -55,12 +49,12 @@ impl Pubkey {
     pub fn generate_pubkey(address: &str) -> Result<Vec<u8>, Box<dyn Error>> {
         let pubkey_hash = get_pubkey_hash_from_address(address)?;
         let mut pk_script: Vec<u8> = Vec::new();
-        pk_script.push(ScriptOpcode::OP_DUP);
-        pk_script.push(ScriptOpcode::OP_HASH160);
+        pk_script.push(ScriptOpcodes::OP_DUP);
+        pk_script.push(ScriptOpcodes::OP_HASH160);
         pk_script.push(20); // <bytes_to_push>: Son 20 bytes
         pk_script.extend_from_slice(&pubkey_hash);
-        pk_script.push(ScriptOpcode::OP_EQUALVERIFY);
-        pk_script.push(ScriptOpcode::OP_CHECKSIG);
+        pk_script.push(ScriptOpcodes::OP_EQUALVERIFY);
+        pk_script.push(ScriptOpcodes::OP_CHECKSIG);
         Ok(pk_script)
     }
 }
