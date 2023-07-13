@@ -16,7 +16,7 @@ const CANTIDAD_ATRIBUTOS: usize = 20;
 pub struct Config {
     pub number_of_nodes: usize,
     pub dns_seed: String,
-    pub testnet_port: u16,
+    pub net_port: u16,
     pub start_string: [u8; 4],
     pub protocol_version: i32,
     pub user_agent: String,
@@ -69,7 +69,7 @@ impl Config {
         let mut cfg = Self {
             number_of_nodes: 0,
             dns_seed: String::new(),
-            testnet_port: 0,
+            net_port: 0,
             start_string: [0; 4],
             protocol_version: 0,
             user_agent: String::new(),
@@ -140,8 +140,8 @@ impl Config {
                 self.dns_seed = String::from(value);
                 *number_of_settings_loaded += 1;
             }
-            "TESTNET_PORT" => {
-                self.testnet_port = u16::from_str(value)?;
+            "NET_PORT" => {
+                self.net_port = u16::from_str(value)?;
                 *number_of_settings_loaded += 1;
             }
             "START_STRING" => {

@@ -33,7 +33,7 @@ impl NodeServer {
     /// Crea un nuevo servidor de nodo en un thread aparte encargado de eso
     pub fn new(config: Arc<Config>, log_sender: LogSender, node: &mut Node) -> NodeServer {
         let (sender, rx) = mpsc::channel();
-        let address = get_socket(LOCALHOST.to_string(), config.testnet_port);
+        let address = get_socket(LOCALHOST.to_string(), config.net_port);
         let mut node_clone = node.clone();
         let handle =
             spawn(move || Self::listen(config, log_sender.clone(), &mut node_clone, address, rx));
