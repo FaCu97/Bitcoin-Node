@@ -1,7 +1,6 @@
 use super::script_opcodes::ScriptOpcodes;
 use crate::address_decoder::{self, get_pubkey_hash_from_address};
 use std::error::Error;
-use std::io;
 
 const BYTES_TO_PUSH: u8 = 20;
 //      <Sig> <PubKey> OP_DUP OP_HASH160 <PubkeyHash> OP_EQUALVERIFY OP_CHECKSIG

@@ -1,10 +1,6 @@
+use super::script_opcodes::ScriptOpcodes;
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
-use std::error::Error;
-
-use crate::address_decoder::get_pubkey_hash_from_address;
-
-use super::script_opcodes::ScriptOpcodes;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Pubkey {
