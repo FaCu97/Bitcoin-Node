@@ -20,7 +20,7 @@ use std::{
 
 use super::message_handlers::{
     handle_block_message, handle_getdata_message, handle_headers_message, handle_inv_message,
-    handle_ping_message, handle_tx_message, handle_getheaders_message,
+    handle_ping_message, handle_tx_message, handle_getheaders_message, write_to_node,
 };
 
 type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;
@@ -101,7 +101,7 @@ impl NodeMessageHandler {
         for node_sender in &self.nodes_sender {
             // si alguno de los channels esta cerrado significa que por alguna razon el nodo fallo entonces lo ignoro y pruebo broadcastear
             // en los siguientes nodos restantes
-            if node_sender.send(message.clone()).is_err() {
+            if write_to_node(node_sender, message.clone()).is_err() {
                 amount_of_failed_nodes += 1;
                 continue;
             }

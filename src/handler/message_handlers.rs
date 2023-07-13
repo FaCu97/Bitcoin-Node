@@ -99,9 +99,7 @@ pub fn handle_getdata_message(
         let notfound_message = get_notfound_message(notfound_inventories);
         message_to_send.extend_from_slice(&notfound_message);
     }
-    node_sender
-        .send(message_to_send)
-        .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+    write_to_node(&node_sender, message_to_send)?;
     Ok(())
 }
 
@@ -158,9 +156,7 @@ fn handle_tx_inventory(
         {
             if tx.hash() == inventory.hash {
                 let tx_message = get_tx_message(tx);
-                node_sender
-                    .send(tx_message)
-                    .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+                write_to_node(node_sender, tx_message)?;
                 write_in_log(
                     log_sender.clone().info_log_sender,
                     format!("transaccion {:?} enviada", tx.hex_hash()).as_str(),
@@ -374,4 +370,11 @@ fn get_tx_message(tx: &Transaction) -> Vec<u8> {
     tx_message.extend_from_slice(&tx_payload);
 
     tx_message
+}
+
+
+pub fn write_to_node(tx: &NodeSender, message: Vec<u8>) -> NodeMessageHandlerResult {
+    tx.send(message)
+        .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+    Ok(())
 }
