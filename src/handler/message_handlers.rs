@@ -27,6 +27,8 @@ type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;
 type NodeSender = Sender<Vec<u8>>;
 
 const START_STRING: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
+const MSG_TX: u32 = 1;
+const MSG_BLOCK: u32 = 2;
 
 /*
 ***************************************************************************
@@ -65,6 +67,10 @@ pub fn handle_headers_message(
     Ok(())
 }
 
+pub fn handle_getheaders_message(log_sender: LogSender, tx: NodeSender, payload: &[u8], headers: Arc<RwLock<Vec<BlockHeader>>>) -> NodeMessageHandlerResult {
+    unimplemented!();
+}
+
 /// Recibe un Sender de bytes, el payload del mensaje getdata recibido y un vector de cuentas de la wallet y deserializa el mensaje getdata que llega
 /// y por cada Inventory que pide si esta como pending_transaction en alguna de las cuentas de la wallet se le envia el mensaje tx con la transaccion pedida
 /// por el channel para ser escrita. Devuelve Ok(()) en caso exitoso o error de tipo NodeCustomErrors en caso contrarui
@@ -77,66 +83,19 @@ pub fn handle_getdata_message(
 ) -> Result<(), NodeCustomErrors> {
     // idea: mover a GetDataPayload, que devuelva una lista de inventories
     let mut message_to_send: Vec<u8> = Vec::new();
-
     let inventories = unmarshalling(payload)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
-
     let mut notfound_inventories: Vec<Inventory> = Vec::new();
-
     for inv in inventories {
-        //  MSG_TX == 1
-        if inv.type_identifier == 1 {
-            for account in &*accounts
-                .read()
-                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-                .read()
-                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            {
-                for tx in &*account
-                    .pending_transactions
-                    .read()
-                    .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-                {
-                    if tx.hash() == inv.hash {
-                        // mover get_tx_message a otro módulo?
-                        let tx_message = get_tx_message(tx);
-                        node_sender
-                            .send(tx_message)
-                            .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
-                        write_in_log(
-                            log_sender.clone().info_log_sender,
-                            format!("transaccion {:?} enviada", tx.hex_hash()).as_str(),
-                        );
-                    }
-                }
-            }
+        if inv.type_identifier == MSG_TX {
+            handle_tx_inventory(&inv, &accounts, &node_sender, &log_sender)?;
         }
-        //  MSG_BLOCK == 2
-        if inv.type_identifier == 2 {
-            let block_hash = inv.hash;
-            // buscar el bloque en la blockchain
-            match blocks
-                .read()
-                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-                .get(&block_hash)
-            {
-                Some(block) => {
-                    message_to_send.extend_from_slice(&get_block_message(block));
-                }
-                None => {
-                    write_in_log(
-                        log_sender.error_log_sender.clone(),
-                        &format!(
-                            "No se encontro el bloque en la blockchain: {}",
-                            crate::account::bytes_to_hex_string(&inv.hash)
-                        ),
-                    );
-                    notfound_inventories.push(inv);
-                }
-            }
+        if inv.type_identifier == MSG_BLOCK {
+            handle_block_inventory(&inv, &blocks, &log_sender, &mut message_to_send, &mut notfound_inventories)?;
         }
     }
     if !notfound_inventories.is_empty() {
+        // Hay un bloque o mas que no fueron encontrados en la blockchain
         let notfound_message = get_notfound_message(notfound_inventories);
         message_to_send.extend_from_slice(&notfound_message);
     }
@@ -146,16 +105,70 @@ pub fn handle_getdata_message(
     Ok(())
 }
 
-// Devuelve el mensaje tx según la transacción recibida
-fn get_tx_message(tx: &Transaction) -> Vec<u8> {
-    let mut tx_payload = vec![];
-    tx.marshalling(&mut tx_payload);
-    let header = HeaderMessage::new("tx".to_string(), Some(&tx_payload));
-    let mut tx_message = vec![];
-    tx_message.extend_from_slice(&header.to_le_bytes());
-    tx_message.extend_from_slice(&tx_payload);
+/// Recibe un inventory, un puntero a la cadena de bloques, un puntero al sender del nodo y un puntero al sender de logs.
+/// Se fija si el bloque del inventory esta en la blockchain y si es asi lo agrega al mensaje a enviar. Si no esta en la blockchain
+/// lo agrega a la lista de inventories notfound. Devuelve Ok(()) en caso de poder agregarlo correctamente o error del tipo NodeHandlerError en caso de no poder.
+fn handle_block_inventory(
+    inventory: &Inventory,
+    blocks: &Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    log_sender: &LogSender,
+    message_to_send: &mut Vec<u8>,
+    notfound_inventories: &mut Vec<Inventory>,
+) -> Result<(), NodeCustomErrors> {
+    let block_hash = inventory.hash;
+    match blocks
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .get(&block_hash)
+    {
+        Some(block) => {
+            message_to_send.extend_from_slice(&get_block_message(block));
+        }
+        None => {
+            write_in_log(
+                log_sender.error_log_sender.clone(),
+                &format!(
+                    "No se encontro el bloque en la blockchain: {}",
+                    crate::account::bytes_to_hex_string(&inventory.hash)
+                ),
+            );
+            notfound_inventories.push(inventory.clone());
+        }
+    }
+    Ok(())
+}
 
-    tx_message
+/// Se fija si la transaccion del inventory esta en alguna de las cuentas de la wallet y si es asi la envia por el channel para que se escriba en el nodo
+fn handle_tx_inventory(
+    inventory: &Inventory,
+    accounts: &Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
+    node_sender: &NodeSender,
+    log_sender: &LogSender,
+) -> Result<(), NodeCustomErrors> {
+    for account in &*accounts
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+    {
+        for tx in &*account
+            .pending_transactions
+            .read()
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        {
+            if tx.hash() == inventory.hash {
+                let tx_message = get_tx_message(tx);
+                node_sender
+                    .send(tx_message)
+                    .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+                write_in_log(
+                    log_sender.clone().info_log_sender,
+                    format!("transaccion {:?} enviada", tx.hex_hash()).as_str(),
+                );
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Deserializa el payload del mensaje blocks y en caso de que el bloque es valido y todavia no este incluido, agrega el header a la cadena de headers
@@ -348,4 +361,17 @@ fn update_accounts_utxo_set(
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
     }
     Ok(())
+}
+
+
+// Devuelve el mensaje tx según la transacción recibida
+fn get_tx_message(tx: &Transaction) -> Vec<u8> {
+    let mut tx_payload = vec![];
+    tx.marshalling(&mut tx_payload);
+    let header = HeaderMessage::new("tx".to_string(), Some(&tx_payload));
+    let mut tx_message = vec![];
+    tx_message.extend_from_slice(&header.to_le_bytes());
+    tx_message.extend_from_slice(&tx_payload);
+
+    tx_message
 }

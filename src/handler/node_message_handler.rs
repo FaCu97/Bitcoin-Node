@@ -20,7 +20,7 @@ use std::{
 
 use super::message_handlers::{
     handle_block_message, handle_getdata_message, handle_headers_message, handle_inv_message,
-    handle_ping_message, handle_tx_message,
+    handle_ping_message, handle_tx_message, handle_getheaders_message,
 };
 
 type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;
@@ -254,6 +254,9 @@ pub fn handle_messages_from_node(
                 "ping" => handle_message(&mut error, || handle_ping_message(tx.clone(), &payload)),
                 "tx" => handle_message(&mut error, || {
                     handle_tx_message(log_sender.clone(), &payload, accounts.clone())
+                }),
+                "getheaders" => handle_message(&mut error, || {
+                    handle_getheaders_message(log_sender.clone(), tx.clone(), &payload, headers.clone())
                 }),
                 _ => {
                     write_in_log(
