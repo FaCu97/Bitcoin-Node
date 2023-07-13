@@ -12,12 +12,12 @@ impl Gtk {
         let glade_src = include_str!("resources/interfaz.glade");
         let builder = gtk::Builder::from_string(glade_src);
 
-        let css_provider = CssProvider::new();
+        let css_provider: CssProvider = CssProvider::new();
         css_provider
             .load_from_path("src/gtk/resources/styles.css")
             .expect("Failed to load CSS file.");
 
-        let screen = gdk::Screen::default().expect("Failed to get default screen.");
+        let screen: gdk::Screen = gdk::Screen::default().expect("Failed to get default screen.");
         StyleContext::add_provider_for_screen(
             &screen,
             &css_provider,
@@ -27,7 +27,7 @@ impl Gtk {
         let initial_window: gtk::Window = builder.object("initial-window").unwrap();
         let main_window: gtk::Window = builder.object("main-window").unwrap();
         let start_button: gtk::Button = builder.object("start-button").unwrap();
-        let progress_bar: ProgressBar = builder.object("load-bar").unwrap();
+        //let progress_bar: ProgressBar = builder.object("load-bar").unwrap();
         initial_window.show_all();
 
         start_button.connect_clicked(move |_| {

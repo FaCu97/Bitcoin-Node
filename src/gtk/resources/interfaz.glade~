@@ -58,7 +58,7 @@
             <property name="can-focus">False</property>
             <property name="halign">center</property>
             <property name="valign">center</property>
-            <property name="pixbuf">src/gtk/resources/initial_background.jpg</property>
+            <property name="pixbuf">initial_background.jpg</property>
           </object>
         </child>
         <child>
@@ -106,6 +106,14 @@
       <!-- column-name status -->
       <column type="gchar"/>
     </columns>
+    <data>
+      <row>
+        <col id="0">a</col>
+      </row>
+      <row>
+        <col id="0"/>
+      </row>
+    </data>
   </object>
   <object class="GtkWindow" id="main-window">
     <property name="width-request">800</property>
@@ -572,6 +580,11 @@
                                 <property name="enable-grid-lines">both</property>
                                 <property name="enable-tree-lines">True</property>
                                 <property name="tooltip-column">0</property>
+                                <child internal-child="selection">
+                                  <object class="GtkTreeSelection">
+                                    <property name="mode">multiple</property>
+                                  </object>
+                                </child>
                                 <child>
                                   <object class="GtkTreeViewColumn" id="status">
                                     <property name="resizable">True</property>
@@ -581,7 +594,7 @@
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText">
-                                        <property name="text">asdasdsad</property>
+                                        <property name="placeholder-text">asdsadasd</property>
                                       </object>
                                       <attributes>
                                         <attribute name="wrap-width">1</attribute>
@@ -593,36 +606,24 @@
                                   <object class="GtkTreeViewColumn" id="date">
                                     <property name="title" translatable="yes">date</property>
                                     <property name="expand">True</property>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                    </child>
                                   </object>
                                 </child>
                                 <child>
                                   <object class="GtkTreeViewColumn" id="type">
                                     <property name="title" translatable="yes">type</property>
                                     <property name="expand">True</property>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                    </child>
                                   </object>
                                 </child>
                                 <child>
                                   <object class="GtkTreeViewColumn" id="label">
                                     <property name="title" translatable="yes">label</property>
                                     <property name="expand">True</property>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                    </child>
                                   </object>
                                 </child>
                                 <child>
                                   <object class="GtkTreeViewColumn" id="amount">
                                     <property name="title" translatable="yes">amount(satoshis)</property>
                                     <property name="expand">True</property>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                    </child>
                                   </object>
                                 </child>
                               </object>
