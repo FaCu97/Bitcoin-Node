@@ -12,7 +12,6 @@ use bitcoin::server::NodeServer;
 use bitcoin::terminal_ui;
 use bitcoin::wallet::Wallet;
 use std::error::Error;
-use std::sync::Arc;
 use std::{env, fmt};
 
 #[derive(Debug)]
@@ -23,6 +22,7 @@ pub enum GenericError {
     ConnectionToDnsError(ConnectionToDnsError),
     LoggingError(LoggingError),
     NodeHandlerError(NodeCustomErrors),
+    NodeServerError(NodeCustomErrors),
 }
 
 impl fmt::Display for GenericError {
@@ -38,6 +38,7 @@ impl fmt::Display for GenericError {
             GenericError::NodeHandlerError(msg) => {
                 write!(f, "NODE MESSAGE LISTENER AND WRITER ERROR: {}", msg)
             }
+            GenericError::NodeServerError(msg) => write!(f, "NODE SERVER ERROR: {}", msg),
         }
     }
 }
@@ -51,7 +52,7 @@ fn main() -> Result<(), GenericError> {
         // lo saco para que lea config correctamente
         args.pop();
     }
-    let config: Arc<Config> = Config::from(&args).map_err(GenericError::ConfigError)?;
+    let config = Config::from(&args).map_err(GenericError::ConfigError)?;
     let (
         error_log_sender,
         error_handler,
@@ -60,7 +61,7 @@ fn main() -> Result<(), GenericError> {
         message_log_sender,
         message_handler,
     ) = set_up_loggers(
-        config.clone(),
+        &config,
         config.error_log_path.clone(),
         config.info_log_path.clone(),
         config.message_log_path.clone(),
@@ -68,28 +69,29 @@ fn main() -> Result<(), GenericError> {
     .map_err(GenericError::LoggingError)?;
     let logsender = LogSender::new(error_log_sender, info_log_sender, message_log_sender);
     write_in_log(
-        logsender.info_log_sender.clone(),
+        &logsender.info_log_sender,
         "Se leyo correctamente el archivo de configuracion\n",
     );
-    let active_nodes = get_active_nodes_from_dns_seed(config.clone(), logsender.clone())
+    let active_nodes = get_active_nodes_from_dns_seed(&config, &logsender)
         .map_err(GenericError::ConnectionToDnsError)?;
-    let pointer_to_nodes = Handshake::handshake(config.clone(), logsender.clone(), &active_nodes)
+    let pointer_to_nodes = Handshake::handshake(&config, &logsender, &active_nodes)
         .map_err(GenericError::HandShakeError)?;
     // Acá iría la descarga de los headers
-    let headers_and_blocks =
-        initial_block_download(config.clone(), logsender.clone(), pointer_to_nodes.clone())
-            .map_err(|err| {
-                write_in_log(
-                    logsender.error_log_sender.clone(),
-                    format!("Error al descargar los bloques: {}", err).as_str(),
-                );
-                GenericError::DownloadError(err)
-            })?;
+    let headers_and_blocks = initial_block_download(&config, &logsender, pointer_to_nodes.clone())
+        .map_err(|err| {
+            write_in_log(
+                &logsender.error_log_sender,
+                format!("Error al descargar los bloques: {}", err).as_str(),
+            );
+            GenericError::DownloadError(err)
+        })?;
     let (headers, blocks) = headers_and_blocks;
-    let mut node = Node::new(logsender.clone(), pointer_to_nodes, headers, blocks)
+    let mut node = Node::new(&logsender, pointer_to_nodes, headers, blocks)
         .map_err(GenericError::NodeHandlerError)?;
     let wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
-    let server = NodeServer::new(config, logsender.clone(), &mut node);
+
+    let server = NodeServer::new(&config, &logsender, &mut node)
+        .map_err(GenericError::NodeServerError)?;
     terminal_ui(wallet);
     node.shutdown_node()
         .map_err(GenericError::NodeHandlerError)?;

@@ -1,5 +1,3 @@
-use gtk::STYLE_CLASS_LEFT;
-
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
@@ -34,7 +32,7 @@ pub struct Node {
 impl Node {
     /// Inicializa el nodo. Recibe la blockchain ya descargada.
     pub fn new(
-        log_sender: LogSender,
+        log_sender: &LogSender,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -136,7 +134,7 @@ impl Node {
     /// Se encarga de llamar a la funcion add_connection del peers_handler del nodo
     pub fn add_connection(
         &mut self,
-        log_sender: LogSender,
+        log_sender: &LogSender,
         connection: TcpStream,
     ) -> Result<(), NodeCustomErrors> {
         self.peers_handler.add_connection(

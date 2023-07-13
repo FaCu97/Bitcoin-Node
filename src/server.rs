@@ -31,39 +31,46 @@ pub struct NodeServer {
 
 impl NodeServer {
     /// Crea un nuevo servidor de nodo en un thread aparte encargado de eso
-    pub fn new(config: Arc<Config>, log_sender: LogSender, node: &mut Node) -> NodeServer {
+
+    pub fn new(
+        config: &Arc<Config>,
+        log_sender: &LogSender,
+        node: &mut Node,
+    ) -> Result<NodeServer, NodeCustomErrors> {
         let (sender, rx) = mpsc::channel();
-        let address = get_socket(LOCALHOST.to_string(), config.testnet_port);
+        let address = get_socket(LOCALHOST.to_string(), config.net_port)?;
         let mut node_clone = node.clone();
+        let log_sender_clone = log_sender.clone();
+        let config = config.clone();
         let handle =
-            spawn(move || Self::listen(config, log_sender.clone(), &mut node_clone, address, rx));
-        NodeServer { sender, handle }
+            spawn(move || Self::listen(&config, &log_sender_clone, &mut node_clone, address, rx));
+        Ok(NodeServer { sender, handle })
     }
 
     /// Escucha por conexiones entrantes y las maneja
     /// Si llega un mensaje por el channel, sigifica que debe dejar de escuchar y cortar el bucle
     /// Devuelve un error si ocurre alguno que no sea del tipo WouldBlock
     fn listen(
-        config: Arc<Config>,
-        log_sender: LogSender,
+        config: &Arc<Config>,
+        log_sender: &LogSender,
         node: &mut Node,
         address: SocketAddr,
         rx: Receiver<String>,
     ) -> Result<(), NodeCustomErrors> {
         let address = format!("{}:{}", address.ip(), address.port());
-        let listener: TcpListener = TcpListener::bind(&address).unwrap();
+        let listener: TcpListener = TcpListener::bind(&address)
+            .map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
         let amount_of_connections = 0;
-        //listener.set_nonblocking(true).unwrap();
         println!("Empiezo a esuchar por conecciones entrantes!\n");
         write_in_log(
-            log_sender.info_log_sender.clone(),
+            &log_sender.info_log_sender,
             "Empiezo a esuchar por conecciones entrantes!",
         );
         for stream in listener.incoming() {
             // recibio un mensaje para frenar
             if rx.try_recv().is_ok() {
                 write_in_log(
-                    log_sender.info_log_sender,
+                    &log_sender.info_log_sender,
                     "Dejo de escuchar por conexiones entrantes!",
                 );
                 break;
@@ -75,19 +82,14 @@ impl NodeServer {
                     }
                     println!("RECIBO NUEVA CONEXION ENTRANTE!\n");
                     write_in_log(
-                        log_sender.info_log_sender.clone(),
+                        &log_sender.info_log_sender,
                         format!(
                             "Recibo nueva conexion entrante --{:?}--",
                             stream.peer_addr()
                         )
                         .as_str(),
                     );
-                    Self::handle_incoming_connection(
-                        config.clone(),
-                        log_sender.clone(),
-                        node,
-                        stream,
-                    )?;
+                    Self::handle_incoming_connection(config, log_sender, node, stream)?;
                 }
                 Err(ref err) if err.kind() == std::io::ErrorKind::WouldBlock => {
                     // This doesen't mean an error ocurred, there just wasn't a connection at the moment
@@ -103,27 +105,32 @@ impl NodeServer {
     /// Realiza el handshake y agrega la conexion al nodo
     /// Devuelve un error si ocurre alguno
     fn handle_incoming_connection(
-        config: Arc<Config>,
-        log_sender: LogSender,
+        config: &Arc<Config>,
+        log_sender: &LogSender,
         node: &mut Node,
         mut stream: TcpStream,
     ) -> Result<(), NodeCustomErrors> {
         // REALIZAR EL HANDSHAKE
-        let local_ip_addr = stream.local_addr().unwrap();
-        let socket_addr = stream.peer_addr().unwrap();
-        VersionMessage::read_from(log_sender.clone(), &mut stream)
+        let local_ip_addr = stream
+            .local_addr()
+            .map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
+        let socket_addr = stream
+            .peer_addr()
+            .map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
+        VersionMessage::read_from(log_sender, &mut stream)
             .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
-        let version_message = get_version_message(config, socket_addr, local_ip_addr).unwrap();
+        let version_message = get_version_message(config, socket_addr, local_ip_addr)
+            .map_err(|err| NodeCustomErrors::OtherError(err.to_string()))?;
         version_message
             .write_to(&mut stream)
             .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
-        read_verack_message(log_sender.clone(), &mut stream)
+        read_verack_message(log_sender, &mut stream)
             .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
         write_verack_message(&mut stream)
             .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
         println!("HANDSHAKE REALIZADO CON EXITO!\n");
         write_in_log(
-            log_sender.info_log_sender.clone(),
+            &log_sender.info_log_sender,
             format!("Handshake con nodo {:?} realizado con exito!", socket_addr).as_str(),
         );
         // AGREGAR LA CONEXION AL NODO
@@ -147,7 +154,9 @@ impl NodeServer {
 }
 
 /// Devuelve un SocketAddr a partir de una ip y un puerto
-fn get_socket(ip: String, port: u16) -> SocketAddr {
-    let ip: IpAddr = ip.parse::<IpAddr>().unwrap();
-    SocketAddr::new(ip, port)
+fn get_socket(ip: String, port: u16) -> Result<SocketAddr, NodeCustomErrors> {
+    let ip = ip
+        .parse::<IpAddr>()
+        .map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
+    Ok(SocketAddr::new(ip, port))
 }

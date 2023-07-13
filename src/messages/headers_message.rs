@@ -39,7 +39,7 @@ impl HeadersMessage {
     /// Dado un stream que implementa el trait Read (desde donde se puede leer) lee el mensaje headers y devuelve
     /// un vector con los headers en caso de que se haya podido leer correctamente o un Error en caso contrario
     pub fn read_from(
-        log_sender: LogSender,
+        log_sender: &LogSender,
         stream: &mut TcpStream,
         finish: Option<Arc<RwLock<bool>>>,
     ) -> Result<Vec<BlockHeader>, Box<dyn std::error::Error>> {
@@ -62,7 +62,7 @@ impl HeadersMessage {
     /// Lee los headers recibidos del stream y los escribe en el file recibido,
     /// en el mismo formato en que se leen del stream.
     pub fn read_from_node_and_write_to_file(
-        log_sender: LogSender,
+        log_sender: &LogSender,
         stream: &mut TcpStream,
         finish: Option<Arc<RwLock<bool>>>,
         file: &mut File,
