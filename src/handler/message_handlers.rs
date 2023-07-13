@@ -104,10 +104,10 @@ pub fn handle_getdata_message(
     let mut notfound_inventories: Vec<Inventory> = Vec::new();
     for inv in inventories {
         if inv.type_identifier == MSG_TX {
-            handle_tx_inventory(&inv, &accounts, &node_sender, &log_sender)?;
+            handle_tx_inventory(log_sender,&inv, &accounts, &node_sender)?;
         }
         if inv.type_identifier == MSG_BLOCK {
-            handle_block_inventory(&inv, &blocks, &log_sender, &mut message_to_send, &mut notfound_inventories)?;
+            handle_block_inventory(log_sender, &inv, &blocks, &mut message_to_send, &mut notfound_inventories)?;
         }
     }
     if !notfound_inventories.is_empty() {
@@ -123,9 +123,9 @@ pub fn handle_getdata_message(
 /// Se fija si el bloque del inventory esta en la blockchain y si es asi lo agrega al mensaje a enviar. Si no esta en la blockchain
 /// lo agrega a la lista de inventories notfound. Devuelve Ok(()) en caso de poder agregarlo correctamente o error del tipo NodeHandlerError en caso de no poder.
 fn handle_block_inventory(
+    log_sender: &LogSender,
     inventory: &Inventory,
     blocks: &Arc<RwLock<HashMap<[u8; 32], Block>>>,
-    log_sender: &LogSender,
     message_to_send: &mut Vec<u8>,
     notfound_inventories: &mut Vec<Inventory>,
 ) -> Result<(), NodeCustomErrors> {
@@ -140,7 +140,7 @@ fn handle_block_inventory(
         }
         None => {
             write_in_log(
-                log_sender.error_log_sender.clone(),
+                &log_sender.error_log_sender,
                 &format!(
                     "No se encontro el bloque en la blockchain: {}",
                     crate::account::bytes_to_hex_string(&inventory.hash)
@@ -154,10 +154,10 @@ fn handle_block_inventory(
 
 /// Se fija si la transaccion del inventory esta en alguna de las cuentas de la wallet y si es asi la envia por el channel para que se escriba en el nodo
 fn handle_tx_inventory(
+    log_sender: &LogSender,
     inventory: &Inventory,
     accounts: &Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     node_sender: &NodeSender,
-    log_sender: &LogSender,
 ) -> Result<(), NodeCustomErrors> {
     for account in &*accounts
         .read()
@@ -174,7 +174,7 @@ fn handle_tx_inventory(
                 let tx_message = get_tx_message(tx);
                 write_to_node(node_sender, tx_message)?;
                 write_in_log(
-                    log_sender.clone().info_log_sender,
+                    &log_sender.info_log_sender,
                     format!("transaccion {:?} enviada", tx.hex_hash()).as_str(),
                 );
             }
