@@ -95,7 +95,7 @@ impl TxOut {
     /// devuelve Ok(()) y en caso de algun error devuevle el error especifico
     pub fn involves_user_account(
         &self,
-        log_sender: LogSender,
+        log_sender: &LogSender,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         tx: Transaction,
     ) -> Result<(), NodeCustomErrors> {
@@ -117,7 +117,7 @@ impl TxOut {
                 };
                 if tx_asociate_address == account.address {
                     write_in_log(
-                        log_sender.info_log_sender.clone(),
+                        &log_sender.info_log_sender,
                         format!(
                             "Transaccion pendiente {:?} -- involucra a la cuenta {:?}",
                             tx.hex_hash(),

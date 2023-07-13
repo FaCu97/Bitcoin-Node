@@ -23,8 +23,8 @@ impl Error for ConnectionToDnsError {}
 
 /// Devuelve una lista de direcciones Ipv4 obtenidas del dns seed
 pub fn get_active_nodes_from_dns_seed(
-    config: Arc<Config>,
-    log_sender: LogSender,
+    config: &Arc<Config>,
+    log_sender: &LogSender,
 ) -> Result<Vec<Ipv4Addr>, ConnectionToDnsError> {
     let mut node_ips = Vec::new();
     let host = config.dns_seed.clone();
@@ -40,7 +40,7 @@ pub fn get_active_nodes_from_dns_seed(
         }
     }
     write_in_log(
-        log_sender.info_log_sender,
+        &log_sender.info_log_sender,
         format!(
             "Se obtuvieron {} ips de la DNS: {:?}\n",
             node_ips.len(),
