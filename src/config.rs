@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
-const CANTIDAD_ATRIBUTOS: usize = 18;
+const CANTIDAD_ATRIBUTOS: usize = 20;
 
 /// Almacena los campos leidos del archivo de configuración
 #[derive(Debug, Clone)]
@@ -30,6 +30,8 @@ pub struct Config {
     pub blocks_download_per_node: usize,
     pub fecha_inicio_proyecto: String,
     pub formato_fecha_inicio_proyecto: String,
+    pub headers_in_disk: usize,
+    pub height_first_block_to_download: usize,
     pub archivo_headers: String,
     pub logs_folder_path: String,
 }
@@ -81,6 +83,8 @@ impl Config {
             blocks_download_per_node: 0,
             fecha_inicio_proyecto: String::new(),
             formato_fecha_inicio_proyecto: String::new(),
+            headers_in_disk: 0,
+            height_first_block_to_download: 0,
             archivo_headers: String::new(),
             logs_folder_path: String::new(),
         };
@@ -190,6 +194,14 @@ impl Config {
             }
             "FORMATO_FECHA_INICIO_PROYECTO" => {
                 self.formato_fecha_inicio_proyecto = String::from(value);
+                *number_of_settings_loaded += 1;
+            }
+            "AMOUNT_OF_HEADERS_TO_STORE_IN_DISK" => {
+                self.headers_in_disk = usize::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            }
+            "HEIGHT_FIRST_BLOCK_TO_DOWNLOAD" => {
+                self.height_first_block_to_download = usize::from_str(value)?;
                 *number_of_settings_loaded += 1;
             }
             "ARCHIVO_HEADERS" => {

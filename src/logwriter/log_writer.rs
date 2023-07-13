@@ -15,7 +15,7 @@ use std::{
 use crate::config::Config;
 
 const CENTER_DATE_LINE: &str = "-------------------------------------------";
-const LINEA_FINAL_LOG: &str = "-----------------------------------------------------------------------------------------------------------------------------";
+const FINAL_LOG_LINE: &str = "-----------------------------------------------------------------------------------------------------------------------------";
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum LoggingError {
@@ -218,7 +218,7 @@ fn open_log_file(log_file: &String, config: Arc<Config>) -> Result<File, Logging
 /// imprime que va a cerrar el archivo, cierra el extremo del channel y le hace join al thread para que termine. Devuelve
 /// error en caso de que no se pueda mandar el mensaje por el channel o no se pueda hacer join correctamente al thread
 fn shutdown_logger(tx: LogFileSender, handler: JoinHandle<()>) -> Result<(), LoggingError> {
-    tx.send(format!("Closing log \n\n{}", LINEA_FINAL_LOG))
+    tx.send(format!("Closing log \n\n{}", FINAL_LOG_LINE))
         .map_err(|err| LoggingError::WritingInFileError(err.to_string()))?;
     drop(tx);
     handler
