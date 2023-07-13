@@ -1,3 +1,5 @@
+use gtk::STYLE_CLASS_LEFT;
+
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
@@ -23,7 +25,7 @@ type MerkleProofOfInclusionResult = Result<Option<Vec<([u8; 32], bool)>>, NodeCu
 pub struct Node {
     pub connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
     pub headers: Arc<RwLock<Vec<BlockHeader>>>,
-    pub block_chain: Arc<RwLock<Vec<Block>>>,
+    pub block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     pub utxo_set: UtxoSetPointer,
     pub accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     pub peers_handler: NodeMessageHandler,
@@ -35,7 +37,7 @@ impl Node {
         log_sender: LogSender,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
-        block_chain: Arc<RwLock<Vec<Block>>>,
+        block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     ) -> Result<Self, NodeCustomErrors> {
         let pointer_to_utxo_set: UtxoSetPointer = Arc::new(RwLock::new(HashMap::new()));
         generate_utxo_set(&block_chain, pointer_to_utxo_set.clone())?;
@@ -119,32 +121,45 @@ impl Node {
     ) -> MerkleProofOfInclusionResult {
         let block_chain = self
             .block_chain
-            .write()
+            .read()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
-        let mut index = block_chain.len() - 1;
-        while index > 0 {
-            if block_chain[index].is_same_block(block_hash) {
-                return Ok(block_chain[index].merkle_proof_of_inclusion(tx_hash));
-            }
-            index -= 1;
-        }
+        let block_option = block_chain.get(block_hash);
 
-        Err(NodeCustomErrors::OtherError(
-            "No se encontro el bloque".to_string(),
-        ))
+        match block_option {
+            Some(block) => Ok(block.merkle_proof_of_inclusion(tx_hash)),
+            None => Err(NodeCustomErrors::OtherError(
+                "No se encontro el bloque".to_string(),
+            )),
+        }
+    }
+
+    /// Se encarga de llamar a la funcion add_connection del peers_handler del nodo
+    pub fn add_connection(
+        &mut self,
+        log_sender: LogSender,
+        connection: TcpStream,
+    ) -> Result<(), NodeCustomErrors> {
+        self.peers_handler.add_connection(
+            log_sender,
+            self.headers.clone(),
+            self.block_chain.clone(),
+            self.accounts.clone(),
+            self.utxo_set.clone(),
+            connection,
+        )
     }
 }
 
 /// Funcion que se encarga de generar la lista de utxos
 fn generate_utxo_set(
-    block_chain: &Arc<RwLock<Vec<Block>>>,
+    block_chain: &Arc<RwLock<HashMap<[u8; 32], Block>>>,
     utxo_set: UtxoSetPointer,
 ) -> Result<UtxoSetPointer, NodeCustomErrors> {
     let block_chain_lock = block_chain
         .read()
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
 
-    for block in block_chain_lock.iter() {
+    for block in block_chain_lock.values() {
         block
             .give_me_utxos(utxo_set.clone())
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;

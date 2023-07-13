@@ -26,7 +26,10 @@ use super::message_handlers::{
 type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;
 type NodeSender = Sender<Vec<u8>>;
 type NodeReceiver = Receiver<Vec<u8>>;
-type NodeBlocksData = (Arc<RwLock<Vec<BlockHeader>>>, Arc<RwLock<Vec<Block>>>);
+type NodeBlocksData = (
+    Arc<RwLock<Vec<BlockHeader>>>,
+    Arc<RwLock<HashMap<[u8; 32], Block>>>,
+);
 type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
 type PointerToAccountsPointer = Arc<RwLock<Arc<RwLock<Vec<Account>>>>>;
 #[derive(Debug, Clone)]
@@ -35,6 +38,7 @@ type PointerToAccountsPointer = Arc<RwLock<Arc<RwLock<Vec<Account>>>>>;
 pub struct NodeMessageHandler {
     nodes_handle: Arc<Mutex<Vec<JoinHandle<()>>>>,
     nodes_sender: Vec<NodeSender>,
+    transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>>,
     finish: Arc<RwLock<bool>>,
 }
 
@@ -47,7 +51,7 @@ impl NodeMessageHandler {
     pub fn new(
         log_sender: LogSender,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
-        blocks: Arc<RwLock<Vec<Block>>>,
+        blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
@@ -84,6 +88,7 @@ impl NodeMessageHandler {
         Ok(NodeMessageHandler {
             nodes_handle: nodes_handle_mutex,
             nodes_sender,
+            transactions_recieved,
             finish,
         })
     }
@@ -134,6 +139,40 @@ impl NodeMessageHandler {
         for node_sender in self.nodes_sender.clone() {
             drop(node_sender);
         }
+        Ok(())
+    }
+
+    /// Se encarga de agregar un nuevo nodo a la lista de nodos que estan siendo escuchados.
+    /// Se le pasa como parametro el canal por el cual se va a comunicar con el nodo
+    /// y el socket del nodo que se quiere agregar
+    /// Devuelve Ok(()) en caso de salir todo bien o Error especifico en caso contrario
+    pub fn add_connection(
+        &mut self,
+        log_sender: LogSender,
+        headers: Arc<RwLock<Vec<BlockHeader>>>,
+        blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
+        utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+        connection: TcpStream,
+    ) -> NodeMessageHandlerResult {
+        let (tx, rx) = channel();
+        self.nodes_sender.push(tx.clone());
+        println!(
+            "Nodo -{:?}- Escuchando por nuevos bloques...\n NUEVA CONECCION AGREGADA!!!",
+            connection.peer_addr()
+        );
+        self.nodes_handle
+            .lock()
+            .unwrap()
+            .push(handle_messages_from_node(
+                log_sender,
+                (tx, rx),
+                (headers, blocks),
+                self.transactions_recieved.clone(),
+                (accounts, utxo_set),
+                connection,
+                None,
+            ));
         Ok(())
     }
 }
@@ -195,6 +234,7 @@ pub fn handle_messages_from_node(
                         log_sender.clone(),
                         tx.clone(),
                         &payload,
+                        blocks.clone(),
                         accounts.clone(),
                     )
                 }),
@@ -285,6 +325,7 @@ pub fn write_message_in_node(node: &mut dyn Write, message: &[u8]) -> NodeMessag
         .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
     node.flush()
         .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
+
     Ok(())
 }
 

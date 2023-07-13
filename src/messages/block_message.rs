@@ -32,3 +32,14 @@ impl BlockMessage {
         Ok(block)
     }
 }
+
+// Devuelve el mensaje de tipo block con el bloque pasado por parametro
+pub fn get_block_message(block: &Block) -> Vec<u8> {
+    let mut block_payload = vec![];
+    block.marshalling(&mut block_payload);
+    let header = HeaderMessage::new("block".to_string(), Some(&block_payload));
+    let mut block_message = vec![];
+    block_message.extend_from_slice(&header.to_le_bytes());
+    block_message.extend_from_slice(&block_payload);
+    block_message
+}
