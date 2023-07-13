@@ -36,7 +36,7 @@ impl VersionMessage {
     /// del stream o en caso de que los bytes leidos no puedan ser deserializados a un struct del VersionMessage, en caso
     /// contrario, devuelve un Ok() con un VersionMessage deserializado de los bytes que leyo del stream.
     pub fn read_from(
-        log_sender: LogSender,
+        log_sender: &LogSender,
         stream: &mut TcpStream,
     ) -> Result<VersionMessage, std::io::Error> {
         let header = HeaderMessage::read_from(log_sender, stream, "version".to_string(), None)
@@ -54,11 +54,11 @@ impl VersionMessage {
 /// Genera el VersionMessage con los datos recibidos y lo devuelve
 /// En caso que falle devuelve error
 pub fn get_version_message(
-    config: Arc<Config>,
+    config: &Arc<Config>,
     socket_addr: SocketAddr,
     local_ip_addr: SocketAddr,
 ) -> Result<VersionMessage, Box<dyn Error>> {
-    let version_payload = get_version_payload(config.clone(), socket_addr, local_ip_addr)?;
+    let version_payload = get_version_payload(config, socket_addr, local_ip_addr)?;
     let version_header = HeaderMessage {
         start_string: config.testnet_start_string,
         command_name: "version".to_string(),

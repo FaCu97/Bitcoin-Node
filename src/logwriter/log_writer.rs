@@ -61,7 +61,7 @@ type Loggers = (
 );
 
 /// Imprime el mensaje en el logFile recibido
-pub fn write_in_log(log_sender: LogFileSender, msg: &str) {
+pub fn write_in_log(log_sender: &LogFileSender, msg: &str) {
     if let Err(err) = log_sender.send(msg.to_string()) {
         println!(
             "Error al intentar escribir {} en el log!, error: {}\n",
@@ -73,15 +73,14 @@ pub fn write_in_log(log_sender: LogFileSender, msg: &str) {
 /// Inicializa los loggers.
 /// Recibe el file path de cada uno
 pub fn set_up_loggers(
-    config: Arc<Config>,
+    config: &Arc<Config>,
     error_file_path: String,
     info_file_path: String,
     message_file_path: String,
 ) -> Result<Loggers, LoggingError> {
     let (error_log_sender, error_handler) =
-        LogWriter::new(error_file_path).create_logger(config.clone())?;
-    let (info_log_sender, info_handler) =
-        LogWriter::new(info_file_path).create_logger(config.clone())?;
+        LogWriter::new(error_file_path).create_logger(config)?;
+    let (info_log_sender, info_handler) = LogWriter::new(info_file_path).create_logger(config)?;
     let (message_log_sender, message_handler) =
         LogWriter::new(message_file_path).create_logger(config)?;
     Ok((
@@ -153,10 +152,10 @@ impl LogWriter {
     /// log.shutdown(tx, handle)?;
     pub fn create_logger(
         &self,
-        config: Arc<Config>,
+        config: &Arc<Config>,
     ) -> Result<(LogFileSender, JoinHandle<()>), LoggingError> {
         let (tx, rx): (Sender<String>, Receiver<String>) = channel();
-        let mut file = open_log_file(&self.log_file, config)?;
+        let mut file = open_log_file(config, &self.log_file)?;
         let local = Local::now();
         let date = format!(
             "\n{} Actual date: {}-{}-{} Hour: {:02}:{:02}:{:02} {}\n",
@@ -198,7 +197,7 @@ impl LogWriter {
 }
 
 /// Abre el file donde va a imprimir el log
-fn open_log_file(log_file: &String, config: Arc<Config>) -> Result<File, LoggingError> {
+fn open_log_file(config: &Arc<Config>, log_file: &String) -> Result<File, LoggingError> {
     let logs_dir = PathBuf::from(config.logs_folder_path.clone());
     let log_path = logs_dir.join(log_file);
 

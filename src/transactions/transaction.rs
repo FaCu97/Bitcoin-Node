@@ -225,11 +225,11 @@ impl Transaction {
     /// igual que alguna de la wallet. Devuelve Ok(()) en caso de no ocurrir ningun error o Error especifico en caso contrario
     pub fn check_if_tx_involves_user_account(
         &self,
-        log_sender: LogSender,
+        log_sender: &LogSender,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     ) -> Result<(), NodeCustomErrors> {
         for tx_out in self.tx_out.clone() {
-            tx_out.involves_user_account(log_sender.clone(), accounts.clone(), self.clone())?;
+            tx_out.involves_user_account(log_sender, accounts.clone(), self.clone())?;
         }
         Ok(())
     }
