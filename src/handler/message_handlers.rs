@@ -81,6 +81,9 @@ pub fn handle_getheaders_message(log_sender: LogSender, tx: NodeSender, payload:
             }
         }
     }
+    // Si no hay headers para enviar, se envia un notfound
+    // Si hay headers para enviar, se envia el mensaje headers
+    // serializar mensaje headers y escribirlo al nodo
     Ok(())
 }
 
