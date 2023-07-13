@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::logwriter::log_writer::{write_in_log, LogSender};
 use bitcoin_hashes::{sha256d, Hash};
 use std::error::Error;
@@ -23,10 +24,10 @@ pub struct HeaderMessage {
 impl HeaderMessage {
     /// Dado el nombre del comando y un Option que si es None representa que el comando
     /// no tiene payload o un Vec<u8> representando al payload del mensaje devuelve el HeaderMessage de ese mensaje
-    pub fn new(command_name: String, payload: Option<&[u8]>) -> Self {
+    pub fn new(config: Arc<Config>, command_name: String, payload: Option<&[u8]>) -> Self {
         match payload {
             None => HeaderMessage {
-                start_string: START_STRING_TESTNET,
+                start_string: config.start_string,
                 command_name,
                 payload_size: 0,
                 checksum: CHECKSUM_EMPTY_PAYLOAD,
