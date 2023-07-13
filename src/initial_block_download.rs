@@ -101,7 +101,10 @@ fn search_first_header_block_to_download(
 
 /// Validates all the BlockHeaders received.
 /// Returns an error if the validation fails.
-fn validate_headers(log_sender: LogSender, headers: Vec<BlockHeader>) -> Result<(), DownloadError> {
+fn validate_headers(
+    log_sender: &LogSender,
+    headers: Vec<BlockHeader>,
+) -> Result<(), DownloadError> {
     for header in headers {
         if !header.validate() {
             write_in_log(
@@ -121,7 +124,7 @@ fn validate_headers(log_sender: LogSender, headers: Vec<BlockHeader>) -> Result<
 /// If something fails, an error is returned
 fn download_headers_from_node(
     config: Arc<Config>,
-    log_sender: LogSender,
+    log_sender: &LogSender,
     mut node: TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     tx: Sender<Vec<BlockHeader>>,
@@ -138,7 +141,7 @@ fn download_headers_from_node(
     let mut first_block_found = false;
     node = request_headers_from_node(config.clone(), node, headers.clone())?;
     let mut headers_read: Vec<BlockHeader>;
-    (node, headers_read) = receive_headers_from_node(log_sender.clone(), node)?;
+    (node, headers_read) = receive_headers_from_node(log_sender, node)?;
 
     // store headers in `global` vec `headers_guard`
     headers
@@ -148,9 +151,9 @@ fn download_headers_from_node(
     let mut first_headers_had_just_been_sent = false;
     while headers_read.len() == 2000 {
         node = request_headers_from_node(config.clone(), node, headers.clone())?;
-        (node, headers_read) = receive_headers_from_node(log_sender.clone(), node)?;
+        (node, headers_read) = receive_headers_from_node(log_sender, node)?;
 
-        validate_headers(log_sender.clone(), headers_read.clone())?;
+        validate_headers(log_sender, headers_read.clone())?;
         if headers
             .read()
             .map_err(|err| DownloadError::LockError(err.to_string()))?
@@ -225,7 +228,7 @@ fn request_headers_from_node(
 /// Receives the header_message from the node.
 /// Returns an array of BlockHeader or error if something fails.
 fn receive_headers_from_node(
-    log_sender: LogSender,
+    log_sender: &LogSender,
     mut node: TcpStream,
 ) -> Result<(TcpStream, Vec<BlockHeader>), DownloadError> {
     // read first 2000 headers from headers message answered from node
@@ -241,7 +244,7 @@ fn receive_headers_from_node(
 /// If all the nodes fail, retuns an error.
 fn download_headers(
     config: Arc<Config>,
-    log_sender: LogSender,
+    log_sender: &LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     tx: Sender<Vec<BlockHeader>>,
@@ -257,7 +260,7 @@ fn download_headers(
     let tx_clone = tx.clone();
     // first try to dowload headers from node
     let mut download_result =
-        download_headers_from_node(config.clone(), log_sender.clone(), node, headers, tx);
+        download_headers_from_node(config.clone(), log_sender, node, headers, tx);
     while let Err(err) = download_result {
         write_in_log(
             &log_sender.error_log_sender,
@@ -279,7 +282,7 @@ fn download_headers(
         // try to download headers from that node
         download_result = download_headers_from_node(
             config.clone(),
-            log_sender.clone(),
+            log_sender,
             node,
             headers_clone.clone(),
             tx_clone.clone(),
@@ -298,10 +301,10 @@ fn download_headers(
         .push(node);
     /*
     let last_headers =
-        compare_and_ask_for_last_headers(config, log_sender.clone(), nodes, headers_clone)?;
+        compare_and_ask_for_last_headers(config, log_sender, nodes, headers_clone)?;
     if !last_headers.is_empty() {
         write_in_log(
-            log_sender.info_log_sender,
+            &log_sender.info_log_sender,
             format!(
                 "Agrego ultimos {} headers enocontrados al comparar con todos los nodos",
                 last_headers.len()
@@ -333,7 +336,7 @@ fn download_headers(
 /// - Ok o un error si no se puede completar la descarga
 fn download_blocks(
     config: Arc<Config>,
-    log_sender: LogSender,
+    log_sender: &LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
@@ -394,7 +397,7 @@ fn download_blocks(
             handle_join.push(thread::spawn(move || {
                 download_blocks_single_thread(
                     config_cloned,
-                    log_sender_clone,
+                    &log_sender_clone,
                     block_headers,
                     node,
                     tx_cloned,
@@ -433,7 +436,7 @@ fn download_blocks(
 /// In other cases, it returns error.
 fn download_blocks_single_thread(
     config: Arc<Config>,
-    log_sender: LogSender,
+    log_sender: &LogSender,
     block_headers: Vec<BlockHeader>,
     mut node: TcpStream,
     tx: Sender<Vec<BlockHeader>>,
@@ -454,7 +457,7 @@ fn download_blocks_single_thread(
     );
     for chunk_llamada in block_headers.chunks(config.blocks_download_per_node) {
         match request_blocks_from_node(
-            log_sender.clone(),
+            log_sender,
             &node,
             chunk_llamada,
             &block_headers_thread,
@@ -466,7 +469,7 @@ fn download_blocks_single_thread(
         }
         let received_blocks;
         (node, received_blocks) = match receive_requested_blocks_from_node(
-            log_sender.clone(),
+            log_sender,
             node,
             chunk_llamada,
             &block_headers_thread,
@@ -515,7 +518,7 @@ fn download_blocks_single_thread(
 /// In case of error while sending the message, it returns the block headers back to the channel so
 /// they can be downloaded from another node. If this cannot be done, returns an error.
 fn request_blocks_from_node(
-    log_sender: LogSender,
+    log_sender: &LogSender,
     mut node: &TcpStream,
     chunk_llamada: &[BlockHeader],
     block_headers_thread: &[BlockHeader],
@@ -546,7 +549,7 @@ fn request_blocks_from_node(
 /// In case of error while receiving the message, it returns the block headers back to the channel so
 /// they can be downloaded from another node. If this cannot be done, returns an error.
 fn receive_requested_blocks_from_node(
-    log_sender: LogSender,
+    log_sender: &LogSender,
     mut node: TcpStream,
     chunk_llamada: &[BlockHeader],
     block_headers_thread: &[BlockHeader],
@@ -555,7 +558,7 @@ fn receive_requested_blocks_from_node(
     // Acá tengo que recibir los 16 bloques (o menos) de la llamada
     let mut current_blocks: Vec<Block> = Vec::new();
     for _ in 0..chunk_llamada.len() {
-        let bloque = match BlockMessage::read_from(log_sender.clone(), &mut node) {
+        let bloque = match BlockMessage::read_from(log_sender, &mut node) {
             Ok(bloque) => bloque,
             Err(err) => {
                 write_in_log(&log_sender.error_log_sender,format!("No puedo descargar {:?} de bloques del nodo: {:?}. Se los voy a pedir a otro nodo y descarto este. Error: {err}", chunk_llamada.len(), node.peer_addr()).as_str());
@@ -590,7 +593,7 @@ fn receive_requested_blocks_from_node(
 /// two separete lists in case of exit or an error in case of faliure
 pub fn initial_block_download(
     config: Arc<Config>,
-    log_sender: LogSender,
+    log_sender: &LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<HeadersBlocksTuple, DownloadError> {
     write_in_log(
@@ -602,7 +605,7 @@ pub fn initial_block_download(
     let pointer_to_headers = Arc::new(RwLock::new(headers));
     get_initial_headers(
         config.clone(),
-        log_sender.clone(),
+        log_sender,
         pointer_to_headers.clone(),
         nodes.clone(),
     )
@@ -619,7 +622,7 @@ pub fn initial_block_download(
     let headers_thread = thread::spawn(move || {
         download_headers(
             config_cloned,
-            log_sender_clone.clone(),
+            &log_sender_clone,
             pointer_to_nodes_clone,
             pointer_to_headers_clone,
             tx,
@@ -631,7 +634,7 @@ pub fn initial_block_download(
     let blocks_thread = thread::spawn(move || {
         download_blocks(
             config.clone(),
-            log_sender_clone,
+            &log_sender_clone,
             nodes,
             pointer_to_blocks_clone,
             pointer_to_headers_clone_for_blocks,
@@ -668,12 +671,12 @@ pub fn initial_block_download(
 /// Returns error if something fails.
 fn get_initial_headers(
     config: Arc<Config>,
-    log_sender: LogSender,
+    log_sender: &LogSender,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<(), Box<dyn Error>> {
     if Path::new(&config.archivo_headers).exists() {
-        read_first_headers_from_disk(config, log_sender.clone(), headers).map_err(|err| {
+        read_first_headers_from_disk(config, log_sender, headers).map_err(|err| {
             write_in_log(
                 &log_sender.error_log_sender,
                 format!("Error al descargar primeros 2 millones de headers de disco. {err}")
@@ -694,7 +697,7 @@ fn get_initial_headers(
 /// If a node fails, the download is continud from another nodes.
 fn download_first_headers(
     config: Arc<Config>,
-    log_sender: LogSender,
+    log_sender: &LogSender,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> DownloadResult {
@@ -713,13 +716,8 @@ fn download_first_headers(
         .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
     let headers_clone = headers.clone();
     // first try to download headers from node
-    let mut download_result = download_initial_headers_from_node(
-        config.clone(),
-        log_sender.clone(),
-        node,
-        headers,
-        &mut file,
-    );
+    let mut download_result =
+        download_initial_headers_from_node(config.clone(), log_sender, node, headers, &mut file);
     while let Err(err) = download_result {
         write_in_log(
             &log_sender.error_log_sender,
@@ -741,7 +739,7 @@ fn download_first_headers(
         // try to download headers from that node
         download_result = download_initial_headers_from_node(
             config.clone(),
-            log_sender.clone(),
+            log_sender,
             node,
             headers_clone.clone(),
             &mut file,
@@ -766,7 +764,7 @@ fn download_first_headers(
 /// Returns an error if something fails
 fn download_initial_headers_from_node(
     config: Arc<Config>,
-    log_sender: LogSender,
+    log_sender: &LogSender,
     mut node: TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     file: &mut File,
@@ -794,7 +792,7 @@ fn download_initial_headers_from_node(
         );
         node = request_headers_from_node(config.clone(), node, headers.clone())?;
         let headers_read: Vec<BlockHeader>;
-        (node, headers_read) = receive_initial_headers_from_node(log_sender.clone(), node, file)?;
+        (node, headers_read) = receive_initial_headers_from_node(log_sender, node, file)?;
         // store headers in `global` vec `headers_guard`
         headers
             .write()
@@ -814,7 +812,7 @@ fn download_initial_headers_from_node(
 
 /// Receives from the node and write to a file the headers
 fn receive_initial_headers_from_node(
-    log_sender: LogSender,
+    log_sender: &LogSender,
     mut node: TcpStream,
     file: &mut File,
 ) -> Result<(TcpStream, Vec<BlockHeader>), DownloadError> {
@@ -830,7 +828,7 @@ fn receive_initial_headers_from_node(
 /// Loads the headers from disk
 fn read_first_headers_from_disk(
     config: Arc<Config>,
-    log_sender: LogSender,
+    log_sender: &LogSender,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
 ) -> Result<(), Box<dyn Error>> {
     write_in_log(
@@ -870,7 +868,7 @@ fn read_first_headers_from_disk(
 /// it returns error in case of failure.
 fn compare_and_ask_for_last_headers(
     config: Arc<Config>,
-    log_sender: LogSender,
+    log_sender: &LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
 ) -> Result<Vec<BlockHeader>, DownloadError> {
@@ -899,11 +897,11 @@ fn compare_and_ask_for_last_headers(
         GetHeadersMessage::build_getheaders_message(config.clone(), vec![last_header])
             .write_to(&mut node)
             .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
-        let headers_read = match HeadersMessage::read_from(log_sender.clone(), &mut node, None) {
+        let headers_read = match HeadersMessage::read_from(log_sender, &mut node, None) {
             Ok(headers) => headers,
             Err(err) => {
                 write_in_log(
-                    log_sender.error_log_sender.clone(),
+                    &log_sender.error_log_sender,
                     format!("Error al tratar de leer nuevos headers, descarto nodo. Error: {err}")
                         .as_str(),
                 );

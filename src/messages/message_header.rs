@@ -87,7 +87,7 @@ impl HeaderMessage {
     /// y devuelve un HeaderMessage si se pudo leer correctamente uno desde el stream
     /// o Error si lo leido no corresponde a el header de un mensaje del protocolo de bitcoin
     pub fn read_from(
-        log_sender: LogSender,
+        log_sender: &LogSender,
         mut stream: &mut TcpStream,
         command_name: String,
         finish: Option<Arc<RwLock<bool>>>,
@@ -199,7 +199,7 @@ pub fn write_sendheaders_message(stream: &mut dyn Write) -> Result<(), Box<dyn s
 /// Recibe un stream que implemente el trait Read (algo donde se pueda Leer) y lee el mensaje verack segun
 /// el protocolo de bitcoin, si se lee correctamente devuelve Ok(HeaderMessage) y sino devuelve un error
 pub fn read_verack_message(
-    log_sender: LogSender,
+    log_sender: &LogSender,
     stream: &mut TcpStream,
 ) -> Result<HeaderMessage, Box<dyn std::error::Error>> {
     HeaderMessage::read_from(log_sender, stream, "verack".to_string(), None)

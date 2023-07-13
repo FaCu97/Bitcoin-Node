@@ -189,7 +189,7 @@ impl Block {
     /// De las cuentas
     pub fn contains_pending_tx(
         &self,
-        log_sender: LogSender,
+        log_sender: &LogSender,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     ) -> Result<(), NodeCustomErrors> {
         for tx in &self.txn {

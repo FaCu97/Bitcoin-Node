@@ -36,7 +36,7 @@ impl VersionMessage {
     /// del stream o en caso de que los bytes leidos no puedan ser deserializados a un struct del VersionMessage, en caso
     /// contrario, devuelve un Ok() con un VersionMessage deserializado de los bytes que leyo del stream.
     pub fn read_from(
-        log_sender: LogSender,
+        log_sender: &LogSender,
         stream: &mut TcpStream,
     ) -> Result<VersionMessage, std::io::Error> {
         let header = HeaderMessage::read_from(log_sender, stream, "version".to_string(), None)

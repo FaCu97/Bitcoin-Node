@@ -46,7 +46,7 @@ impl Handshake {
     /// Devuelve un vector de sockets o un error si no se pudo completar.
     pub fn handshake(
         config: Arc<Config>,
-        log_sender: LogSender,
+        log_sender: &LogSender,
         active_nodes: &[Ipv4Addr],
     ) -> Result<Arc<RwLock<Vec<TcpStream>>>, HandShakeError> {
         write_in_log(&log_sender.info_log_sender, "INICIO DE HANDSHAKE");
@@ -71,7 +71,7 @@ impl Handshake {
             let log_sender_clone = log_sender.clone();
             let sockets: Arc<RwLock<Vec<TcpStream>>> = Arc::clone(&sockets_lock);
             thread_handles.push(thread::spawn(move || {
-                connect_to_nodes(configuracion, log_sender_clone, sockets, &chunk)
+                connect_to_nodes(configuracion, &log_sender_clone, sockets, &chunk)
             }));
         }
 
@@ -102,12 +102,12 @@ impl Handshake {
 /// En caso de no poder conectarse, continua intentando con el siguiente.
 fn connect_to_nodes(
     configuracion: Arc<Config>,
-    log_sender: LogSender,
+    log_sender: &LogSender,
     sockets: Arc<RwLock<Vec<TcpStream>>>,
     nodos: &[Ipv4Addr],
 ) -> Result<(), HandShakeError> {
     for nodo in nodos {
-        match connect_to_node(configuracion.clone(), log_sender.clone(), nodo) {
+        match connect_to_node(configuracion.clone(), log_sender, nodo) {
             Ok(stream) => {
                 write_in_log(
                     &log_sender.info_log_sender,
@@ -131,7 +131,7 @@ fn connect_to_nodes(
 /// De vuelve el socket o un error
 fn connect_to_node(
     config: Arc<Config>,
-    log_sender: LogSender,
+    log_sender: &LogSender,
     node_ip: &Ipv4Addr,
 ) -> Result<TcpStream, Box<dyn Error>> {
     let socket_addr = SocketAddr::new((*node_ip).into(), config.testnet_port);
@@ -141,7 +141,7 @@ fn connect_to_node(
     let local_ip_addr = stream.local_addr()?;
     let version_message = get_version_message(config, socket_addr, local_ip_addr)?;
     version_message.write_to(&mut stream)?;
-    VersionMessage::read_from(log_sender.clone(), &mut stream)?;
+    VersionMessage::read_from(log_sender, &mut stream)?;
     write_verack_message(&mut stream)?;
     read_verack_message(log_sender, &mut stream)?;
     write_sendheaders_message(&mut stream)?;
