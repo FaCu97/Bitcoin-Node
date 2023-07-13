@@ -31,7 +31,11 @@ pub struct NodeServer {
 
 impl NodeServer {
     /// Crea un nuevo servidor de nodo en un thread aparte encargado de eso
-    pub fn new(config: Arc<Config>, log_sender: LogSender, node: &mut Node) -> Result<NodeServer, NodeCustomErrors> {
+    pub fn new(
+        config: Arc<Config>,
+        log_sender: LogSender,
+        node: &mut Node,
+    ) -> Result<NodeServer, NodeCustomErrors> {
         let (sender, rx) = mpsc::channel();
         let address = get_socket(LOCALHOST.to_string(), config.testnet_port)?;
         let mut node_clone = node.clone();
@@ -51,7 +55,8 @@ impl NodeServer {
         rx: Receiver<String>,
     ) -> Result<(), NodeCustomErrors> {
         let address = format!("{}:{}", address.ip(), address.port());
-        let listener: TcpListener = TcpListener::bind(&address).map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
+        let listener: TcpListener = TcpListener::bind(&address)
+            .map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
         let amount_of_connections = 0;
         println!("Empiezo a esuchar por conecciones entrantes!\n");
         write_in_log(
@@ -108,11 +113,16 @@ impl NodeServer {
         mut stream: TcpStream,
     ) -> Result<(), NodeCustomErrors> {
         // REALIZAR EL HANDSHAKE
-        let local_ip_addr = stream.local_addr().map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
-        let socket_addr = stream.peer_addr().map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
+        let local_ip_addr = stream
+            .local_addr()
+            .map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
+        let socket_addr = stream
+            .peer_addr()
+            .map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
         VersionMessage::read_from(log_sender.clone(), &mut stream)
             .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
-        let version_message = get_version_message(config, socket_addr, local_ip_addr).map_err(|err| NodeCustomErrors::OtherError(err.to_string()))?;
+        let version_message = get_version_message(config, socket_addr, local_ip_addr)
+            .map_err(|err| NodeCustomErrors::OtherError(err.to_string()))?;
         version_message
             .write_to(&mut stream)
             .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
@@ -147,6 +157,8 @@ impl NodeServer {
 
 /// Devuelve un SocketAddr a partir de una ip y un puerto
 fn get_socket(ip: String, port: u16) -> Result<SocketAddr, NodeCustomErrors> {
-    let ip = ip.parse::<IpAddr>().map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
+    let ip = ip
+        .parse::<IpAddr>()
+        .map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
     Ok(SocketAddr::new(ip, port))
 }
