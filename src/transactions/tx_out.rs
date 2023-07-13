@@ -117,7 +117,7 @@ impl TxOut {
                 };
                 if tx_asociate_address == account.address {
                     write_in_log(
-                        log_sender.info_log_sender.clone(),
+                        &log_sender.info_log_sender,
                         format!(
                             "Transaccion pendiente {:?} -- involucra a la cuenta {:?}",
                             tx.hex_hash(),

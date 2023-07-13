@@ -61,7 +61,7 @@ type Loggers = (
 );
 
 /// Imprime el mensaje en el logFile recibido
-pub fn write_in_log(log_sender: LogFileSender, msg: &str) {
+pub fn write_in_log(log_sender: &LogFileSender, msg: &str) {
     if let Err(err) = log_sender.send(msg.to_string()) {
         println!(
             "Error al intentar escribir {} en el log!, error: {}\n",

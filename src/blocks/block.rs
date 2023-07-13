@@ -229,7 +229,7 @@ impl Block {
                             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                             .push(confirmed_tx.clone());
                         write_in_log(
-                            log_sender.info_log_sender.clone(),
+                            &log_sender.info_log_sender,
                             format!(
                                 "CUENTA: {}: SE CONFIRMA NUEVA TRANSACCION {} EN BLOQUE --{}--",
                                 account.address,

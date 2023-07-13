@@ -40,7 +40,7 @@ pub fn get_active_nodes_from_dns_seed(
         }
     }
     write_in_log(
-        log_sender.info_log_sender,
+        &log_sender.info_log_sender,
         format!(
             "Se obtuvieron {} ips de la DNS: {:?}\n",
             node_ips.len(),

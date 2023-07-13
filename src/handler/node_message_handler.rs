@@ -57,7 +57,7 @@ impl NodeMessageHandler {
         utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
     ) -> Result<Self, NodeCustomErrors> {
         write_in_log(
-            log_sender.info_log_sender.clone(),
+            &log_sender.info_log_sender,
             "Empiezo a escuchar por nuevos bloques y transaccciones",
         );
         let finish = Arc::new(RwLock::new(false));
@@ -257,7 +257,7 @@ pub fn handle_messages_from_node(
                 }),
                 _ => {
                     write_in_log(
-                        log_sender.messege_log_sender.clone(),
+                        &log_sender.messege_log_sender,
                         format!(
                             "IGNORADO -- Recibo: {} -- Nodo: {:?}",
                             header.command_name,
@@ -271,7 +271,7 @@ pub fn handle_messages_from_node(
             if command_name != "inv" {
                 // Se imprimen en el log_message todos los mensajes menos el inv
                 write_in_log(
-                    log_sender.messege_log_sender.clone(),
+                    &log_sender.messege_log_sender,
                     format!(
                         "Recibo correctamente: {} -- Nodo: {:?}",
                         command_name,
@@ -288,8 +288,8 @@ pub fn handle_messages_from_node(
         // si ocurrio un error lo documento en el log sender de errores
         if let Some(err) = error {
             write_in_log(
-                log_sender.error_log_sender,
-                format!("NODO {:?} DESCONECTADO!! {}", node.peer_addr(), err).as_str(),
+                &log_sender.error_log_sender,
+                format!("NODO {:?} DESCONECTADO!! OCURRIO UN ERROR: {}", node.peer_addr(), err).as_str(),
             );
         }
     })

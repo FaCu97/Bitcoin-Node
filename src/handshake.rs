@@ -49,7 +49,7 @@ impl Handshake {
         log_sender: LogSender,
         active_nodes: &[Ipv4Addr],
     ) -> Result<Arc<RwLock<Vec<TcpStream>>>, HandShakeError> {
-        write_in_log(log_sender.info_log_sender.clone(), "INICIO DE HANDSHAKE");
+        write_in_log(&log_sender.info_log_sender, "INICIO DE HANDSHAKE");
         let lista_nodos = Arc::new(active_nodes);
         let chunk_size = (lista_nodos.len() as f64 / config.n_threads as f64).ceil() as usize;
         let active_nodes_chunks = Arc::new(RwLock::new(
@@ -86,11 +86,11 @@ impl Handshake {
             .len();
 
         write_in_log(
-            log_sender.info_log_sender.clone(),
+            &log_sender.info_log_sender,
             format!("{:?} nodos conectados", cantidad_sockets).as_str(),
         );
         write_in_log(
-            log_sender.info_log_sender,
+            &log_sender.info_log_sender,
             "Se completo correctamente el handshake\n",
         );
         Ok(sockets_lock)
@@ -110,7 +110,7 @@ fn connect_to_nodes(
         match connect_to_node(configuracion.clone(), log_sender.clone(), nodo) {
             Ok(stream) => {
                 write_in_log(
-                    log_sender.info_log_sender.clone(),
+                    &log_sender.info_log_sender,
                     format!("Conectado correctamente a: {:?}", nodo).as_str(),
                 );
                 sockets
@@ -119,7 +119,7 @@ fn connect_to_nodes(
                     .push(stream);
             }
             Err(err) => {
-                write_in_log(log_sender.error_log_sender.clone(),format!("No se pudo conectar al nodo: {:?}, voy a intenar conectarme a otro. Error {:?}.", nodo, err).as_str());
+                write_in_log(&log_sender.error_log_sender,format!("No se pudo conectar al nodo: {:?}, voy a intenar conectarme a otro. Error {:?}.", nodo, err).as_str());
             }
         };
     }

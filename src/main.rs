@@ -68,7 +68,7 @@ fn main() -> Result<(), GenericError> {
     .map_err(GenericError::LoggingError)?;
     let logsender = LogSender::new(error_log_sender, info_log_sender, message_log_sender);
     write_in_log(
-        logsender.info_log_sender.clone(),
+        &logsender.info_log_sender,
         "Se leyo correctamente el archivo de configuracion\n",
     );
     let active_nodes = get_active_nodes_from_dns_seed(config.clone(), logsender.clone())
@@ -80,7 +80,7 @@ fn main() -> Result<(), GenericError> {
         initial_block_download(config.clone(), logsender.clone(), pointer_to_nodes.clone())
             .map_err(|err| {
                 write_in_log(
-                    logsender.error_log_sender.clone(),
+                    &logsender.error_log_sender,
                     format!("Error al descargar los bloques: {}", err).as_str(),
                 );
                 GenericError::DownloadError(err)

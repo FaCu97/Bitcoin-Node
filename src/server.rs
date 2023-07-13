@@ -56,14 +56,14 @@ impl NodeServer {
         //listener.set_nonblocking(true).unwrap();
         println!("Empiezo a esuchar por conecciones entrantes!\n");
         write_in_log(
-            log_sender.info_log_sender.clone(),
+            &log_sender.info_log_sender,
             "Empiezo a esuchar por conecciones entrantes!",
         );
         for stream in listener.incoming() {
             // recibio un mensaje para frenar
             if rx.try_recv().is_ok() {
                 write_in_log(
-                    log_sender.info_log_sender,
+                    &log_sender.info_log_sender,
                     "Dejo de escuchar por conexiones entrantes!",
                 );
                 break;
@@ -75,7 +75,7 @@ impl NodeServer {
                     }
                     println!("RECIBO NUEVA CONEXION ENTRANTE!\n");
                     write_in_log(
-                        log_sender.info_log_sender.clone(),
+                        &log_sender.info_log_sender,
                         format!(
                             "Recibo nueva conexion entrante --{:?}--",
                             stream.peer_addr()
@@ -123,7 +123,7 @@ impl NodeServer {
             .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
         println!("HANDSHAKE REALIZADO CON EXITO!\n");
         write_in_log(
-            log_sender.info_log_sender.clone(),
+            &log_sender.info_log_sender,
             format!("Handshake con nodo {:?} realizado con exito!", socket_addr).as_str(),
         );
         // AGREGAR LA CONEXION AL NODO

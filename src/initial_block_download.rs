@@ -105,7 +105,7 @@ fn validate_headers(log_sender: LogSender, headers: Vec<BlockHeader>) -> Result<
     for header in headers {
         if !header.validate() {
             write_in_log(
-                log_sender.error_log_sender,
+                &log_sender.error_log_sender,
                 "Error en validacion de la proof of work de header",
             );
             return Err(DownloadError::InvalidHeaderError(
@@ -127,7 +127,7 @@ fn download_headers_from_node(
     tx: Sender<Vec<BlockHeader>>,
 ) -> Result<TcpStream, DownloadError> {
     write_in_log(
-        log_sender.info_log_sender.clone(),
+        &log_sender.info_log_sender,
         format!(
             "Empiezo descarga de headers con nodo: {:?}\n",
             node.peer_addr()
@@ -165,7 +165,7 @@ fn download_headers_from_node(
             )
             .map_err(|err| DownloadError::FirstBlockNotFoundError(err.to_string()))?;
             write_in_log(
-                log_sender.info_log_sender.clone(),
+                &log_sender.info_log_sender,
                 "Encontre primer bloque a descargar! Empieza descarga de bloques\n",
             );
             tx.send(first_block_headers_to_download)
@@ -260,7 +260,7 @@ fn download_headers(
         download_headers_from_node(config.clone(), log_sender.clone(), node, headers, tx);
     while let Err(err) = download_result {
         write_in_log(
-            log_sender.error_log_sender.clone(),
+            &log_sender.error_log_sender,
             format!(
                 "Fallo la descarga con el nodo, lo descarto y voy a intentar con otro. Error: {}",
                 err
@@ -417,7 +417,7 @@ fn download_blocks(
             .len();
         let bloques_a_descargar = cantidad_headers_descargados - ALTURA_PRIMER_BLOQUE + 1;
         if bloques_descargados == bloques_a_descargar {
-            write_in_log(log_sender.info_log_sender, format!("Se terminaron de descargar todos los bloques correctamente! BLOQUES DESCARGADOS: {}\n", bloques_descargados).as_str());
+            write_in_log(&log_sender.info_log_sender, format!("Se terminaron de descargar todos los bloques correctamente! BLOQUES DESCARGADOS: {}\n", bloques_descargados).as_str());
             return Ok(());
         }
     }
@@ -444,7 +444,7 @@ fn download_blocks_single_thread(
     // el thread recibe 250 bloques
     let block_headers_thread = block_headers.clone();
     write_in_log(
-        log_sender.info_log_sender.clone(),
+        &log_sender.info_log_sender,
         format!(
             "Voy a descargar {:?} bloques del nodo {:?}",
             block_headers.len(),
@@ -486,7 +486,7 @@ fn download_blocks_single_thread(
         .map_err(|err| DownloadError::LockError(err.to_string()))?
         .extend(current_blocks);
     write_in_log(
-        log_sender.info_log_sender,
+        &log_sender.info_log_sender,
         format!(
             "BLOQUES DESCARGADOS: {:?}",
             blocks_pointer_clone
@@ -529,7 +529,7 @@ fn request_blocks_from_node(
     match GetDataMessage::new(inventory).write_to(&mut node) {
         Ok(_) => Ok(()),
         Err(err) => {
-            write_in_log(log_sender.error_log_sender,format!("Error: No puedo pedir {:?} cantidad de bloques del nodo: {:?}. Se los voy a pedir a otro nodo", chunk_llamada.len(), node.peer_addr()).as_str());
+            write_in_log(&log_sender.error_log_sender,format!("Error: No puedo pedir {:?} cantidad de bloques del nodo: {:?}. Se los voy a pedir a otro nodo", chunk_llamada.len(), node.peer_addr()).as_str());
 
             tx.send(block_headers_thread.to_vec())
                 .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
@@ -558,7 +558,7 @@ fn receive_requested_blocks_from_node(
         let bloque = match BlockMessage::read_from(log_sender.clone(), &mut node) {
             Ok(bloque) => bloque,
             Err(err) => {
-                write_in_log(log_sender.error_log_sender,format!("No puedo descargar {:?} de bloques del nodo: {:?}. Se los voy a pedir a otro nodo y descarto este. Error: {err}", chunk_llamada.len(), node.peer_addr()).as_str());
+                write_in_log(&log_sender.error_log_sender,format!("No puedo descargar {:?} de bloques del nodo: {:?}. Se los voy a pedir a otro nodo y descarto este. Error: {err}", chunk_llamada.len(), node.peer_addr()).as_str());
                 tx.send(block_headers_thread.to_vec())
                     .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
                 // falló la recepción del mensaje, tengo que intentar con otro nodo
@@ -571,7 +571,7 @@ fn receive_requested_blocks_from_node(
         };
         let validation_result = bloque.validate();
         if !validation_result.0 {
-            write_in_log(log_sender.error_log_sender,format!("El bloque no pasó la validación. {:?}. Se los voy a pedir a otro nodo y descarto este.", validation_result.1).as_str());
+            write_in_log(&log_sender.error_log_sender,format!("El bloque no pasó la validación. {:?}. Se los voy a pedir a otro nodo y descarto este.", validation_result.1).as_str());
             tx.send(block_headers_thread.to_vec())
                 .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
             return Err(DownloadError::ReadNodeError(format!(
@@ -594,7 +594,7 @@ pub fn initial_block_download(
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<HeadersBlocksTuple, DownloadError> {
     write_in_log(
-        log_sender.info_log_sender.clone(),
+        &log_sender.info_log_sender,
         "EMPIEZA DESCARGA INICIAL DE BLOQUES",
     );
     let config_cloned = config.clone();
@@ -652,11 +652,11 @@ pub fn initial_block_download(
         .read()
         .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?;
     write_in_log(
-        log_sender.info_log_sender.clone(),
+        &log_sender.info_log_sender,
         format!("TOTAL DE HEADERS DESCARGADOS: {}", headers.len()).as_str(),
     );
     write_in_log(
-        log_sender.info_log_sender,
+        &log_sender.info_log_sender,
         format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
     );
 
@@ -675,7 +675,7 @@ fn get_initial_headers(
     if Path::new(&config.archivo_headers).exists() {
         read_first_headers_from_disk(config, log_sender.clone(), headers).map_err(|err| {
             write_in_log(
-                log_sender.error_log_sender.clone(),
+                &log_sender.error_log_sender,
                 format!("Error al descargar primeros 2 millones de headers de disco. {err}")
                     .as_str(),
             );
@@ -699,7 +699,7 @@ fn download_first_headers(
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> DownloadResult {
     write_in_log(
-        log_sender.info_log_sender.clone(),
+        &log_sender.info_log_sender,
         "Empiezo descarga de los primeros headers para guardarlos en disco",
     );
     let mut file = File::create(&config.archivo_headers)
@@ -722,7 +722,7 @@ fn download_first_headers(
     );
     while let Err(err) = download_result {
         write_in_log(
-            log_sender.error_log_sender.clone(),
+            &log_sender.error_log_sender,
             format!(
                 "Fallo la descarga con el nodo, lo descarto y voy a intentar con otro. Error: {}",
                 err
@@ -772,7 +772,7 @@ fn download_initial_headers_from_node(
     file: &mut File,
 ) -> Result<TcpStream, DownloadError> {
     write_in_log(
-        log_sender.info_log_sender.clone(),
+        &log_sender.info_log_sender,
         format!(
             "Empiezo descarga de headers con nodo: {:?}\n",
             node.peer_addr()
@@ -834,7 +834,7 @@ fn read_first_headers_from_disk(
     headers: Arc<RwLock<Vec<BlockHeader>>>,
 ) -> Result<(), Box<dyn Error>> {
     write_in_log(
-        log_sender.info_log_sender.clone(),
+        &log_sender.info_log_sender,
         "Empiezo lectura de los primeros headers de disco",
     );
     let mut data: Vec<u8> = Vec::new();
@@ -857,7 +857,7 @@ fn read_first_headers_from_disk(
         i += 162003;
     }
     write_in_log(
-        log_sender.info_log_sender,
+        &log_sender.info_log_sender,
         "Termino lectura de los primeros headers de disco",
     );
 
@@ -917,7 +917,7 @@ fn compare_and_ask_for_last_headers(
                 .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
                 .extend_from_slice(&headers_read);
             write_in_log(
-                log_sender.info_log_sender.clone(),
+                &log_sender.info_log_sender,
                 format!(
                     "{} headers encontrados al comparar el ultimo mio con el nodo: {:?}",
                     headers_read.len(),

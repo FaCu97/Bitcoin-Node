@@ -47,7 +47,7 @@ pub fn handle_headers_message(
     for header in new_headers {
         if !header.validate() {
             write_in_log(
-                log_sender.error_log_sender.clone(),
+                &log_sender.error_log_sender,
                 "Error en validacion de la proof of work de nuevo header",
             );
         } else {
@@ -104,7 +104,7 @@ pub fn handle_getdata_message(
                             .send(tx_message)
                             .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
                         write_in_log(
-                            log_sender.clone().info_log_sender,
+                            &log_sender.info_log_sender,
                             format!("transaccion {:?} enviada", tx.hex_hash()).as_str(),
                         );
                     }
@@ -125,7 +125,7 @@ pub fn handle_getdata_message(
                 }
                 None => {
                     write_in_log(
-                        log_sender.error_log_sender.clone(),
+                        &log_sender.error_log_sender,
                         &format!(
                             "No se encontro el bloque en la blockchain: {}",
                             crate::account::bytes_to_hex_string(&inv.hash)
@@ -184,7 +184,7 @@ pub fn handle_block_message(
         }
     } else {
         write_in_log(
-            log_sender.error_log_sender,
+            &log_sender.error_log_sender,
             "NUEVO BLOQUE ES INVALIDO, NO LO AGREGO!",
         );
     }
@@ -281,7 +281,7 @@ fn include_new_block(
 ) -> NodeMessageHandlerResult {
     println!("\nRECIBO NUEVO BLOQUE: {} \n", block.hex_hash());
     write_in_log(
-        log_sender.info_log_sender,
+        &log_sender.info_log_sender,
         format!("NUEVO BLOQUE AGREGADO: -- {} --", block.hex_hash()).as_str(),
     );
     blocks
@@ -303,7 +303,7 @@ fn include_new_header(
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .push(header);
     write_in_log(
-        log_sender.info_log_sender,
+        &log_sender.info_log_sender,
         "Recibo un nuevo header, lo agrego a la cadena de headers!",
     );
     Ok(())
