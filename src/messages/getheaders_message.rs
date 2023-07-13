@@ -2,6 +2,7 @@ use super::message_header::{get_checksum, HeaderMessage};
 use super::payload::getheaders_payload::GetHeadersPayload;
 use crate::compact_size_uint::CompactSizeUint;
 use crate::config::Config;
+use std::error::Error;
 use std::io::Write;
 use std::sync::Arc;
 
@@ -24,6 +25,13 @@ impl GetHeadersMessage {
         stream.write_all(&message)?;
         stream.flush()?;
         Ok(())
+    }
+
+    /// Dado un vector de bytes, intenta interpretar el mismo como un mensaje getheaders
+    pub fn read_from(payload_bytes: &[u8]) -> Result<GetHeadersMessage, Box<dyn Error>> {
+        let payload = GetHeadersPayload::read_from(payload_bytes)?;
+        let header = HeaderMessage::new("getheaders".to_string(), Some(payload_bytes));
+        Ok(GetHeadersMessage { header, payload })
     }
     /// Recibe un struct Config con las constantes a utilizar en el header del mensaje getheaders y un vector
     /// de hashes de bloques y arma el mensaje getheaders para que pida todos los headers a partir del ultimo hash del vector

@@ -15,7 +15,7 @@ use crate::{
         inventory::Inventory,
         message_header::{get_checksum, HeaderMessage},
         notfound_message::get_notfound_message,
-        payload::get_data_payload::unmarshalling,
+        payload::get_data_payload::unmarshalling, getheaders_message::GetHeadersMessage,
     },
     transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
@@ -68,7 +68,20 @@ pub fn handle_headers_message(
 }
 
 pub fn handle_getheaders_message(log_sender: LogSender, tx: NodeSender, payload: &[u8], headers: Arc<RwLock<Vec<BlockHeader>>>) -> NodeMessageHandlerResult {
-    unimplemented!();
+    let getheaders_message = GetHeadersMessage::read_from(payload)
+        .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
+    let first_header_asked = getheaders_message.payload.locator_hashes[0];
+    let mut headers_to_send: Vec<BlockHeader> = Vec::new();
+    for header in headers.read().unwrap().iter() {
+        if header.hash() == first_header_asked {
+            let mut index = 0;
+            while index < 2000 && index < headers.read().unwrap().len() {
+                headers_to_send.push(headers.read().unwrap()[index].clone());
+                index += 1;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Recibe un Sender de bytes, el payload del mensaje getdata recibido y un vector de cuentas de la wallet y deserializa el mensaje getdata que llega
