@@ -44,17 +44,4 @@ impl Pubkey {
         let string = encoded.into_string();
         Ok(string)
     }
-
-    /// Genera el pubkey a partir de la address.
-    pub fn generate_pubkey(address: &str) -> Result<Vec<u8>, Box<dyn Error>> {
-        let pubkey_hash = get_pubkey_hash_from_address(address)?;
-        let mut pk_script: Vec<u8> = Vec::new();
-        pk_script.push(ScriptOpcodes::OP_DUP);
-        pk_script.push(ScriptOpcodes::OP_HASH160);
-        pk_script.push(20); // <bytes_to_push>: Son 20 bytes
-        pk_script.extend_from_slice(&pubkey_hash);
-        pk_script.push(ScriptOpcodes::OP_EQUALVERIFY);
-        pk_script.push(ScriptOpcodes::OP_CHECKSIG);
-        Ok(pk_script)
-    }
 }
