@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
-const CANTIDAD_ATRIBUTOS: usize = 20;
+const CANTIDAD_ATRIBUTOS: usize = 19;
 
 /// Almacena los campos leidos del archivo de configuración
 #[derive(Debug, Clone)]
@@ -21,7 +21,6 @@ pub struct Config {
     pub protocol_version: i32,
     pub user_agent: String,
     pub n_threads: usize,
-    pub dns_port: u16,
     pub connect_timeout: u64,
     pub max_connections_to_server: u8,
     pub error_log_path: String,
@@ -74,7 +73,6 @@ impl Config {
             protocol_version: 0,
             user_agent: String::new(),
             n_threads: 0,
-            dns_port: 0,
             connect_timeout: 0,
             max_connections_to_server: 0,
             error_log_path: String::new(),
@@ -158,10 +156,6 @@ impl Config {
             }
             "N_THREADS" => {
                 self.n_threads = usize::from_str(value)?;
-                *number_of_settings_loaded += 1;
-            }
-            "DNS_PORT" => {
-                self.dns_port = u16::from_str(value)?;
                 *number_of_settings_loaded += 1;
             }
             "CONNECT_TIMEOUT" => {
