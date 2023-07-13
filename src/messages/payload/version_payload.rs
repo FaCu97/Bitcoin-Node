@@ -221,7 +221,7 @@ pub fn get_ipv6_address_ip(socket_addr: SocketAddr) -> [u8; 16] {
 
 /// Genera el payload para el mensaje version del protocolo bitcoin.
 pub fn get_version_payload(
-    config: Arc<Config>,
+    config: &Arc<Config>,
     socket_addr: SocketAddr,
     local_ip_addr: SocketAddr,
 ) -> Result<VersionPayload, Box<dyn Error>> {

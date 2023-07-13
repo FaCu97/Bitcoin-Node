@@ -31,13 +31,14 @@ pub struct NodeServer {
 
 impl NodeServer {
     /// Crea un nuevo servidor de nodo en un thread aparte encargado de eso
-    pub fn new(config: Arc<Config>, log_sender: &LogSender, node: &mut Node) -> NodeServer {
+    pub fn new(config: &Arc<Config>, log_sender: &LogSender, node: &mut Node) -> NodeServer {
         let (sender, rx) = mpsc::channel();
         let address = get_socket(LOCALHOST.to_string(), config.testnet_port);
         let mut node_clone = node.clone();
         let log_sender_clone = log_sender.clone();
+        let config = config.clone();
         let handle =
-            spawn(move || Self::listen(config, &log_sender_clone, &mut node_clone, address, rx));
+            spawn(move || Self::listen(&config, &log_sender_clone, &mut node_clone, address, rx));
         NodeServer { sender, handle }
     }
 
@@ -45,7 +46,7 @@ impl NodeServer {
     /// Si llega un mensaje por el channel, sigifica que debe dejar de escuchar y cortar el bucle
     /// Devuelve un error si ocurre alguno que no sea del tipo WouldBlock
     fn listen(
-        config: Arc<Config>,
+        config: &Arc<Config>,
         log_sender: &LogSender,
         node: &mut Node,
         address: SocketAddr,
@@ -83,7 +84,7 @@ impl NodeServer {
                         )
                         .as_str(),
                     );
-                    Self::handle_incoming_connection(config.clone(), log_sender, node, stream)?;
+                    Self::handle_incoming_connection(config, log_sender, node, stream)?;
                 }
                 Err(ref err) if err.kind() == std::io::ErrorKind::WouldBlock => {
                     // This doesen't mean an error ocurred, there just wasn't a connection at the moment
@@ -99,7 +100,7 @@ impl NodeServer {
     /// Realiza el handshake y agrega la conexion al nodo
     /// Devuelve un error si ocurre alguno
     fn handle_incoming_connection(
-        config: Arc<Config>,
+        config: &Arc<Config>,
         log_sender: &LogSender,
         node: &mut Node,
         mut stream: TcpStream,

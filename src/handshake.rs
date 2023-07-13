@@ -45,7 +45,7 @@ impl Handshake {
     /// Recibe las direcciones IP de los nodos.
     /// Devuelve un vector de sockets o un error si no se pudo completar.
     pub fn handshake(
-        config: Arc<Config>,
+        config: &Arc<Config>,
         log_sender: &LogSender,
         active_nodes: &[Ipv4Addr],
     ) -> Result<Arc<RwLock<Vec<TcpStream>>>, HandShakeError> {
@@ -67,11 +67,11 @@ impl Handshake {
                 .write()
                 .map_err(|err| HandShakeError::LockError(format!("{}", err)))?[i]
                 .clone();
-            let configuracion = config.clone();
+            let config = config.clone();
             let log_sender_clone = log_sender.clone();
             let sockets: Arc<RwLock<Vec<TcpStream>>> = Arc::clone(&sockets_lock);
             thread_handles.push(thread::spawn(move || {
-                connect_to_nodes(configuracion, &log_sender_clone, sockets, &chunk)
+                connect_to_nodes(&config, &log_sender_clone, sockets, &chunk)
             }));
         }
 
@@ -101,13 +101,13 @@ impl Handshake {
 /// Guarda el los mismos en la lista de sockets recibida.
 /// En caso de no poder conectarse, continua intentando con el siguiente.
 fn connect_to_nodes(
-    configuracion: Arc<Config>,
+    config: &Arc<Config>,
     log_sender: &LogSender,
     sockets: Arc<RwLock<Vec<TcpStream>>>,
     nodos: &[Ipv4Addr],
 ) -> Result<(), HandShakeError> {
     for nodo in nodos {
-        match connect_to_node(configuracion.clone(), log_sender, nodo) {
+        match connect_to_node(config, log_sender, nodo) {
             Ok(stream) => {
                 write_in_log(
                     &log_sender.info_log_sender,
@@ -130,14 +130,13 @@ fn connect_to_nodes(
 /// Envía y recibe los mensajes necesarios para establecer la conexión
 /// De vuelve el socket o un error
 fn connect_to_node(
-    config: Arc<Config>,
+    config: &Arc<Config>,
     log_sender: &LogSender,
     node_ip: &Ipv4Addr,
 ) -> Result<TcpStream, Box<dyn Error>> {
     let socket_addr = SocketAddr::new((*node_ip).into(), config.testnet_port);
     let mut stream: TcpStream =
         TcpStream::connect_timeout(&socket_addr, Duration::from_secs(config.connect_timeout))?;
-
     let local_ip_addr = stream.local_addr()?;
     let version_message = get_version_message(config, socket_addr, local_ip_addr)?;
     version_message.write_to(&mut stream)?;

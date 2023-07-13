@@ -54,11 +54,11 @@ impl VersionMessage {
 /// Genera el VersionMessage con los datos recibidos y lo devuelve
 /// En caso que falle devuelve error
 pub fn get_version_message(
-    config: Arc<Config>,
+    config: &Arc<Config>,
     socket_addr: SocketAddr,
     local_ip_addr: SocketAddr,
 ) -> Result<VersionMessage, Box<dyn Error>> {
-    let version_payload = get_version_payload(config.clone(), socket_addr, local_ip_addr)?;
+    let version_payload = get_version_payload(config, socket_addr, local_ip_addr)?;
     let version_header = HeaderMessage {
         start_string: config.testnet_start_string,
         command_name: "version".to_string(),
