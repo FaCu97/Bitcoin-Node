@@ -372,7 +372,7 @@ fn get_tx_message(tx: &Transaction) -> Vec<u8> {
     tx_message
 }
 
-
+/// Manda por el channel el mensaje recibido para que se escriba en el nodo
 pub fn write_to_node(tx: &NodeSender, message: Vec<u8>) -> NodeMessageHandlerResult {
     tx.send(message)
         .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
