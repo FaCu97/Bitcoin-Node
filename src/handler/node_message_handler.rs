@@ -154,7 +154,7 @@ impl NodeMessageHandler {
                 self.transactions_recieved.clone(),
                 node_pointers,
                 connection,
-                None,
+                Some(self.finish.clone()),
             ));
         Ok(())
     }
