@@ -63,6 +63,15 @@ impl Handshake {
         let mut thread_handles = vec![];
 
         for i in 0..config.n_threads {
+            if i >= active_nodes_chunks
+                .read()
+                .map_err(|err| HandShakeError::LockError(err.to_string()))?
+                .len()
+            {
+                // Este caso evita acceder a una posición fuera de rango
+                // Significa que no hay más chunks con bloques para descargar
+                break;
+            }
             let chunk = active_nodes_chunks
                 .write()
                 .map_err(|err| HandShakeError::LockError(format!("{}", err)))?[i]
