@@ -363,12 +363,6 @@ fn download_blocks(
             let nodes_pointer_clone = nodes.clone();
             let block_headers_chunk_clone = Arc::clone(&blocks_headers_chunks);
             let blocks_pointer_clone = Arc::clone(&blocks);
-            let node = nodes_pointer_clone
-                .write()
-                .map_err(|err| DownloadError::LockError(err.to_string()))?
-                .pop()
-                .ok_or("Error no hay mas nodos para descargar los bloques!\n")
-                .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
 
             if i >= block_headers_chunk_clone
                 .read()
@@ -379,6 +373,22 @@ fn download_blocks(
                 // Significa que no hay más chunks con bloques para descargar
                 break;
             }
+
+            // reviso el largo de nodes_pointer_clone para ver si hay nodos disponibles
+            if nodes_pointer_clone
+                .read()
+                .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
+                .is_empty()
+            {
+                break;
+            }
+
+            let node = nodes_pointer_clone
+                .write()
+                .map_err(|err| DownloadError::LockError(err.to_string()))?
+                .pop()
+                .ok_or("Error no hay mas nodos para descargar los bloques!\n")
+                .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
 
             let block_headers = block_headers_chunk_clone
                 .write()
