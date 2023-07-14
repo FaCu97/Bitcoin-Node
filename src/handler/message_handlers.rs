@@ -73,6 +73,7 @@ pub fn handle_getheaders_message(
     payload: &[u8],
     headers: Arc<RwLock<Vec<BlockHeader>>>,
 ) -> NodeMessageHandlerResult {
+    println!("HANDLEO GETHEADERS!!!\n");
     let getheaders_message = GetHeadersMessage::read_from(payload)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
     let first_header_asked = getheaders_message.payload.locator_hashes[0];
@@ -104,6 +105,8 @@ pub fn handle_getheaders_message(
             }
         }
     }
+    println!("Voy a escribir {:?} headers!\n", headers_to_send.len());
+    //println!("Headers to send: {:?}\n", headers_to_send);
     write_to_node(&tx, HeadersMessage::marshalling(headers_to_send))
 }
 
