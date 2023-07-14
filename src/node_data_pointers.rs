@@ -1,0 +1,40 @@
+use std::{
+    collections::HashMap,
+    net::TcpStream,
+    sync::{Arc, RwLock},
+};
+
+use crate::{
+    account::Account,
+    blocks::{block::Block, block_header::BlockHeader},
+    utxo_tuple::UtxoTuple,
+};
+
+type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
+
+#[derive(Debug, Clone)]
+pub struct NodeDataPointers {
+    pub connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
+    pub headers: Arc<RwLock<Vec<BlockHeader>>>,
+    pub block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    pub accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
+    pub utxo_set: UtxoSetPointer,
+}
+
+impl NodeDataPointers {
+    pub fn new(
+        connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
+        headers: Arc<RwLock<Vec<BlockHeader>>>,
+        block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
+        utxo_set: UtxoSetPointer,
+    ) -> Self {
+        NodeDataPointers {
+            connected_nodes,
+            headers,
+            block_chain,
+            accounts,
+            utxo_set,
+        }
+    }
+}
