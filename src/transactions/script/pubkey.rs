@@ -1,8 +1,6 @@
+use super::script_opcodes::ScriptOpcodes;
 use k256::sha2::Digest;
 use k256::sha2::Sha256;
-use std::error::Error;
-
-use crate::address_decoder::get_pubkey_hash_from_address;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Pubkey {
@@ -18,12 +16,12 @@ impl Pubkey {
     }
     /// Genera la address a partir del pubkey.
     pub fn generate_address(&self) -> Result<String, &'static str> {
-        // vector que generara el adress
+        // vector que generara el address
         let mut adress_bytes: Vec<u8> = vec![0x6f];
         let bytes = &self.bytes;
         let lenght: usize = bytes.len();
         if lenght <= 3 {
-            return Err("el campo pubkey no tiene el largo esperado");
+            return Err("El campo pubkey no tiene el largo esperado");
         }
 
         let first_byte = self.bytes[0];
@@ -31,7 +29,7 @@ impl Pubkey {
             // se trata de una transanccion del tipo P2WPKH
             adress_bytes.extend_from_slice(&bytes[2..lenght]);
         }
-        if first_byte == 0x76 {
+        if first_byte == ScriptOpcodes::OP_DUP {
             // se trata de una transanccion del tipo P2PKH
             adress_bytes.extend_from_slice(&bytes[3..(lenght - 2)]);
         }
@@ -41,18 +39,5 @@ impl Pubkey {
         let encoded: bs58::encode::EncodeBuilder<&Vec<u8>> = bs58::encode(&adress_bytes);
         let string = encoded.into_string();
         Ok(string)
-    }
-
-    /// Genera el pubkey a partir de la address.
-    pub fn generate_pubkey(address: &str) -> Result<Vec<u8>, Box<dyn Error>> {
-        let pubkey_hash = get_pubkey_hash_from_address(address)?;
-        let mut pk_script: Vec<u8> = Vec::new();
-        pk_script.push(0x76); // OP_DUP  -> Pasar a constantes o enum
-        pk_script.push(0xA9);
-        pk_script.push(20); // <bytes_to_push>: Son 20 bytes
-        pk_script.extend_from_slice(&pubkey_hash);
-        pk_script.push(0x88);
-        pk_script.push(0xAC);
-        Ok(pk_script)
     }
 }
