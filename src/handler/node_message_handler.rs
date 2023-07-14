@@ -19,8 +19,9 @@ use std::{
 };
 
 use super::message_handlers::{
-    handle_block_message, handle_getdata_message, handle_headers_message, handle_inv_message,
-    handle_ping_message, handle_tx_message, handle_getheaders_message, write_to_node,
+    handle_block_message, handle_getdata_message, handle_getheaders_message,
+    handle_headers_message, handle_inv_message, handle_ping_message, handle_tx_message,
+    write_to_node,
 };
 
 type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;

@@ -11,11 +11,12 @@ use crate::{
     messages::{
         block_message::{get_block_message, BlockMessage},
         get_data_message::GetDataMessage,
+        getheaders_message::GetHeadersMessage,
         headers_message::HeadersMessage,
         inventory::Inventory,
         message_header::{get_checksum, HeaderMessage},
         notfound_message::get_notfound_message,
-        payload::get_data_payload::unmarshalling, getheaders_message::GetHeadersMessage,
+        payload::get_data_payload::unmarshalling,
     },
     transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
@@ -67,7 +68,11 @@ pub fn handle_headers_message(
     Ok(())
 }
 
-pub fn handle_getheaders_message(tx: NodeSender, payload: &[u8], headers: Arc<RwLock<Vec<BlockHeader>>>) -> NodeMessageHandlerResult {
+pub fn handle_getheaders_message(
+    tx: NodeSender,
+    payload: &[u8],
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+) -> NodeMessageHandlerResult {
     let getheaders_message = GetHeadersMessage::read_from(payload)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
     let first_header_asked = getheaders_message.payload.locator_hashes[0];
@@ -79,15 +84,16 @@ pub fn handle_getheaders_message(tx: NodeSender, payload: &[u8], headers: Arc<Rw
                 // Si no se provee stop_hash, se envian los 2000 headers siguientes al primero
                 let mut index = 0;
                 while index < 2000 && index < headers.read().unwrap().len() {
-                    headers_to_send.push(headers.read().unwrap()[index].clone());
+                    headers_to_send.push(headers.read().unwrap()[index]);
                     index += 1;
                 }
             } else {
                 // Si se provee stop_hash, se envian todos los headers hasta el stop_hash
                 let mut index = 0;
                 while index < headers.read().unwrap().len() {
-                    headers_to_send.push(headers.read().unwrap()[index].clone());
-                    if headers.read().unwrap()[index].hash() == getheaders_message.payload.stop_hash {
+                    headers_to_send.push(headers.read().unwrap()[index]);
+                    if headers.read().unwrap()[index].hash() == getheaders_message.payload.stop_hash
+                    {
                         break;
                     }
                     index += 1;
@@ -116,10 +122,16 @@ pub fn handle_getdata_message(
     let mut notfound_inventories: Vec<Inventory> = Vec::new();
     for inv in inventories {
         if inv.type_identifier == MSG_TX {
-            handle_tx_inventory(log_sender,&inv, &accounts, &node_sender)?;
+            handle_tx_inventory(log_sender, &inv, &accounts, &node_sender)?;
         }
         if inv.type_identifier == MSG_BLOCK {
-            handle_block_inventory(log_sender, &inv, &blocks, &mut message_to_send, &mut notfound_inventories)?;
+            handle_block_inventory(
+                log_sender,
+                &inv,
+                &blocks,
+                &mut message_to_send,
+                &mut notfound_inventories,
+            )?;
         }
     }
     if !notfound_inventories.is_empty() {
@@ -386,7 +398,6 @@ fn update_accounts_utxo_set(
     }
     Ok(())
 }
-
 
 // Devuelve el mensaje tx según la transacción recibida
 fn get_tx_message(tx: &Transaction) -> Vec<u8> {
