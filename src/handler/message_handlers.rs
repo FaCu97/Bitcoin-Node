@@ -18,6 +18,7 @@ use crate::{
         notfound_message::get_notfound_message,
         payload::get_data_payload::unmarshalling,
     },
+    node_data_pointers::NodeDataPointers,
     transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
 };
@@ -217,24 +218,29 @@ fn handle_tx_inventory(
 pub fn handle_block_message(
     log_sender: &LogSender,
     payload: &[u8],
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-    accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
-    utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+    node_pointers: NodeDataPointers,
 ) -> NodeMessageHandlerResult {
     let new_block = BlockMessage::unmarshalling(&payload.to_vec())
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
     if new_block.validate().0 {
         let header_is_not_included_yet =
-            header_is_not_included(new_block.block_header, headers.clone())?;
+            header_is_not_included(new_block.block_header, node_pointers.headers.clone())?;
         if header_is_not_included_yet {
-            include_new_header(log_sender, new_block.block_header, headers)?;
-            include_new_block(log_sender, new_block.clone(), blocks)?;
-            new_block.contains_pending_tx(log_sender, accounts.clone())?;
+            include_new_header(
+                log_sender,
+                new_block.block_header,
+                node_pointers.headers.clone(),
+            )?;
+            include_new_block(
+                log_sender,
+                new_block.clone(),
+                node_pointers.block_chain.clone(),
+            )?;
+            new_block.contains_pending_tx(log_sender, node_pointers.accounts.clone())?;
             new_block
-                .give_me_utxos(utxo_set.clone())
+                .give_me_utxos(node_pointers.utxo_set.clone())
                 .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
-            update_accounts_utxo_set(accounts, utxo_set)?;
+            update_accounts_utxo_set(node_pointers.accounts.clone(), node_pointers.utxo_set)?;
         }
     } else {
         write_in_log(
