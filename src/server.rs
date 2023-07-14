@@ -64,10 +64,10 @@ impl NodeServer {
             .set_nonblocking(true)
             .map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
         let amount_of_connections = 0;
-        println!("Empiezo a esuchar por conecciones entrantes!\n");
+        println!("Empiezo a escuchar por conecciones entrantes!\n");
         write_in_log(
             &log_sender.info_log_sender,
-            "Empiezo a esuchar por conecciones entrantes!",
+            "Empiezo a escuchar por conecciones entrantes!",
         );
         for stream in listener.incoming() {
             // recibio un mensaje para frenar
