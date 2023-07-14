@@ -83,6 +83,8 @@ pub fn handle_getheaders_message(
     let amount_of_headers = headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?.len();
     for header in headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?.iter() {
         if header.hash() == first_header_asked {
+            println!("LO ENCONTRE!!!!\n");
+            println!("HEADER: {:?}\n", header);
             if !stop_hash_provided {
                 // Si no se provee stop_hash, se envian los 2000 headers siguientes al primero
                 let mut index = 0;
@@ -107,7 +109,6 @@ pub fn handle_getheaders_message(
         }
     }
     println!("Voy a escribir {:?} headers!\n", headers_to_send.len());
-    //println!("Headers to send: {:?}\n", headers_to_send);
     write_to_node(&tx, HeadersMessage::marshalling(headers_to_send))
 }
 

@@ -48,12 +48,7 @@ impl GetHeadersMessage {
             locator_hashes,
             stop_hash,
         };
-        let header_of_getheaders = HeaderMessage {
-            start_string: config.start_string,
-            command_name: "getheaders".to_string(),
-            payload_size: getheaders_payload.to_le_bytes().len() as u32,
-            checksum: get_checksum(&getheaders_payload.to_le_bytes()),
-        };
+        let header_of_getheaders = HeaderMessage::new("getheaders".to_string(), Some(&getheaders_payload.to_le_bytes()));
         GetHeadersMessage {
             header: header_of_getheaders,
             payload: getheaders_payload,

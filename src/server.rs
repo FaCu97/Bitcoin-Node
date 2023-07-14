@@ -122,6 +122,7 @@ impl NodeServer {
             .map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
         VersionMessage::read_from(log_sender, &mut stream)
             .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
+        println!("OKKK");
         let version_message = get_version_message(config, socket_addr, local_ip_addr)
             .map_err(|err| NodeCustomErrors::OtherError(err.to_string()))?;
         version_message
@@ -129,6 +130,7 @@ impl NodeServer {
             .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
         read_verack_message(log_sender, &mut stream)
             .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
+        println!("OK1");
         write_verack_message(&mut stream)
             .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
         println!("HANDSHAKE REALIZADO CON EXITO!\n");
