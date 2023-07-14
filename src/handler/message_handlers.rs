@@ -78,21 +78,24 @@ pub fn handle_getheaders_message(
     let first_header_asked = getheaders_message.payload.locator_hashes[0];
     let stop_hash_provided = getheaders_message.payload.stop_hash != [0u8; 32];
     let mut headers_to_send: Vec<BlockHeader> = Vec::new();
-    for header in headers.read().unwrap().iter() {
+    let amount_of_headers = headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?.len();
+    for header in headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?.iter() {
         if header.hash() == first_header_asked {
             if !stop_hash_provided {
                 // Si no se provee stop_hash, se envian los 2000 headers siguientes al primero
                 let mut index = 0;
-                while index < 2000 && index < headers.read().unwrap().len() {
-                    headers_to_send.push(headers.read().unwrap()[index]);
+                while index < 2000 && index < amount_of_headers {
+                    let curr_header = headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index];
+                    headers_to_send.push(curr_header);
                     index += 1;
                 }
             } else {
                 // Si se provee stop_hash, se envian todos los headers hasta el stop_hash
                 let mut index = 0;
-                while index < headers.read().unwrap().len() {
-                    headers_to_send.push(headers.read().unwrap()[index]);
-                    if headers.read().unwrap()[index].hash() == getheaders_message.payload.stop_hash
+                while index < amount_of_headers {
+                    let curr_header = headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index];
+                    headers_to_send.push(curr_header);
+                    if curr_header.hash() == getheaders_message.payload.stop_hash
                     {
                         break;
                     }
@@ -101,8 +104,7 @@ pub fn handle_getheaders_message(
             }
         }
     }
-    let headers_message = HeadersMessage::bytes_build_from_headers(headers_to_send);
-    write_to_node(&tx, headers_message)
+    write_to_node(&tx, HeadersMessage::marshalling(headers_to_send))
 }
 
 /// Recibe un Sender de bytes, el payload del mensaje getdata recibido y un vector de cuentas de la wallet y deserializa el mensaje getdata que llega

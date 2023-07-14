@@ -91,7 +91,7 @@ impl HeadersMessage {
         Ok(headers)
     }
     /// Dado un vector de block headers, arma el mensaje headers y lo devuelve en un vector de bytes
-    pub fn bytes_build_from_headers(headers: Vec<BlockHeader>) -> Vec<u8> {
+    pub fn marshalling(headers: Vec<BlockHeader>) -> Vec<u8> {
         let mut headers_message_payload: Vec<u8> = Vec::new();
         let count = CompactSizeUint::new(headers.len() as u128);
         headers_message_payload.extend_from_slice(count.value());
