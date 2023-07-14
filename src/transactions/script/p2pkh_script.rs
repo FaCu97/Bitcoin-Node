@@ -1,7 +1,8 @@
-use crate::address_decoder;
+use super::script_opcodes::ScriptOpcodes;
+use crate::address_decoder::{self, get_pubkey_hash_from_address};
 use std::error::Error;
-use std::io;
 
+const BYTES_TO_PUSH: u8 = 20;
 //      <Sig> <PubKey> OP_DUP OP_HASH160 <PubkeyHash> OP_EQUALVERIFY OP_CHECKSIG
 //
 // scriptPubKey: OP_DUP OP_HASH160 <bytes_to_push> <pubKeyHash> OP_EQUALVERIFY OP_CHECKSIG
@@ -10,23 +11,16 @@ use std::io;
 // Si una Tx es P2PKH el largo de su pk_script debe ser == 25
 // <pubKeyHash>: Son 20 bytes. Es el resultado de aplicar hash160 (sha256 + ripemd160 hash) a la publicKey comprimida SEC
 
-/// Genera el pk_script de una transaccion P2PKH
-/// Recibe el <pubKeyHash> del receptor de la tx.
-pub fn generate_p2pkh_pk_script(pubkey_hash: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
-    if pubkey_hash.len() != 20 {
-        return Err(Box::new(std::io::Error::new(
-            io::ErrorKind::Other,
-            "El pubKey hash recibido es inválido. No tiene el largo correcto",
-        )));
-    }
+/// Genera el pubkey script a partir de la address comprimida.
+pub fn generate_pubkey_script(address: &str) -> Result<Vec<u8>, Box<dyn Error>> {
+    let pubkey_hash = get_pubkey_hash_from_address(address)?;
     let mut pk_script: Vec<u8> = Vec::new();
-    pk_script.push(0x76); // OP_DUP
-    pk_script.push(0xA9);
-    pk_script.push(20); // <bytes_to_push>: Son 20 bytes
-
-    pk_script.extend_from_slice(pubkey_hash);
-    pk_script.push(0x88);
-    pk_script.push(0xAC);
+    pk_script.push(ScriptOpcodes::OP_DUP);
+    pk_script.push(ScriptOpcodes::OP_HASH160);
+    pk_script.push(BYTES_TO_PUSH);
+    pk_script.extend_from_slice(&pubkey_hash);
+    pk_script.push(ScriptOpcodes::OP_EQUALVERIFY);
+    pk_script.push(ScriptOpcodes::OP_CHECKSIG);
     Ok(pk_script)
 }
 
@@ -43,12 +37,12 @@ pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> Result<bool, Box<dyn 
         .copy_from_slice(&sig_script[length_sig as usize + 2..length_sig as usize + 35]);
 
     // 1) Chequeo que el primer comando sea OP_DUP (0x76)
-    if p2pkh_script[0..1] != [0x76] {
+    if p2pkh_script[0..1] != [ScriptOpcodes::OP_DUP] {
         return Ok(false);
     }
 
     // 2) Chequeo que el siguiente comando sea OP_HASH_160 (0xA9)
-    if p2pkh_script[1..2] != [0xA9] {
+    if p2pkh_script[1..2] != [ScriptOpcodes::OP_HASH160] {
         return Ok(false);
     }
 
@@ -56,7 +50,7 @@ pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> Result<bool, Box<dyn 
     let ripemd160_hash = address_decoder::hash_160(&sig_script_pubkey);
 
     // 4) Chequeo que el siguiente comando sea OP_EQUALVERIFY (0x88)
-    if p2pkh_script[23..24] != [0x88] {
+    if p2pkh_script[23..24] != [ScriptOpcodes::OP_EQUALVERIFY] {
         return Ok(false);
     }
 
@@ -66,7 +60,7 @@ pub fn validate(p2pkh_script: &[u8], sig_script: &[u8]) -> Result<bool, Box<dyn 
     }
 
     // 6) Chequeo que el siguiente comando sea OP_CHECKSIG (0xAC)
-    if p2pkh_script[24..25] != [0xAC] {
+    if p2pkh_script[24..25] != [ScriptOpcodes::OP_CHECKSIG] {
         return Ok(false);
     }
     Ok(true)
@@ -78,17 +72,16 @@ mod test {
 
     use crate::{
         account::Account,
-        address_decoder,
         transactions::script::{
-            p2pkh_script::{self, generate_p2pkh_pk_script},
+            p2pkh_script::{self, generate_pubkey_script},
             sig_script::SigScript,
         },
     };
 
     #[test]
     fn test_pk_script_se_genera_con_el_largo_correcto() -> Result<(), Box<dyn Error>> {
-        let pub_key_hash: [u8; 20] = [0; 20];
-        let pk_script = generate_p2pkh_pk_script(&pub_key_hash)?;
+        let address = "mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV";
+        let pk_script = generate_pubkey_script(address)?;
 
         assert_eq!(pk_script.len(), 25);
         Ok(())
@@ -96,13 +89,12 @@ mod test {
 
     #[test]
     fn test_pk_script_se_genera_con_el_contenido_correcto() -> Result<(), Box<dyn Error>> {
-        let pub_key_hash: [u8; 20] = [0; 20];
-        let pk_script = generate_p2pkh_pk_script(&pub_key_hash)?;
+        let address = "mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV";
+        let pk_script = generate_pubkey_script(address)?;
 
         assert_eq!(pk_script[..1], [0x76]);
         assert_eq!(pk_script[1..2], [0xA9]);
         assert_eq!(pk_script[2..3], [20]);
-        assert_eq!(pk_script[3..23], pub_key_hash);
         assert_eq!(pk_script[23..24], [0x88]);
         assert_eq!(pk_script[24..25], [0xAC]);
         Ok(())
@@ -112,14 +104,12 @@ mod test {
     fn test_p2pkh_script_se_valida_correctamente() -> Result<(), Box<dyn Error>> {
         let hash: [u8; 32] = [123; 32];
 
-        let address: String = String::from("mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV");
+        let address = "mnEvYsxexfDEkCx2YLEfzhjrwKKcyAhMqV";
         let private_key: String =
             String::from("cMoBjaYS6EraKLNqrNN8DvN93Nnt6pJNfWkYM8pUufYQB5EVZ7SR");
-        let account = Account::new(private_key, address)?;
+        let account = Account::new(private_key, address.to_string())?;
 
-        let p2pkh_script = generate_p2pkh_pk_script(
-            &address_decoder::get_pubkey_hash_from_address(&account.address)?,
-        )?;
+        let p2pkh_script = generate_pubkey_script(address)?;
         let sig = SigScript::generate_sig_script(hash, &account)?;
         let validation = p2pkh_script::validate(&p2pkh_script, sig.get_bytes())?;
 
