@@ -372,7 +372,7 @@ fn download_blocks(
 
             if i >= block_headers_chunk_clone
                 .read()
-                .map_err(|err| DownloadError::LockError(err.to_string()))?
+                .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
                 .len()
             {
                 // Este caso evita acceder a una posición fuera de rango
