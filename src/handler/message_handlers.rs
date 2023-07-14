@@ -67,24 +67,36 @@ pub fn handle_headers_message(
     Ok(())
 }
 
-pub fn handle_getheaders_message(log_sender: LogSender, tx: NodeSender, payload: &[u8], headers: Arc<RwLock<Vec<BlockHeader>>>) -> NodeMessageHandlerResult {
+pub fn handle_getheaders_message(tx: NodeSender, payload: &[u8], headers: Arc<RwLock<Vec<BlockHeader>>>) -> NodeMessageHandlerResult {
     let getheaders_message = GetHeadersMessage::read_from(payload)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
     let first_header_asked = getheaders_message.payload.locator_hashes[0];
+    let stop_hash_provided = getheaders_message.payload.stop_hash != [0u8; 32];
     let mut headers_to_send: Vec<BlockHeader> = Vec::new();
     for header in headers.read().unwrap().iter() {
         if header.hash() == first_header_asked {
-            let mut index = 0;
-            while index < 2000 && index < headers.read().unwrap().len() {
-                headers_to_send.push(headers.read().unwrap()[index].clone());
-                index += 1;
+            if !stop_hash_provided {
+                // Si no se provee stop_hash, se envian los 2000 headers siguientes al primero
+                let mut index = 0;
+                while index < 2000 && index < headers.read().unwrap().len() {
+                    headers_to_send.push(headers.read().unwrap()[index].clone());
+                    index += 1;
+                }
+            } else {
+                // Si se provee stop_hash, se envian todos los headers hasta el stop_hash
+                let mut index = 0;
+                while index < headers.read().unwrap().len() {
+                    headers_to_send.push(headers.read().unwrap()[index].clone());
+                    if headers.read().unwrap()[index].hash() == getheaders_message.payload.stop_hash {
+                        break;
+                    }
+                    index += 1;
+                }
             }
         }
     }
-    // Si no hay headers para enviar, se envia un notfound
-    // Si hay headers para enviar, se envia el mensaje headers
-    // serializar mensaje headers y escribirlo al nodo
-    Ok(())
+    let headers_message = HeadersMessage::bytes_build_from_headers(headers_to_send);
+    write_to_node(&tx, headers_message)
 }
 
 /// Recibe un Sender de bytes, el payload del mensaje getdata recibido y un vector de cuentas de la wallet y deserializa el mensaje getdata que llega

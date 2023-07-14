@@ -252,7 +252,7 @@ pub fn handle_messages_from_node(
                     handle_tx_message(&log_sender, &payload, accounts.clone())
                 }),
                 "getheaders" => handle_message(&mut error, || {
-                    handle_getheaders_message(log_sender.clone(), tx.clone(), &payload, headers.clone())
+                    handle_getheaders_message(tx.clone(), &payload, headers.clone())
                 }),
                 _ => {
                     write_in_log(
