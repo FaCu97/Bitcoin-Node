@@ -1,13 +1,10 @@
 use crate::{
-    account::Account,
-    blocks::{block::Block, block_header::BlockHeader},
     custom_errors::NodeCustomErrors,
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{message_header::is_terminated, message_header::HeaderMessage},
-    utxo_tuple::UtxoTuple,
+    node_data_pointers::NodeDataPointers,
 };
 use std::{
-    collections::HashMap,
     io::{self, Read, Write},
     mem,
     net::TcpStream,
@@ -26,12 +23,7 @@ use super::message_handlers::{
 type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;
 type NodeSender = Sender<Vec<u8>>;
 type NodeReceiver = Receiver<Vec<u8>>;
-type NodeBlocksData = (
-    Arc<RwLock<Vec<BlockHeader>>>,
-    Arc<RwLock<HashMap<[u8; 32], Block>>>,
-);
-type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
-type PointerToAccountsPointer = Arc<RwLock<Arc<RwLock<Vec<Account>>>>>;
+
 #[derive(Debug, Clone)]
 /// Struct para controlar todos los nodos conectados al nuestro. Escucha permanentemente
 /// a estos y decide que hacer con los mensajes que llegan y con los que tiene que escribir
@@ -50,11 +42,7 @@ impl NodeMessageHandler {
     /// NodeMessageHandler con sus respectivos campos
     pub fn new(
         log_sender: &LogSender,
-        headers: Arc<RwLock<Vec<BlockHeader>>>,
-        blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-        connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
-        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
-        utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+        node_pointers: NodeDataPointers,
     ) -> Result<Self, NodeCustomErrors> {
         write_in_log(
             &log_sender.info_log_sender,
@@ -62,14 +50,14 @@ impl NodeMessageHandler {
         );
         let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<()>> = vec![];
-        let cant_nodos = get_amount_of_nodes(connected_nodes.clone())?;
+        let cant_nodos = get_amount_of_nodes(node_pointers.connected_nodes.clone())?;
         let mut nodes_sender = vec![];
         // Lista de transacciones recibidas para no recibir las mismas de varios nodos
         let transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>> = Arc::new(RwLock::new(Vec::new()));
         for _ in 0..cant_nodos {
             let (tx, rx) = channel();
             nodes_sender.push(tx.clone());
-            let node = get_last_node(connected_nodes.clone())?;
+            let node = get_last_node(node_pointers.connected_nodes.clone())?;
             println!(
                 "Nodo -{:?}- Escuchando por nuevos bloques...\n",
                 node.peer_addr()
@@ -77,9 +65,8 @@ impl NodeMessageHandler {
             nodes_handle.push(handle_messages_from_node(
                 log_sender,
                 (tx, rx),
-                (headers.clone(), blocks.clone()),
                 transactions_recieved.clone(),
-                (accounts.clone(), utxo_set.clone()),
+                node_pointers.clone(),
                 node,
                 Some(finish.clone()),
             ))
@@ -149,10 +136,7 @@ impl NodeMessageHandler {
     pub fn add_connection(
         &mut self,
         log_sender: &LogSender,
-        headers: Arc<RwLock<Vec<BlockHeader>>>,
-        blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
-        utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+        node_pointers: NodeDataPointers,
         connection: TcpStream,
     ) -> NodeMessageHandlerResult {
         let (tx, rx) = channel();
@@ -167,11 +151,10 @@ impl NodeMessageHandler {
             .push(handle_messages_from_node(
                 log_sender,
                 (tx, rx),
-                (headers, blocks),
                 self.transactions_recieved.clone(),
-                (accounts, utxo_set),
+                node_pointers,
                 connection,
-                None,
+                Some(self.finish.clone()),
             ));
         Ok(())
     }
@@ -184,9 +167,8 @@ impl NodeMessageHandler {
 pub fn handle_messages_from_node(
     log_sender: &LogSender,
     (tx, rx): (NodeSender, NodeReceiver),
-    (headers, blocks): NodeBlocksData,
     transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>>,
-    (accounts, utxo_set): (PointerToAccountsPointer, UtxoSetPointer),
+    node_pointers: NodeDataPointers,
     mut node: TcpStream,
     finish: Option<Arc<RwLock<bool>>>,
 ) -> JoinHandle<()> {
@@ -223,33 +205,31 @@ pub fn handle_messages_from_node(
 
             match command_name {
                 "headers" => handle_message(&mut error, || {
-                    handle_headers_message(&log_sender, tx.clone(), &payload, headers.clone())
+                    handle_headers_message(
+                        &log_sender,
+                        tx.clone(),
+                        &payload,
+                        node_pointers.headers.clone(),
+                    )
                 }),
                 "getdata" => handle_message(&mut error, || {
                     handle_getdata_message(
                         &log_sender,
                         tx.clone(),
                         &payload,
-                        blocks.clone(),
-                        accounts.clone(),
+                        node_pointers.block_chain.clone(),
+                        node_pointers.accounts.clone(),
                     )
                 }),
                 "block" => handle_message(&mut error, || {
-                    handle_block_message(
-                        &log_sender,
-                        &payload,
-                        headers.clone(),
-                        blocks.clone(),
-                        accounts.clone(),
-                        utxo_set.clone(),
-                    )
+                    handle_block_message(&log_sender, &payload, node_pointers.clone())
                 }),
                 "inv" => handle_message(&mut error, || {
                     handle_inv_message(tx.clone(), &payload, transactions_recieved.clone())
                 }),
                 "ping" => handle_message(&mut error, || handle_ping_message(tx.clone(), &payload)),
                 "tx" => handle_message(&mut error, || {
-                    handle_tx_message(&log_sender, &payload, accounts.clone())
+                    handle_tx_message(&log_sender, &payload, node_pointers.accounts.clone())
                 }),
                 _ => {
                     write_in_log(
