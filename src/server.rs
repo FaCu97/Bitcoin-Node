@@ -120,6 +120,7 @@ impl NodeServer {
         let socket_addr = stream
             .peer_addr()
             .map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
+        println!("ENTRO!\n");
         VersionMessage::read_from(log_sender, &mut stream)
             .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
         println!("OKKK");
