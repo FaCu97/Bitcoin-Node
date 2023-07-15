@@ -11,12 +11,11 @@ use crate::{
     messages::{
         block_message::{get_block_message, BlockMessage},
         get_data_message::GetDataMessage,
-        getheaders_message::GetHeadersMessage,
         headers_message::HeadersMessage,
         inventory::Inventory,
         message_header::{get_checksum, HeaderMessage},
         notfound_message::get_notfound_message,
-        payload::get_data_payload::unmarshalling,
+        payload::{get_data_payload::unmarshalling, getheaders_payload::GetHeadersPayload},
     },
     node_data_pointers::NodeDataPointers,
     transactions::transaction::Transaction,
@@ -69,47 +68,36 @@ pub fn handle_headers_message(
     Ok(())
 }
 
+
+
 pub fn handle_getheaders_message(
     tx: NodeSender,
     payload: &[u8],
     headers: Arc<RwLock<Vec<BlockHeader>>>,
 ) -> NodeMessageHandlerResult {
     println!("HANDLEO GETHEADERS!!!\n");
-    let getheaders_message = GetHeadersMessage::read_from(payload)
+    let getheaders_payload = GetHeadersPayload::read_from(payload)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
-    let first_header_asked = getheaders_message.payload.locator_hashes[0];
-    let stop_hash_provided = getheaders_message.payload.stop_hash != [0u8; 32];
-    let mut headers_to_send: Vec<BlockHeader> = Vec::new();
+    // check first header in common (provided in locator hashes)
+    let first_header_asked = getheaders_payload.locator_hashes[0];
+    // check if stop hash is provided
+    let stop_hash_provided = getheaders_payload.stop_hash != [0u8; 32];
     let amount_of_headers = headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?.len();
-    for header in headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?.iter() {
-        if header.hash() == first_header_asked {
-            println!("LO ENCONTRE!!!!\n");
-            println!("HEADER: {:?}\n", header);
-            if !stop_hash_provided {
-                // Si no se provee stop_hash, se envian los 2000 headers siguientes al primero
-                let mut index = 0;
-                while index < 2000 && index < amount_of_headers {
-                    let curr_header = headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index];
-                    headers_to_send.push(curr_header);
-                    index += 1;
-                }
-            } else {
-                // Si se provee stop_hash, se envian todos los headers hasta el stop_hash
-                let mut index = 0;
-                while index < amount_of_headers {
-                    let curr_header = headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index];
-                    headers_to_send.push(curr_header);
-                    if curr_header.hash() == getheaders_message.payload.stop_hash
-                    {
-                        break;
-                    }
-                    index += 1;
-                }
-            }
-        }
+    let mut index_of_first_header_asked: usize = get_index_of_header(first_header_asked, headers.clone())?;
+    index_of_first_header_asked += 1;
+    let mut headers_to_send: Vec<BlockHeader> = Vec::new();
+    if !stop_hash_provided {
+        if index_of_first_header_asked + 2000 >=  amount_of_headers {
+            headers_to_send.copy_from_slice(&headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index_of_first_header_asked..]);
+        } else {
+            headers_to_send.copy_from_slice(&headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index_of_first_header_asked..index_of_first_header_asked + 2000]);
+        }    
+    } else {
+        let index_of_stop_hash: usize = get_index_of_header(getheaders_payload.stop_hash, headers.clone())?;
+        headers_to_send.copy_from_slice(&headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index_of_first_header_asked..index_of_stop_hash]);
     }
-    println!("Voy a escribir {:?} headers!\n", headers_to_send.len());
-    write_to_node(&tx, HeadersMessage::marshalling(headers_to_send))
+    write_to_node(&tx, HeadersMessage::marshalling(headers_to_send))?;
+    Ok(())
 }
 
 /// Recibe un Sender de bytes, el payload del mensaje getdata recibido y un vector de cuentas de la wallet y deserializa el mensaje getdata que llega
@@ -428,4 +416,18 @@ pub fn write_to_node(tx: &NodeSender, message: Vec<u8>) -> NodeMessageHandlerRes
     tx.send(message)
         .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
     Ok(())
+}
+
+/// Recibe el hash de un header a buscar en la cadena de header y los headers
+/// Recorre los headers hasta encontrar el hash buscado y devuelve el indice en el que se enecuntra
+/// Si no fue encontrado se devuelve el idice 0. En caso de un Error se devuelve un error de tipo NodeCustomErrors
+fn get_index_of_header(header_hash: [u8; 32], headers: Arc<RwLock<Vec<BlockHeader>>>) -> Result<usize, NodeCustomErrors> {
+    for (i, header) in headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?.iter().enumerate() {
+        if header.hash() == header_hash {
+            return Ok(i);
+        }
+    }
+    // If the receiving peer does not find a common header hash within the list, 
+    // it will assume the last common block was the genesis block (block zero)
+    return Ok(0);
 }
