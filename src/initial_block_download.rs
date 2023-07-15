@@ -17,15 +17,17 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, RwLock};
 use std::{fmt, thread, vec};
 
+
 // Informacion obtenida de https://blockchair.com/es/bitcoin/testnet/block/000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943
 const GENESIS_BLOCK_HEADER: BlockHeader = BlockHeader {
     version: 1i32,
     previous_block_header_hash: [0u8; 32],
     merkle_root_hash: [59, 163, 237, 253, 122, 123, 18, 178, 122, 199, 44, 62, 103, 118, 143, 97, 127, 200, 27, 195, 136, 138, 81, 50, 58, 159, 184, 170, 75, 30, 94, 74],
-    time: 1296688560u32, // 2 Feb 2011 23:16:00 UTC
-    n_bits: 486604799u32,
-    nonce: 414098458u32,
+    time: 1296688560, // 2011-02-02 20:16:42 GMT -3  
+    n_bits: 486604799,
+    nonce: 414098458,
 };
+
 
 
 const GENESIS_BLOCK_HASH: [u8; 32] = [
@@ -860,7 +862,8 @@ fn read_first_headers_from_disk(
     );
     println!("GENESIS BLOCK: {:?}", headers.read().unwrap()[0]);
     println!("GENESIS BLOCK HASH: {:?}", GENESIS_BLOCK_HEADER.hash());
-    println!("GENESIS BLOCK 1: {:?}", headers.read().unwrap()[1]);
+    println!("BLOCK 1: {:?}", headers.read().unwrap()[1]);
+    println!("BLOCK 1 HASH: {:?}", headers.read().unwrap()[1].hash());
     Ok(())
 }
 
