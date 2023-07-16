@@ -1,3 +1,4 @@
+use crate::custom_errors::NodeCustomErrors;
 use crate::logwriter::log_writer::{write_in_log, LogSender};
 use crate::messages::message_header::{
     read_verack_message, write_sendheaders_message, write_verack_message,
@@ -8,36 +9,10 @@ use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::result::Result;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
-use std::{fmt, thread};
+use std::thread;
 
 use crate::config::Config;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum HandShakeError {
-    ThreadJoinError(String),
-    LockError(String),
-    ReadNodeError(String),
-    WriteNodeError(String),
-    CanNotRead(String),
-}
-
-impl fmt::Display for HandShakeError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            HandShakeError::ThreadJoinError(msg) => write!(f, "ThreadJoinError Error: {}", msg),
-            HandShakeError::LockError(msg) => write!(f, "LockError Error: {}", msg),
-            HandShakeError::ReadNodeError(msg) => {
-                write!(f, "Can not read from socket Error: {}", msg)
-            }
-            HandShakeError::WriteNodeError(msg) => {
-                write!(f, "Can not write in socket Error: {}", msg)
-            }
-            HandShakeError::CanNotRead(msg) => write!(f, "No more elements in list Error: {}", msg),
-        }
-    }
-}
-
-impl Error for HandShakeError {}
 pub struct Handshake;
 
 impl Handshake {
@@ -47,8 +22,8 @@ impl Handshake {
     pub fn handshake(
         config: &Arc<Config>,
         log_sender: &LogSender,
-        active_nodes: &[Ipv4Addr],
-    ) -> Result<Arc<RwLock<Vec<TcpStream>>>, HandShakeError> {
+        active_nodes: Vec<Ipv4Addr>,
+    ) -> Result<Arc<RwLock<Vec<TcpStream>>>, NodeCustomErrors> {
         write_in_log(&log_sender.info_log_sender, "INICIO DE HANDSHAKE");
         let lista_nodos = Arc::new(active_nodes);
         let chunk_size = (lista_nodos.len() as f64 / config.n_threads as f64).ceil() as usize;
@@ -65,7 +40,7 @@ impl Handshake {
         for i in 0..config.n_threads {
             if i >= active_nodes_chunks
                 .read()
-                .map_err(|err| HandShakeError::LockError(err.to_string()))?
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                 .len()
             {
                 // Este caso evita acceder a una posición fuera de rango
@@ -74,7 +49,7 @@ impl Handshake {
             }
             let chunk = active_nodes_chunks
                 .write()
-                .map_err(|err| HandShakeError::LockError(format!("{}", err)))?[i]
+                .map_err(|err| NodeCustomErrors::LockError(format!("{}", err)))?[i]
                 .clone();
             let config = config.clone();
             let log_sender_clone = log_sender.clone();
@@ -87,11 +62,11 @@ impl Handshake {
         for handle in thread_handles {
             handle
                 .join()
-                .map_err(|err| HandShakeError::ThreadJoinError(format!("{:?}", err)))??;
+                .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
         }
         let cantidad_sockets = sockets_lock
             .read()
-            .map_err(|err| HandShakeError::LockError(format!("{:?}", err)))?
+            .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
             .len();
 
         write_in_log(
@@ -114,7 +89,7 @@ fn connect_to_nodes(
     log_sender: &LogSender,
     sockets: Arc<RwLock<Vec<TcpStream>>>,
     nodos: &[Ipv4Addr],
-) -> Result<(), HandShakeError> {
+) -> Result<(), NodeCustomErrors> {
     for nodo in nodos {
         match connect_to_node(config, log_sender, nodo) {
             Ok(stream) => {
@@ -124,7 +99,7 @@ fn connect_to_nodes(
                 );
                 sockets
                     .write()
-                    .map_err(|err| HandShakeError::LockError(format!("{}", err)))?
+                    .map_err(|err| NodeCustomErrors::LockError(format!("{}", err)))?
                     .push(stream);
             }
             Err(err) => {
@@ -137,7 +112,7 @@ fn connect_to_nodes(
 
 /// Realiza la conexión con un nodo.
 /// Envía y recibe los mensajes necesarios para establecer la conexión
-/// De vuelve el socket o un error
+/// Devuelve el socket o un error
 fn connect_to_node(
     config: &Arc<Config>,
     log_sender: &LogSender,

@@ -1,12 +1,12 @@
 use bitcoin::config::Config;
 use bitcoin::custom_errors::NodeCustomErrors;
 use bitcoin::gtk::interfaz_gtk::Gtk;
-use bitcoin::handshake::{HandShakeError, Handshake};
+use bitcoin::handshake::Handshake;
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
 use bitcoin::logwriter::log_writer::{
     set_up_loggers, shutdown_loggers, write_in_log, LogSender, LoggingError,
 };
-use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
+use bitcoin::network::get_active_nodes_from_dns_seed;
 use bitcoin::node::Node;
 use bitcoin::server::NodeServer;
 use bitcoin::terminal_ui;
@@ -17,9 +17,9 @@ use std::{env, fmt};
 #[derive(Debug)]
 pub enum GenericError {
     DownloadError(DownloadError),
-    HandShakeError(HandShakeError),
+    HandShakeError(NodeCustomErrors),
     ConfigError(Box<dyn Error>),
-    ConnectionToDnsError(ConnectionToDnsError),
+    ConnectionToDnsError(NodeCustomErrors),
     LoggingError(LoggingError),
     NodeHandlerError(NodeCustomErrors),
     NodeServerError(NodeCustomErrors),
@@ -74,7 +74,7 @@ fn main() -> Result<(), GenericError> {
     );
     let active_nodes = get_active_nodes_from_dns_seed(&config, &logsender)
         .map_err(GenericError::ConnectionToDnsError)?;
-    let pointer_to_nodes = Handshake::handshake(&config, &logsender, &active_nodes)
+    let pointer_to_nodes = Handshake::handshake(&config, &logsender, active_nodes)
         .map_err(GenericError::HandShakeError)?;
     // Acá iría la descarga de los headers
     let headers_and_blocks = initial_block_download(&config, &logsender, pointer_to_nodes.clone())
