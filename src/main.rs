@@ -1,8 +1,8 @@
+use bitcoin::blockchain_download::{DownloadError, initial_block_download};
 use bitcoin::config::Config;
 use bitcoin::custom_errors::NodeCustomErrors;
 use bitcoin::gtk::interfaz_gtk::Gtk;
 use bitcoin::handshake::{HandShakeError, Handshake};
-use bitcoin::initial_block_download::{initial_block_download, DownloadError};
 use bitcoin::logwriter::log_writer::{
     set_up_loggers, shutdown_loggers, write_in_log, LogSender, LoggingError,
 };
