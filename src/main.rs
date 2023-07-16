@@ -76,7 +76,6 @@ fn main() -> Result<(), GenericError> {
         .map_err(GenericError::ConnectionToDnsError)?;
     let pointer_to_nodes = handshake_with_nodes(&config, &logsender, active_nodes)
         .map_err(GenericError::HandShakeError)?;
-    // Acá iría la descarga de los headers
     let headers_and_blocks = initial_block_download(&config, &logsender, pointer_to_nodes.clone())
         .map_err(|err| {
             write_in_log(
@@ -89,7 +88,6 @@ fn main() -> Result<(), GenericError> {
     let mut node = Node::new(&logsender, pointer_to_nodes, headers, blocks)
         .map_err(GenericError::NodeHandlerError)?;
     let wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
-
     let server = NodeServer::new(&config, &logsender, &mut node)
         .map_err(GenericError::NodeServerError)?;
     terminal_ui(wallet);
@@ -98,7 +96,6 @@ fn main() -> Result<(), GenericError> {
     server
         .shutdown_server()
         .map_err(GenericError::NodeHandlerError)?;
-
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
         .map_err(GenericError::LoggingError)?;
 
