@@ -94,6 +94,10 @@ impl Config {
         let mut number_of_settings_loaded: usize = 0;
         for line in reader.lines() {
             let current_line = line?;
+            // es un comentario, ignorarlo
+            if current_line.starts_with('#') {
+                continue;
+            }
             let setting: Vec<&str> = current_line.split('=').collect();
 
             if setting.len() != 2 {
