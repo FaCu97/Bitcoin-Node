@@ -12,7 +12,6 @@ use std::time::Duration;
 
 use crate::config::Config;
 
-
 /// Realiza el handshake con todos los nodos de la lista recibida por parámetro.
 /// Devuelve un vector de sockets con los nodos con los que se pudo establecer la conexión.
 /// En caso de no poder conectarse a ninguno, devuelve un error.
@@ -24,7 +23,12 @@ pub fn handshake_with_nodes(
     write_in_log(&log_sender.info_log_sender, "INICIO DE HANDSHAKE");
     let sockets = vec![];
     let pointer_to_sockets = Arc::new(RwLock::new(sockets));
-    connect_to_nodes(config, log_sender, pointer_to_sockets.clone(), &active_nodes)?;
+    connect_to_nodes(
+        config,
+        log_sender,
+        pointer_to_sockets.clone(),
+        &active_nodes,
+    )?;
     let amount_of_ips = pointer_to_sockets
         .read()
         .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
@@ -39,7 +43,6 @@ pub fn handshake_with_nodes(
     );
     Ok(pointer_to_sockets)
 }
-
 
 /// Realiza la conexión con todos los nodos de la lista recibida por parámetro.
 /// Guarda el los mismos en la lista de sockets recibida.
@@ -63,7 +66,10 @@ fn connect_to_nodes(
                     .push(stream);
             }
             Err(err) => {
-                write_in_log(&log_sender.error_log_sender,format!("No se pudo conectar al nodo: {:?}. Error {:?}.", node, err).as_str());
+                write_in_log(
+                    &log_sender.error_log_sender,
+                    format!("No se pudo conectar al nodo: {:?}. Error {:?}.", node, err).as_str(),
+                );
             }
         };
     }
@@ -73,7 +79,9 @@ fn connect_to_nodes(
         .map_err(|err| NodeCustomErrors::LockError(format!("{}", err)))?
         .is_empty()
     {
-        return Err(NodeCustomErrors::HandshakeError("No se pudo conectar a ningun nodo".to_string()));
+        return Err(NodeCustomErrors::HandshakeError(
+            "No se pudo conectar a ningun nodo".to_string(),
+        ));
     }
     Ok(())
 }
@@ -87,7 +95,8 @@ fn connect_to_node(
     node_ip: &Ipv4Addr,
 ) -> Result<TcpStream, Box<dyn Error>> {
     let socket_addr = SocketAddr::new((*node_ip).into(), config.net_port);
-    let mut stream: TcpStream = TcpStream::connect_timeout(&socket_addr, Duration::from_secs(config.connect_timeout))?;
+    let mut stream: TcpStream =
+        TcpStream::connect_timeout(&socket_addr, Duration::from_secs(config.connect_timeout))?;
     let local_ip_addr = stream.local_addr()?;
     let version_message = get_version_message(config, socket_addr, local_ip_addr)?;
     version_message.write_to(&mut stream)?;

@@ -1,6 +1,5 @@
 use std::{error::Error, fmt};
 
-
 #[derive(Debug, PartialEq, Eq, Clone)]
 /// Representa los distintos errores genericos que pueden llegar a ocurrir
 /// durante el programa

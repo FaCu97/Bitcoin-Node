@@ -5,7 +5,8 @@ use std::{
 
 use crate::{
     config::Config,
-    logwriter::log_writer::{write_in_log, LogSender}, custom_errors::NodeCustomErrors,
+    custom_errors::NodeCustomErrors,
+    logwriter::log_writer::{write_in_log, LogSender},
 };
 
 /// Devuelve una lista de direcciones Ipv4 obtenidas de la DNS seed y de los nodos ingresados manualmente en el archivo de configuración
@@ -38,12 +39,14 @@ pub fn get_active_nodes_from_dns_seed(
         node_ips.push(custom_node_ip);
     }
     Ok(node_ips)
-    
 }
 
-
 /// Obtiene las direcciones de los nodos a partir de la DNS seed
-fn get_nodes_from_dns_seed(config: &Arc<Config>, log_sender: &LogSender, node_ips: &mut Vec<Ipv4Addr>) -> Result<(), NodeCustomErrors> {
+fn get_nodes_from_dns_seed(
+    config: &Arc<Config>,
+    log_sender: &LogSender,
+    node_ips: &mut Vec<Ipv4Addr>,
+) -> Result<(), NodeCustomErrors> {
     let host = config.dns_seed.clone();
     let port = config.net_port;
     let addrs = (host, port)
