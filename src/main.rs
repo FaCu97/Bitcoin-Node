@@ -1,7 +1,7 @@
 use bitcoin::config::Config;
 use bitcoin::custom_errors::NodeCustomErrors;
 use bitcoin::gtk::interfaz_gtk::Gtk;
-use bitcoin::handshake::Handshake;
+use bitcoin::handshake::handshake_with_nodes;
 use bitcoin::initial_block_download::{initial_block_download, DownloadError};
 use bitcoin::logwriter::log_writer::{
     set_up_loggers, shutdown_loggers, write_in_log, LogSender, LoggingError,
@@ -74,7 +74,7 @@ fn main() -> Result<(), GenericError> {
     );
     let active_nodes = get_active_nodes_from_dns_seed(&config, &logsender)
         .map_err(GenericError::ConnectionToDnsError)?;
-    let pointer_to_nodes = Handshake::handshake(&config, &logsender, active_nodes)
+    let pointer_to_nodes = handshake_with_nodes(&config, &logsender, active_nodes)
         .map_err(GenericError::HandShakeError)?;
     // Acá iría la descarga de los headers
     let headers_and_blocks = initial_block_download(&config, &logsender, pointer_to_nodes.clone())
