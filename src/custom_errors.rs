@@ -13,6 +13,8 @@ pub enum NodeCustomErrors {
     UnmarshallingError(String),
     SocketError(String),
     HandshakeError(String),
+    FirstBlockNotFoundError(String),
+    InvalidHeaderError(String),
     OtherError(String),
 }
 
@@ -46,6 +48,12 @@ impl fmt::Display for NodeCustomErrors {
             }
             NodeCustomErrors::HandshakeError(msg) => {
                 write!(f, "HandShake Error: {}", msg)
+            }
+            NodeCustomErrors::FirstBlockNotFoundError(msg) => {
+                write!(f, "FirstBlockNotFound Error: {}", msg)
+            }
+            NodeCustomErrors::InvalidHeaderError(msg) => {
+                write!(f, "InvalidHeader Error: {}", msg)
             }
         }
     }

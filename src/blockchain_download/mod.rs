@@ -1,3 +1,5 @@
+use crate::custom_errors::NodeCustomErrors;
+
 use self::headers_download::get_initial_headers;
 
 use super::blocks::block::Block;
@@ -14,10 +16,9 @@ use std::error::Error;
 use std::fs::File;
 use std::io::Read;
 use std::net::TcpStream;
-use std::path::Path;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, RwLock};
-use std::{fmt, thread, vec};
+use std::{thread, vec};
 mod headers_download;
 mod blocks_download;
 
@@ -29,44 +30,9 @@ const GENESIS_BLOCK: [u8; 32] = [
     0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43,
 ];
 
-type DownloadResult = Result<(), DownloadError>;
+type DownloadResult = Result<(), NodeCustomErrors>;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum DownloadError {
-    ThreadJoinError(String),
-    LockError(String),
-    ReadNodeError(String),
-    WriteNodeError(String),
-    CanNotRead(String),
-    ThreadChannelError(String),
-    FirstBlockNotFoundError(String),
-    InvalidHeaderError(String),
-}
 
-impl fmt::Display for DownloadError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            DownloadError::ThreadJoinError(msg) => write!(f, "ThreadJoinError Error: {}", msg),
-            DownloadError::LockError(msg) => write!(f, "LockError Error: {}", msg),
-            DownloadError::ReadNodeError(msg) => {
-                write!(f, "Can not read from socket Error: {}", msg)
-            }
-            DownloadError::WriteNodeError(msg) => {
-                write!(f, "Can not write in socket Error: {}", msg)
-            }
-            DownloadError::CanNotRead(msg) => write!(f, "No more elements in list Error: {}", msg),
-            DownloadError::ThreadChannelError(msg) => {
-                write!(f, "Can not send elements to channel Error: {}", msg)
-            }
-            DownloadError::FirstBlockNotFoundError(msg) => {
-                write!(f, "First block to download not found Error: {}", msg)
-            }
-            DownloadError::InvalidHeaderError(msg) => write!(f, "Not valid header Error: {}", msg),
-        }
-    }
-}
-
-impl Error for DownloadError {}
 
 type HeadersBlocksTuple = (
     Arc<RwLock<Vec<BlockHeader>>>,
@@ -104,14 +70,14 @@ fn search_first_header_block_to_download(
 fn validate_headers(
     log_sender: &LogSender,
     headers: Vec<BlockHeader>,
-) -> Result<(), DownloadError> {
+) -> Result<(), NodeCustomErrors> {
     for header in headers {
         if !header.validate() {
             write_in_log(
                 &log_sender.error_log_sender,
                 "Error en validacion de la proof of work de header",
             );
-            return Err(DownloadError::InvalidHeaderError(
+            return Err(NodeCustomErrors::InvalidHeaderError(
                 "partial validation of header is invalid!".to_string(),
             ));
         }
@@ -128,7 +94,7 @@ fn download_headers_from_node(
     mut node: TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     tx: Sender<Vec<BlockHeader>>,
-) -> Result<TcpStream, DownloadError> {
+) -> Result<TcpStream, NodeCustomErrors> {
     write_in_log(
         &log_sender.info_log_sender,
         format!(
@@ -146,7 +112,7 @@ fn download_headers_from_node(
     // store headers in `global` vec `headers_guard`
     headers
         .write()
-        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .extend_from_slice(&headers_read);
     let mut first_headers_had_just_been_sent = false;
     while headers_read.len() == 2000 {
@@ -156,7 +122,7 @@ fn download_headers_from_node(
         validate_headers(log_sender, headers_read.clone())?;
         if headers
             .read()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .len()
             == (config.height_first_block_to_download / 2000) * 2000
         {
@@ -166,30 +132,30 @@ fn download_headers_from_node(
                 headers_read.clone(),
                 &mut first_block_found,
             )
-            .map_err(|err| DownloadError::FirstBlockNotFoundError(err.to_string()))?;
+            .map_err(|err| NodeCustomErrors::FirstBlockNotFoundError(err.to_string()))?;
             write_in_log(
                 &log_sender.info_log_sender,
                 "Encontre primer bloque a descargar! Empieza descarga de bloques\n",
             );
             tx.send(first_block_headers_to_download)
-                .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
+                .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
             first_headers_had_just_been_sent = true;
         }
         if first_block_found && !first_headers_had_just_been_sent {
             tx.send(headers_read.clone())
-                .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
+                .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
         }
         first_headers_had_just_been_sent = false;
         // store headers in `global` vec `headers_guard`
         headers
             .write()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .extend_from_slice(&headers_read);
         println!(
             "{:?} headers descargados",
             headers
                 .read()
-                .map_err(|err| DownloadError::LockError(err.to_string()))?
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                 .len()
         );
     }
@@ -202,26 +168,26 @@ fn request_headers_from_node(
     config: &Arc<Config>,
     mut node: TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
-) -> Result<TcpStream, DownloadError> {
+) -> Result<TcpStream, NodeCustomErrors> {
     // write first getheaders message with genesis block
     let last_hash_header_downloaded: [u8; 32] = if headers
         .read()
-        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .is_empty()
     {
         GENESIS_BLOCK
     } else {
         headers
             .read()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .last()
             .ok_or("No se pudo obtener el último elemento del vector de 2000 headers")
-            .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?
             .hash()
     };
     GetHeadersMessage::build_getheaders_message(config, vec![last_hash_header_downloaded])
         .write_to(&mut node)
-        .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
     Ok(node)
 }
 
@@ -230,11 +196,11 @@ fn request_headers_from_node(
 fn receive_headers_from_node(
     log_sender: &LogSender,
     mut node: TcpStream,
-) -> Result<(TcpStream, Vec<BlockHeader>), DownloadError> {
+) -> Result<(TcpStream, Vec<BlockHeader>), NodeCustomErrors> {
     // read first 2000 headers from headers message answered from node
     let headers: Vec<BlockHeader> = HeadersMessage::read_from(log_sender, &mut node, None)
         .map_err(|_| {
-            DownloadError::ReadNodeError("error al leer primeros 2000 headers".to_string())
+            NodeCustomErrors::ReadNodeError("error al leer primeros 2000 headers".to_string())
         })?;
     Ok((node, headers))
 }
@@ -252,10 +218,10 @@ fn download_headers(
     // get last node from list, if possible
     let mut node = nodes
         .write()
-        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .pop()
         .ok_or("Error no hay mas nodos para descargar los headers!\n")
-        .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
     let headers_clone = headers.clone();
     let tx_clone = tx.clone();
     // first try to dowload headers from node
@@ -269,15 +235,15 @@ fn download_headers(
             )
             .as_str(),
         );
-        if let DownloadError::ThreadChannelError(_) = err {
-            return Err(DownloadError::ThreadChannelError("Error se cerro el channel que comunica la descarga de headers y bloques en paralelo".to_string()));
+        if let NodeCustomErrors::ThreadChannelError(_) = err {
+            return Err(NodeCustomErrors::ThreadChannelError("Error se cerro el channel que comunica la descarga de headers y bloques en paralelo".to_string()));
         }
         node = nodes
             .write()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .pop()
             .ok_or("Error no hay mas nodos para descargar los headers! Todos fallaron \n")
-            .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+            .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
         // try to download headers from that node
         download_result = download_headers_from_node(
             config,
@@ -289,14 +255,14 @@ fn download_headers(
     }
     // get the node which download the headers correctly
     node = download_result.map_err(|_| {
-        DownloadError::ReadNodeError(
+        NodeCustomErrors::ReadNodeError(
             "Descarga fallida con todos los nodos conectados! \n".to_string(),
         )
     })?;
     // return node again to the list of nodes
     nodes
         .write()
-        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .push(node);
     /*
     let last_headers =
@@ -311,7 +277,7 @@ fn download_headers(
             .as_str(),
         );
         tx.send(last_headers)
-            .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
+            .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
     }
     */
     Ok(())
@@ -341,7 +307,7 @@ fn download_blocks(
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     rx: Receiver<Vec<BlockHeader>>,
     tx: Sender<Vec<BlockHeader>>,
-) -> Result<(), DownloadError> {
+) -> Result<(), NodeCustomErrors> {
     // recieves in the channel the vec of headers sent by the function downloading headers
     for received in rx {
         // acá recibo 2000 block headers
@@ -350,7 +316,7 @@ fn download_blocks(
             n_threads = 1;
         }
         if received.is_empty() {
-            return Err(DownloadError::ThreadChannelError(
+            return Err(NodeCustomErrors::ThreadChannelError(
                 "Se recibio una lista con 0 elementos!".to_string(),
             ));
         }
@@ -372,14 +338,14 @@ fn download_blocks(
             let blocks_pointer_clone = Arc::clone(&blocks);
             let node = nodes_pointer_clone
                 .write()
-                .map_err(|err| DownloadError::LockError(err.to_string()))?
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                 .pop()
                 .ok_or("Error no hay mas nodos para descargar los bloques!\n")
-                .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+                .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
 
             if i >= block_headers_chunk_clone
                 .read()
-                .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
+                .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?
                 .len()
             {
                 // Este caso evita acceder a una posición fuera de rango
@@ -389,7 +355,7 @@ fn download_blocks(
 
             let block_headers = block_headers_chunk_clone
                 .write()
-                .map_err(|err| DownloadError::LockError(err.to_string()))?[i]
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[i]
                 .clone();
             let log_sender_clone = log_sender.clone();
             let config_cloned = config.clone();
@@ -407,15 +373,15 @@ fn download_blocks(
         }
         for h in handle_join {
             h.join()
-                .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))??;
+                .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
         }
         let bloques_descargados = blocks
             .read()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .len();
         let cantidad_headers_descargados = headers
             .read()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .len();
         let bloques_a_descargar =
             cantidad_headers_descargados - config.height_first_block_to_download + 1;
@@ -464,7 +430,7 @@ fn download_blocks_single_thread(
             tx.clone(),
         ) {
             Ok(_) => {}
-            Err(DownloadError::WriteNodeError(_)) => return Ok(()),
+            Err(NodeCustomErrors::WriteNodeError(_)) => return Ok(()),
             Err(error) => return Err(error),
         }
         let received_blocks;
@@ -476,7 +442,7 @@ fn download_blocks_single_thread(
             tx.clone(),
         ) {
             Ok(blocks) => blocks,
-            Err(DownloadError::ReadNodeError(_)) => return Ok(()),
+            Err(NodeCustomErrors::ReadNodeError(_)) => return Ok(()),
             Err(error) => return Err(error),
         };
 
@@ -486,7 +452,7 @@ fn download_blocks_single_thread(
     }
     blocks_pointer_clone
         .write()
-        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .extend(current_blocks);
     write_in_log(
         &log_sender.info_log_sender,
@@ -494,7 +460,7 @@ fn download_blocks_single_thread(
             "BLOQUES DESCARGADOS: {:?}",
             blocks_pointer_clone
                 .read()
-                .map_err(|err| DownloadError::LockError(err.to_string()))?
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                 .len()
         )
         .as_str(),
@@ -503,12 +469,12 @@ fn download_blocks_single_thread(
         "{:?} bloques descargados",
         blocks_pointer_clone
             .read()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .len()
     );
     nodes_pointer_clone
         .write()
-        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .push(node);
     Ok(())
 }
@@ -535,11 +501,11 @@ fn request_blocks_from_node(
             write_in_log(&log_sender.error_log_sender,format!("Error: No puedo pedir {:?} cantidad de bloques del nodo: {:?}. Se los voy a pedir a otro nodo", chunk_llamada.len(), node.peer_addr()).as_str());
 
             tx.send(block_headers_thread.to_vec())
-                .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
+                .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
             // falló el envio del mensaje, tengo que intentar con otro nodo
             // si hago return, termino el thread.
             // tengo que enviar todos los bloques que tenía ese thread
-            Err(DownloadError::WriteNodeError(format!("{:?}", err)))
+            Err(NodeCustomErrors::WriteNodeError(format!("{:?}", err)))
         }
     }
 }
@@ -554,7 +520,7 @@ fn receive_requested_blocks_from_node(
     chunk_llamada: &[BlockHeader],
     block_headers_thread: &[BlockHeader],
     tx: Sender<Vec<BlockHeader>>,
-) -> Result<(TcpStream, Vec<Block>), DownloadError> {
+) -> Result<(TcpStream, Vec<Block>), NodeCustomErrors> {
     // Acá tengo que recibir los 16 bloques (o menos) de la llamada
     let mut current_blocks: Vec<Block> = Vec::new();
     for _ in 0..chunk_llamada.len() {
@@ -563,10 +529,10 @@ fn receive_requested_blocks_from_node(
             Err(err) => {
                 write_in_log(&log_sender.error_log_sender,format!("No puedo descargar {:?} de bloques del nodo: {:?}. Se los voy a pedir a otro nodo y descarto este. Error: {err}", chunk_llamada.len(), node.peer_addr()).as_str());
                 tx.send(block_headers_thread.to_vec())
-                    .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
+                    .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
                 // falló la recepción del mensaje, tengo que intentar con otro nodo
                 // termino el nodo con el return
-                return Err(DownloadError::ReadNodeError(format!(
+                return Err(NodeCustomErrors::ReadNodeError(format!(
                     "Error al recibir el mensaje `block`: {:?}",
                     err
                 )));
@@ -576,8 +542,8 @@ fn receive_requested_blocks_from_node(
         if !validation_result.0 {
             write_in_log(&log_sender.error_log_sender,format!("El bloque no pasó la validación. {:?}. Se los voy a pedir a otro nodo y descarto este.", validation_result.1).as_str());
             tx.send(block_headers_thread.to_vec())
-                .map_err(|err| DownloadError::ThreadChannelError(err.to_string()))?;
-            return Err(DownloadError::ReadNodeError(format!(
+                .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+            return Err(NodeCustomErrors::ReadNodeError(format!(
                 "Error al recibir el mensaje `block`: {:?}",
                 validation_result.1
             )));
@@ -595,7 +561,7 @@ pub fn initial_block_download(
     config: &Arc<Config>,
     log_sender: &LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-) -> Result<HeadersBlocksTuple, DownloadError> {
+) -> Result<HeadersBlocksTuple, NodeCustomErrors> {
     write_in_log(
         &log_sender.info_log_sender,
         "EMPIEZA DESCARGA INICIAL DE BLOQUES",
@@ -608,7 +574,7 @@ pub fn initial_block_download(
         pointer_to_headers.clone(),
         nodes.clone(),
     )
-    .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))?;
+    .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))?;
 
     let blocks: HashMap<[u8; 32], Block> = HashMap::new();
     let pointer_to_blocks = Arc::new(RwLock::new(blocks));
@@ -645,16 +611,16 @@ pub fn initial_block_download(
     });
     headers_thread
         .join()
-        .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))??;
+        .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
     blocks_thread
         .join()
-        .map_err(|err| DownloadError::ThreadJoinError(format!("{:?}", err)))??;
+        .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
     let headers = &*pointer_to_headers
         .read()
-        .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?;
+        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?;
     let blocks = &*pointer_to_blocks
         .read()
-        .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?;
+        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?;
     write_in_log(
         &log_sender.info_log_sender,
         format!("TOTAL DE HEADERS DESCARGADOS: {}", headers.len()).as_str(),
@@ -681,14 +647,14 @@ fn download_first_headers(
         "Empiezo descarga de los primeros headers para guardarlos en disco",
     );
     let mut file = File::create(&config.archivo_headers)
-        .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
     // get last node from list, if possible
     let mut node = nodes
         .write()
-        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .pop()
         .ok_or("Error no hay mas nodos para descargar los headers!\n")
-        .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
     let headers_clone = headers.clone();
     // first try to download headers from node
     let mut download_result =
@@ -702,15 +668,15 @@ fn download_first_headers(
             )
             .as_str(),
         );
-        if let DownloadError::ThreadChannelError(_) = err {
-            return Err(DownloadError::ThreadChannelError("Error se cerro el channel que comunica la descarga de headers y bloques en paralelo".to_string()));
+        if let NodeCustomErrors::ThreadChannelError(_) = err {
+            return Err(NodeCustomErrors::ThreadChannelError("Error se cerro el channel que comunica la descarga de headers y bloques en paralelo".to_string()));
         }
         node = nodes
             .write()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .pop()
             .ok_or("Error no hay mas nodos para descargar los headers! Todos fallaron \n")
-            .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+            .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
         // try to download headers from that node
         download_result = download_initial_headers_from_node(
             config,
@@ -722,14 +688,14 @@ fn download_first_headers(
     }
     // get the node which download the headers correctly
     node = download_result.map_err(|_| {
-        DownloadError::ReadNodeError(
+        NodeCustomErrors::ReadNodeError(
             "Descarga fallida con todos los nodos conectados! \n".to_string(),
         )
     })?;
     // return node again to the list of nodes
     nodes
         .write()
-        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .push(node);
 
     Ok(())
@@ -743,7 +709,7 @@ fn download_initial_headers_from_node(
     mut node: TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     file: &mut File,
-) -> Result<TcpStream, DownloadError> {
+) -> Result<TcpStream, NodeCustomErrors> {
     write_in_log(
         &log_sender.info_log_sender,
         format!(
@@ -754,7 +720,7 @@ fn download_initial_headers_from_node(
     );
     while headers
         .read()
-        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .len()
         < config.headers_in_disk
     {
@@ -762,7 +728,7 @@ fn download_initial_headers_from_node(
             "{:?}",
             headers
                 .read()
-                .map_err(|err| DownloadError::LockError(err.to_string()))?
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                 .len()
         );
         node = request_headers_from_node(config, node, headers.clone())?;
@@ -771,7 +737,7 @@ fn download_initial_headers_from_node(
         // store headers in `global` vec `headers_guard`
         headers
             .write()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .extend_from_slice(&headers_read);
     }
 
@@ -779,7 +745,7 @@ fn download_initial_headers_from_node(
         "{:?} headers descargados",
         headers
             .read()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .len()
     );
     Ok(node)
@@ -790,12 +756,12 @@ fn receive_initial_headers_from_node(
     log_sender: &LogSender,
     mut node: TcpStream,
     file: &mut File,
-) -> Result<(TcpStream, Vec<BlockHeader>), DownloadError> {
+) -> Result<(TcpStream, Vec<BlockHeader>), NodeCustomErrors> {
     // read first 2000 headers from headers message answered from node
     let headers: Vec<BlockHeader> =
         HeadersMessage::read_from_node_and_write_to_file(log_sender, &mut node, None, file)
             .map_err(|_| {
-                DownloadError::ReadNodeError("error al leer primeros 2000 headers".to_string())
+                NodeCustomErrors::ReadNodeError("error al leer primeros 2000 headers".to_string())
             })?;
     Ok((node, headers))
 }
@@ -812,9 +778,9 @@ fn read_first_headers_from_disk(
     );
     let mut data: Vec<u8> = Vec::new();
     let mut file = File::open(&config.archivo_headers)
-        .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
     file.read_to_end(&mut data)
-        .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
     let mut cant = 0;
     let mut i = 0;
     while i < data.len() {
@@ -824,7 +790,7 @@ fn read_first_headers_from_disk(
         let unmarshalled_headers = HeadersMessage::unmarshalling(&message_bytes)?;
         headers
             .write()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .extend_from_slice(&unmarshalled_headers);
         println!("{:?} headers leidos", cant);
         i += 162003;
@@ -846,32 +812,32 @@ fn compare_and_ask_for_last_headers(
     log_sender: &LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
-) -> Result<Vec<BlockHeader>, DownloadError> {
+) -> Result<Vec<BlockHeader>, NodeCustomErrors> {
     // voy guardando los nodos que saco aca para despues agregarlos al puntero
     let mut nodes_vec: Vec<TcpStream> = vec![];
     let mut new_headers = vec![];
     // recorro todos los nodos
     while !nodes
         .read()
-        .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
+        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
         .is_empty()
     {
         let mut node = nodes
             .write()
-            .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
+            .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
             .pop()
             .ok_or("Error no hay mas nodos para comparar y descargar ultimos headers!\n")
-            .map_err(|err| DownloadError::CanNotRead(err.to_string()))?;
+            .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
         let last_header = headers
             .read()
-            .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
+            .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
             .last()
             .ok_or("Error no hay headers guardados, no tengo para comparar...\n")
-            .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
+            .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?
             .hash();
         GetHeadersMessage::build_getheaders_message(config, vec![last_header])
             .write_to(&mut node)
-            .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
+            .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
         let headers_read = match HeadersMessage::read_from(log_sender, &mut node, None) {
             Ok(headers) => headers,
             Err(err) => {
@@ -887,7 +853,7 @@ fn compare_and_ask_for_last_headers(
         if !headers_read.is_empty() {
             headers
                 .write()
-                .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
+                .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
                 .extend_from_slice(&headers_read);
             write_in_log(
                 &log_sender.info_log_sender,
@@ -905,7 +871,7 @@ fn compare_and_ask_for_last_headers(
     // devuelvo todos los nodos a su puntero
     nodes
         .write()
-        .map_err(|err| DownloadError::LockError(format!("{:?}", err)))?
+        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
         .extend(nodes_vec);
     Ok(new_headers)
 }

@@ -1,4 +1,4 @@
-use bitcoin::blockchain_download::{DownloadError, initial_block_download};
+use bitcoin::blockchain_download::initial_block_download;
 use bitcoin::config::Config;
 use bitcoin::custom_errors::NodeCustomErrors;
 use bitcoin::gtk::interfaz_gtk::Gtk;
@@ -16,7 +16,7 @@ use std::{env, fmt};
 
 #[derive(Debug)]
 pub enum GenericError {
-    DownloadError(DownloadError),
+    DownloadError(String),
     HandShakeError(NodeCustomErrors),
     ConfigError(Box<dyn Error>),
     ConnectionToDnsError(NodeCustomErrors),
@@ -82,7 +82,7 @@ fn main() -> Result<(), GenericError> {
                 &logsender.error_log_sender,
                 format!("Error al descargar los bloques: {}", err).as_str(),
             );
-            GenericError::DownloadError(err)
+            GenericError::DownloadError(err.to_string())
         })?;
     let (headers, blocks) = headers_and_blocks;
     let mut node = Node::new(&logsender, pointer_to_nodes, headers, blocks)
