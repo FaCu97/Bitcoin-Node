@@ -9,19 +9,18 @@ use std::sync::Arc;
 
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
-const CANTIDAD_ATRIBUTOS: usize = 18;
+const CANTIDAD_ATRIBUTOS: usize = 19;
 
 /// Almacena los campos leidos del archivo de configuración
 #[derive(Debug, Clone)]
 pub struct Config {
     pub number_of_nodes: usize,
     pub dns_seed: String,
-    pub testnet_port: u16,
-    pub testnet_start_string: [u8; 4],
+    pub net_port: u16,
+    pub start_string: [u8; 4],
     pub protocol_version: i32,
     pub user_agent: String,
     pub n_threads: usize,
-    pub dns_port: u16,
     pub connect_timeout: u64,
     pub max_connections_to_server: u8,
     pub error_log_path: String,
@@ -30,6 +29,8 @@ pub struct Config {
     pub blocks_download_per_node: usize,
     pub fecha_inicio_proyecto: String,
     pub formato_fecha_inicio_proyecto: String,
+    pub headers_in_disk: usize,
+    pub height_first_block_to_download: usize,
     pub archivo_headers: String,
     pub logs_folder_path: String,
 }
@@ -67,12 +68,11 @@ impl Config {
         let mut cfg = Self {
             number_of_nodes: 0,
             dns_seed: String::new(),
-            testnet_port: 0,
-            testnet_start_string: [0; 4],
+            net_port: 0,
+            start_string: [0; 4],
             protocol_version: 0,
             user_agent: String::new(),
             n_threads: 0,
-            dns_port: 0,
             connect_timeout: 0,
             max_connections_to_server: 0,
             error_log_path: String::new(),
@@ -81,6 +81,8 @@ impl Config {
             blocks_download_per_node: 0,
             fecha_inicio_proyecto: String::new(),
             formato_fecha_inicio_proyecto: String::new(),
+            headers_in_disk: 0,
+            height_first_block_to_download: 0,
             archivo_headers: String::new(),
             logs_folder_path: String::new(),
         };
@@ -136,12 +138,12 @@ impl Config {
                 self.dns_seed = String::from(value);
                 *number_of_settings_loaded += 1;
             }
-            "TESTNET_PORT" => {
-                self.testnet_port = u16::from_str(value)?;
+            "NET_PORT" => {
+                self.net_port = u16::from_str(value)?;
                 *number_of_settings_loaded += 1;
             }
-            "TESTNET_START_STRING" => {
-                self.testnet_start_string = i32::from_str(value)?.to_be_bytes();
+            "START_STRING" => {
+                self.start_string = i32::from_str(value)?.to_be_bytes();
                 *number_of_settings_loaded += 1;
             }
             "PROTOCOL_VERSION" => {
@@ -154,10 +156,6 @@ impl Config {
             }
             "N_THREADS" => {
                 self.n_threads = usize::from_str(value)?;
-                *number_of_settings_loaded += 1;
-            }
-            "DNS_PORT" => {
-                self.dns_port = u16::from_str(value)?;
                 *number_of_settings_loaded += 1;
             }
             "CONNECT_TIMEOUT" => {
@@ -190,6 +188,14 @@ impl Config {
             }
             "FORMATO_FECHA_INICIO_PROYECTO" => {
                 self.formato_fecha_inicio_proyecto = String::from(value);
+                *number_of_settings_loaded += 1;
+            }
+            "AMOUNT_OF_HEADERS_TO_STORE_IN_DISK" => {
+                self.headers_in_disk = usize::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            }
+            "HEIGHT_FIRST_BLOCK_TO_DOWNLOAD" => {
+                self.height_first_block_to_download = usize::from_str(value)?;
                 *number_of_settings_loaded += 1;
             }
             "ARCHIVO_HEADERS" => {

@@ -1,13 +1,10 @@
 use crate::{
-    account::Account,
-    blocks::{block::Block, block_header::BlockHeader},
     custom_errors::NodeCustomErrors,
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{message_header::is_terminated, message_header::HeaderMessage},
-    utxo_tuple::UtxoTuple,
+    node_data_pointers::NodeDataPointers,
 };
 use std::{
-    collections::HashMap,
     io::{self, Read, Write},
     mem,
     net::TcpStream,
@@ -26,12 +23,7 @@ use super::message_handlers::{
 type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;
 type NodeSender = Sender<Vec<u8>>;
 type NodeReceiver = Receiver<Vec<u8>>;
-type NodeBlocksData = (
-    Arc<RwLock<Vec<BlockHeader>>>,
-    Arc<RwLock<HashMap<[u8; 32], Block>>>,
-);
-type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
-type PointerToAccountsPointer = Arc<RwLock<Arc<RwLock<Vec<Account>>>>>;
+
 #[derive(Debug, Clone)]
 /// Struct para controlar todos los nodos conectados al nuestro. Escucha permanentemente
 /// a estos y decide que hacer con los mensajes que llegan y con los que tiene que escribir
@@ -49,37 +41,32 @@ impl NodeMessageHandler {
     /// NodeCustomErrors y en caso contrario devuelve el nuevo struct
     /// NodeMessageHandler con sus respectivos campos
     pub fn new(
-        log_sender: LogSender,
-        headers: Arc<RwLock<Vec<BlockHeader>>>,
-        blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-        connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
-        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
-        utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+        log_sender: &LogSender,
+        node_pointers: NodeDataPointers,
     ) -> Result<Self, NodeCustomErrors> {
         write_in_log(
-            log_sender.info_log_sender.clone(),
+            &log_sender.info_log_sender,
             "Empiezo a escuchar por nuevos bloques y transaccciones",
         );
         let finish = Arc::new(RwLock::new(false));
         let mut nodes_handle: Vec<JoinHandle<()>> = vec![];
-        let cant_nodos = get_amount_of_nodes(connected_nodes.clone())?;
+        let cant_nodos = get_amount_of_nodes(node_pointers.connected_nodes.clone())?;
         let mut nodes_sender = vec![];
         // Lista de transacciones recibidas para no recibir las mismas de varios nodos
         let transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>> = Arc::new(RwLock::new(Vec::new()));
         for _ in 0..cant_nodos {
             let (tx, rx) = channel();
             nodes_sender.push(tx.clone());
-            let node = get_last_node(connected_nodes.clone())?;
+            let node = get_last_node(node_pointers.connected_nodes.clone())?;
             println!(
                 "Nodo -{:?}- Escuchando por nuevos bloques...\n",
                 node.peer_addr()
             );
             nodes_handle.push(handle_messages_from_node(
-                log_sender.clone(),
+                log_sender,
                 (tx, rx),
-                (headers.clone(), blocks.clone()),
                 transactions_recieved.clone(),
-                (accounts.clone(), utxo_set.clone()),
+                node_pointers.clone(),
                 node,
                 Some(finish.clone()),
             ))
@@ -148,11 +135,8 @@ impl NodeMessageHandler {
     /// Devuelve Ok(()) en caso de salir todo bien o Error especifico en caso contrario
     pub fn add_connection(
         &mut self,
-        log_sender: LogSender,
-        headers: Arc<RwLock<Vec<BlockHeader>>>,
-        blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-        accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
-        utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+        log_sender: &LogSender,
+        node_pointers: NodeDataPointers,
         connection: TcpStream,
     ) -> NodeMessageHandlerResult {
         let (tx, rx) = channel();
@@ -163,15 +147,14 @@ impl NodeMessageHandler {
         );
         self.nodes_handle
             .lock()
-            .unwrap()
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .push(handle_messages_from_node(
                 log_sender,
                 (tx, rx),
-                (headers, blocks),
                 self.transactions_recieved.clone(),
-                (accounts, utxo_set),
+                node_pointers,
                 connection,
-                None,
+                Some(self.finish.clone()),
             ));
         Ok(())
     }
@@ -182,14 +165,14 @@ impl NodeMessageHandler {
 /// El puntero finish define cuando el programa termina y por lo tanto el ciclo de esta funcion. Devuelve el JoinHandle del thread
 /// con lo que devuelve el loop. Ok(()) en caso de salir todo bien o NodeHandlerError en caso de algun error.
 pub fn handle_messages_from_node(
-    log_sender: LogSender,
+    log_sender: &LogSender,
     (tx, rx): (NodeSender, NodeReceiver),
-    (headers, blocks): NodeBlocksData,
     transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>>,
-    (accounts, utxo_set): (PointerToAccountsPointer, UtxoSetPointer),
+    node_pointers: NodeDataPointers,
     mut node: TcpStream,
     finish: Option<Arc<RwLock<bool>>>,
 ) -> JoinHandle<()> {
+    let log_sender = log_sender.clone();
     thread::spawn(move || {
         // si ocurre algun error se guarda en esta variable
         let mut error: Option<NodeCustomErrors> = None;
@@ -223,41 +206,34 @@ pub fn handle_messages_from_node(
             match command_name {
                 "headers" => handle_message(&mut error, || {
                     handle_headers_message(
-                        log_sender.clone(),
+                        &log_sender,
                         tx.clone(),
                         &payload,
-                        headers.clone(),
+                        node_pointers.headers.clone(),
                     )
                 }),
                 "getdata" => handle_message(&mut error, || {
                     handle_getdata_message(
-                        log_sender.clone(),
+                        &log_sender,
                         tx.clone(),
                         &payload,
-                        blocks.clone(),
-                        accounts.clone(),
+                        node_pointers.block_chain.clone(),
+                        node_pointers.accounts.clone(),
                     )
                 }),
                 "block" => handle_message(&mut error, || {
-                    handle_block_message(
-                        log_sender.clone(),
-                        &payload,
-                        headers.clone(),
-                        blocks.clone(),
-                        accounts.clone(),
-                        utxo_set.clone(),
-                    )
+                    handle_block_message(&log_sender, &payload, node_pointers.clone())
                 }),
                 "inv" => handle_message(&mut error, || {
                     handle_inv_message(tx.clone(), &payload, transactions_recieved.clone())
                 }),
                 "ping" => handle_message(&mut error, || handle_ping_message(tx.clone(), &payload)),
                 "tx" => handle_message(&mut error, || {
-                    handle_tx_message(log_sender.clone(), &payload, accounts.clone())
+                    handle_tx_message(&log_sender, &payload, node_pointers.accounts.clone())
                 }),
                 _ => {
                     write_in_log(
-                        log_sender.messege_log_sender.clone(),
+                        &log_sender.messege_log_sender,
                         format!(
                             "IGNORADO -- Recibo: {} -- Nodo: {:?}",
                             header.command_name,
@@ -271,7 +247,7 @@ pub fn handle_messages_from_node(
             if command_name != "inv" {
                 // Se imprimen en el log_message todos los mensajes menos el inv
                 write_in_log(
-                    log_sender.messege_log_sender.clone(),
+                    &log_sender.messege_log_sender,
                     format!(
                         "Recibo correctamente: {} -- Nodo: {:?}",
                         command_name,
@@ -288,8 +264,13 @@ pub fn handle_messages_from_node(
         // si ocurrio un error lo documento en el log sender de errores
         if let Some(err) = error {
             write_in_log(
-                log_sender.error_log_sender,
-                format!("NODO {:?} DESCONECTADO!! {}", node.peer_addr(), err).as_str(),
+                &log_sender.error_log_sender,
+                format!(
+                    "NODO {:?} DESCONECTADO!! OCURRIO UN ERROR: {}",
+                    node.peer_addr(),
+                    err
+                )
+                .as_str(),
             );
         }
     })

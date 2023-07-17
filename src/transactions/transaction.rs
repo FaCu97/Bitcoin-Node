@@ -15,8 +15,7 @@ use crate::{
 use super::{
     outpoint::Outpoint,
     script::{
-        p2pkh_script::{self},
-        pubkey::Pubkey,
+        p2pkh_script::{self, generate_pubkey_script},
         sig_script::SigScript,
     },
     tx_in::TxIn,
@@ -225,11 +224,11 @@ impl Transaction {
     /// igual que alguna de la wallet. Devuelve Ok(()) en caso de no ocurrir ningun error o Error especifico en caso contrario
     pub fn check_if_tx_involves_user_account(
         &self,
-        log_sender: LogSender,
+        log_sender: &LogSender,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     ) -> Result<(), NodeCustomErrors> {
         for tx_out in self.tx_out.clone() {
-            tx_out.involves_user_account(log_sender.clone(), accounts.clone(), self.clone())?;
+            tx_out.involves_user_account(log_sender, accounts.clone(), self.clone())?;
         }
         Ok(())
     }
@@ -264,14 +263,14 @@ impl Transaction {
         // este vector contiene los outputs de nuestra transaccion
         let mut tx_outs: Vec<TxOut> = Vec::new();
         // creacion del pubkey_script donde transferimos los satoshis
-        let target_pk_script: Vec<u8> = Pubkey::generate_pubkey(address_receiver)?;
+        let target_pk_script: Vec<u8> = generate_pubkey_script(address_receiver)?;
         let target_pk_script_bytes: CompactSizeUint =
             CompactSizeUint::new(target_pk_script.len() as u128);
         // creacion del txOut(utxo) referenciado al address que nos enviaron
         let utxo_to_send: TxOut = TxOut::new(value, target_pk_script_bytes, target_pk_script);
         tx_outs.push(utxo_to_send);
         // creacion del pubkey_script donde enviaremos el cambio de nuestra tx
-        let change_pk_script: Vec<u8> = Pubkey::generate_pubkey(change_adress)?;
+        let change_pk_script: Vec<u8> = generate_pubkey_script(change_adress)?;
         let change_pk_script_bytes: CompactSizeUint =
             CompactSizeUint::new(change_pk_script.len() as u128);
         let change_utxo: TxOut =

@@ -2,6 +2,8 @@ use std::error::Error;
 
 use crate::{compact_size_uint::CompactSizeUint, messages::inventory::Inventory};
 
+const INV_SIZE: usize = 36;
+
 /// Representa el mensaje Inv del protocolo bitcoin.
 /// Transmite uno o varios inventories (hashes).
 /// Puede ser la respuesta al mensaje getdata
@@ -47,7 +49,6 @@ fn get_data_payload_bytes(count: &CompactSizeUint, inventories: &Vec<Inventory>)
 
 /// Recibe el payload del mensaje getdata en una cadena de bytes y devuelve un vector de Inventory
 pub fn unmarshalling(payload: &[u8]) -> Result<Vec<Inventory>, Box<dyn Error>> {
-    const INV_SIZE: usize = 36;
     let mut offset: usize = 0;
     let count = CompactSizeUint::unmarshalling(payload, &mut offset)?;
     let mut inventories: Vec<Inventory> = Vec::new();

@@ -1,5 +1,3 @@
-use gtk::STYLE_CLASS_LEFT;
-
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
@@ -7,6 +5,7 @@ use crate::{
     handler::node_message_handler::NodeMessageHandler,
     logwriter::log_writer::LogSender,
     messages::inventory::{inv_mershalling, Inventory},
+    node_data_pointers::NodeDataPointers,
     utxo_tuple::UtxoTuple,
 };
 use std::{
@@ -29,12 +28,13 @@ pub struct Node {
     pub utxo_set: UtxoSetPointer,
     pub accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     pub peers_handler: NodeMessageHandler,
+    pub node_pointers: NodeDataPointers,
 }
 
 impl Node {
     /// Inicializa el nodo. Recibe la blockchain ya descargada.
     pub fn new(
-        log_sender: LogSender,
+        log_sender: &LogSender,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -42,14 +42,16 @@ impl Node {
         let pointer_to_utxo_set: UtxoSetPointer = Arc::new(RwLock::new(HashMap::new()));
         generate_utxo_set(&block_chain, pointer_to_utxo_set.clone())?;
         let pointer_to_accounts_in_node = Arc::new(RwLock::new(Arc::new(RwLock::new(vec![]))));
-        let peers_handler = NodeMessageHandler::new(
-            log_sender,
+
+        let node_pointers = NodeDataPointers::new(
+            connected_nodes.clone(),
             headers.clone(),
             block_chain.clone(),
-            connected_nodes.clone(),
             pointer_to_accounts_in_node.clone(),
             pointer_to_utxo_set.clone(),
-        )?;
+        );
+
+        let peers_handler = NodeMessageHandler::new(log_sender, node_pointers.clone())?;
         Ok(Node {
             connected_nodes,
             headers,
@@ -57,6 +59,7 @@ impl Node {
             utxo_set: pointer_to_utxo_set,
             accounts: pointer_to_accounts_in_node,
             peers_handler,
+            node_pointers,
         })
     }
     /// Validar el bloque recibido
@@ -136,17 +139,11 @@ impl Node {
     /// Se encarga de llamar a la funcion add_connection del peers_handler del nodo
     pub fn add_connection(
         &mut self,
-        log_sender: LogSender,
+        log_sender: &LogSender,
         connection: TcpStream,
     ) -> Result<(), NodeCustomErrors> {
-        self.peers_handler.add_connection(
-            log_sender,
-            self.headers.clone(),
-            self.block_chain.clone(),
-            self.accounts.clone(),
-            self.utxo_set.clone(),
-            connection,
-        )
+        self.peers_handler
+            .add_connection(log_sender, self.node_pointers.clone(), connection)
     }
 }
 

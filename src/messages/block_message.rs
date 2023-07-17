@@ -19,7 +19,7 @@ impl BlockMessage {
     /// Dado un stream que implementa el trait Read (desde donde se puede leer) lee el mensaje block y devuelve
     /// el bloque correspondiente si se pudo leer correctamente o un Error en caso contrario.
     pub fn read_from(
-        log_sender: LogSender,
+        log_sender: &LogSender,
         stream: &mut TcpStream,
     ) -> Result<Block, Box<dyn std::error::Error>> {
         let header = HeaderMessage::read_from(log_sender, stream, "block".to_string(), None)?;

@@ -17,6 +17,7 @@ use crate::{
         notfound_message::get_notfound_message,
         payload::get_data_payload::unmarshalling,
     },
+    node_data_pointers::NodeDataPointers,
     transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
 };
@@ -37,7 +38,7 @@ const START_STRING: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
 /// Deserializa el payload del mensaje headers y en caso de ser validos se fijan si no estan incluidos en la cadena de headers. En caso
 /// de no estarlo, manda por el channel que escribe en el nodo el mensaje getData con el bloque a pedir
 pub fn handle_headers_message(
-    log_sender: LogSender,
+    log_sender: &LogSender,
     tx: NodeSender,
     payload: &[u8],
     headers: Arc<RwLock<Vec<BlockHeader>>>,
@@ -47,7 +48,7 @@ pub fn handle_headers_message(
     for header in new_headers {
         if !header.validate() {
             write_in_log(
-                log_sender.error_log_sender.clone(),
+                &log_sender.error_log_sender,
                 "Error en validacion de la proof of work de nuevo header",
             );
         } else {
@@ -69,7 +70,7 @@ pub fn handle_headers_message(
 /// y por cada Inventory que pide si esta como pending_transaction en alguna de las cuentas de la wallet se le envia el mensaje tx con la transaccion pedida
 /// por el channel para ser escrita. Devuelve Ok(()) en caso exitoso o error de tipo NodeCustomErrors en caso contrarui
 pub fn handle_getdata_message(
-    log_sender: LogSender,
+    log_sender: &LogSender,
     node_sender: NodeSender,
     payload: &[u8],
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -104,7 +105,7 @@ pub fn handle_getdata_message(
                             .send(tx_message)
                             .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
                         write_in_log(
-                            log_sender.clone().info_log_sender,
+                            &log_sender.info_log_sender,
                             format!("transaccion {:?} enviada", tx.hex_hash()).as_str(),
                         );
                     }
@@ -125,7 +126,7 @@ pub fn handle_getdata_message(
                 }
                 None => {
                     write_in_log(
-                        log_sender.error_log_sender.clone(),
+                        &log_sender.error_log_sender,
                         &format!(
                             "No se encontro el bloque en la blockchain: {}",
                             crate::account::bytes_to_hex_string(&inv.hash)
@@ -161,30 +162,35 @@ fn get_tx_message(tx: &Transaction) -> Vec<u8> {
 /// Deserializa el payload del mensaje blocks y en caso de que el bloque es valido y todavia no este incluido, agrega el header a la cadena de headers
 /// y el bloque a la cadena de bloques. Se fija si alguna transaccion del bloque involucra a alguna de las cuentas del programa.
 pub fn handle_block_message(
-    log_sender: LogSender,
+    log_sender: &LogSender,
     payload: &[u8],
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-    accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
-    utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
+    node_pointers: NodeDataPointers,
 ) -> NodeMessageHandlerResult {
     let new_block = BlockMessage::unmarshalling(&payload.to_vec())
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
     if new_block.validate().0 {
         let header_is_not_included_yet =
-            header_is_not_included(new_block.block_header, headers.clone())?;
+            header_is_not_included(new_block.block_header, node_pointers.headers.clone())?;
         if header_is_not_included_yet {
-            include_new_header(log_sender.clone(), new_block.block_header, headers)?;
-            include_new_block(log_sender.clone(), new_block.clone(), blocks)?;
-            new_block.contains_pending_tx(log_sender, accounts.clone())?;
+            include_new_header(
+                log_sender,
+                new_block.block_header,
+                node_pointers.headers.clone(),
+            )?;
+            include_new_block(
+                log_sender,
+                new_block.clone(),
+                node_pointers.block_chain.clone(),
+            )?;
+            new_block.contains_pending_tx(log_sender, node_pointers.accounts.clone())?;
             new_block
-                .give_me_utxos(utxo_set.clone())
+                .give_me_utxos(node_pointers.utxo_set.clone())
                 .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
-            update_accounts_utxo_set(accounts, utxo_set)?;
+            update_accounts_utxo_set(node_pointers.accounts.clone(), node_pointers.utxo_set)?;
         }
     } else {
         write_in_log(
-            log_sender.error_log_sender,
+            &log_sender.error_log_sender,
             "NUEVO BLOQUE ES INVALIDO, NO LO AGREGO!",
         );
     }
@@ -247,7 +253,7 @@ pub fn handle_ping_message(tx: NodeSender, payload: &[u8]) -> NodeMessageHandler
 /// Recibe un LogSender, el Payload del mensaje tx y un puntero a un puntero con las cuentas de la wallet. Se fija si la tx involucra una cuenta de nuestra wallet. Devuelve Ok(())
 /// en caso de que se pueda leer bien el payload y recorrer las tx o error en caso contrario
 pub fn handle_tx_message(
-    log_sender: LogSender,
+    log_sender: &LogSender,
     payload: &[u8],
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
 ) -> NodeMessageHandlerResult {
@@ -275,13 +281,13 @@ fn ask_for_incoming_tx(tx: NodeSender, inventories: Vec<Inventory>) -> NodeMessa
 /// Recibe un bloque a agregar a la cadena y el puntero Arc apuntando a la cadena de bloques y lo agrega.
 /// Devuelve Ok(()) en caso de poder agregarlo correctamente o error del tipo NodeHandlerError en caso de no poder.
 fn include_new_block(
-    log_sender: LogSender,
+    log_sender: &LogSender,
     block: Block,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
 ) -> NodeMessageHandlerResult {
     println!("\nRECIBO NUEVO BLOQUE: {} \n", block.hex_hash());
     write_in_log(
-        log_sender.info_log_sender,
+        &log_sender.info_log_sender,
         format!("NUEVO BLOQUE AGREGADO: -- {} --", block.hex_hash()).as_str(),
     );
     blocks
@@ -294,7 +300,7 @@ fn include_new_block(
 /// Recibe un header a agregar a la cadena de headers y el Arc apuntando a la cadena de headers y lo agrega
 /// Devuelve Ok(()) en caso de poder agregarlo correctamente o error del tipo NodeHandlerError en caso de no poder
 fn include_new_header(
-    log_sender: LogSender,
+    log_sender: &LogSender,
     header: BlockHeader,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
 ) -> NodeMessageHandlerResult {
@@ -303,7 +309,7 @@ fn include_new_header(
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .push(header);
     write_in_log(
-        log_sender.info_log_sender,
+        &log_sender.info_log_sender,
         "Recibo un nuevo header, lo agrego a la cadena de headers!",
     );
     Ok(())

@@ -87,7 +87,7 @@ impl HeaderMessage {
     /// y devuelve un HeaderMessage si se pudo leer correctamente uno desde el stream
     /// o Error si lo leido no corresponde a el header de un mensaje del protocolo de bitcoin
     pub fn read_from(
-        log_sender: LogSender,
+        log_sender: &LogSender,
         mut stream: &mut TcpStream,
         command_name: String,
         finish: Option<Arc<RwLock<bool>>>,
@@ -108,7 +108,7 @@ impl HeaderMessage {
             let payload = read_payload(&mut stream, &header)?;
             if header.command_name.contains("ping") {
                 write_in_log(
-                    log_sender.messege_log_sender.clone(),
+                    &log_sender.messege_log_sender,
                     format!(
                         "Recibo Correctamente: ping -- Nodo: {:?}",
                         stream.peer_addr()?
@@ -118,7 +118,7 @@ impl HeaderMessage {
                 write_pong_message(&mut stream, &payload)?;
             }
             write_in_log(
-                log_sender.messege_log_sender.clone(),
+                &log_sender.messege_log_sender,
                 format!(
                     "IGNORADO -- Recibo: {} -- Nodo: {:?}",
                     header.command_name,
@@ -133,7 +133,7 @@ impl HeaderMessage {
         }
         if !is_terminated(finish) {
             write_in_log(
-                log_sender.messege_log_sender,
+                &log_sender.messege_log_sender,
                 format!(
                     "Recibo Correctamente: {} -- Nodo: {:?}",
                     command_name,
@@ -199,7 +199,7 @@ pub fn write_sendheaders_message(stream: &mut dyn Write) -> Result<(), Box<dyn s
 /// Recibe un stream que implemente el trait Read (algo donde se pueda Leer) y lee el mensaje verack segun
 /// el protocolo de bitcoin, si se lee correctamente devuelve Ok(HeaderMessage) y sino devuelve un error
 pub fn read_verack_message(
-    log_sender: LogSender,
+    log_sender: &LogSender,
     stream: &mut TcpStream,
 ) -> Result<HeaderMessage, Box<dyn std::error::Error>> {
     HeaderMessage::read_from(log_sender, stream, "verack".to_string(), None)

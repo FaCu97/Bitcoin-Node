@@ -29,7 +29,7 @@ impl GetHeadersMessage {
     /// de hashes de bloques y arma el mensaje getheaders para que pida todos los headers a partir del ultimo hash del vector
     /// de hashes y con stop_hash en 0 para que devuelva 2000 o si no puede devolver 2000, todos los que tenga
     pub fn build_getheaders_message(
-        config: Arc<Config>,
+        config: &Arc<Config>,
         locator_hashes: Vec<[u8; 32]>,
     ) -> GetHeadersMessage {
         let hash_count = CompactSizeUint::new(1u128);
@@ -41,7 +41,7 @@ impl GetHeadersMessage {
             stop_hash,
         };
         let header_of_getheaders = HeaderMessage {
-            start_string: config.testnet_start_string,
+            start_string: config.start_string,
             command_name: "getheaders".to_string(),
             payload_size: getheaders_payload.to_le_bytes().len() as u32,
             checksum: get_checksum(&getheaders_payload.to_le_bytes()),
