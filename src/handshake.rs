@@ -74,7 +74,7 @@ fn connect_to_nodes(
             }
         };
     }
-    // si no se pudo conectar a ninugn nodo devuelvo error
+    // si no se pudo conectar a ningun nodo devuelvo error
     if sockets
         .read()
         .map_err(|err| NodeCustomErrors::LockError(format!("{}", err)))?
