@@ -38,7 +38,7 @@ pub fn get_initial_headers(
                 return Err(err)
             }
         }
-    } else if config.persist_headers_in_disk {
+    } else {
         download_and_persist_headers(config, log_sender, headers, nodes)?;
     }
     Ok(())
