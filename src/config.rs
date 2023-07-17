@@ -155,8 +155,8 @@ impl Config {
                 *number_of_settings_loaded += 1;
             }
             "CUSTOM_NODES_IPS" => {
-                if value != "" {
-                    self.custom_nodes_ips = value.split(',').map(String::from).collect();  
+                if !value.is_empty() {
+                    self.custom_nodes_ips = value.split(',').map(String::from).collect();
                 }
                 *number_of_settings_loaded += 1;
             }

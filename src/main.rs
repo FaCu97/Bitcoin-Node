@@ -3,9 +3,7 @@ use bitcoin::config::Config;
 use bitcoin::custom_errors::NodeCustomErrors;
 use bitcoin::gtk::interfaz_gtk::Gtk;
 use bitcoin::handshake::handshake_with_nodes;
-use bitcoin::logwriter::log_writer::{
-    set_up_loggers, shutdown_loggers, write_in_log, LogSender,
-};
+use bitcoin::logwriter::log_writer::{set_up_loggers, shutdown_loggers, write_in_log, LogSender};
 use bitcoin::network::get_active_nodes_from_dns_seed;
 use bitcoin::node::Node;
 use bitcoin::server::NodeServer;

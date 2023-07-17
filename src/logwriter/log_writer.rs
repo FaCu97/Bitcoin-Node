@@ -15,7 +15,6 @@ use crate::{config::Config, custom_errors::NodeCustomErrors};
 const CENTER_DATE_LINE: &str = "-------------------------------------------";
 const FINAL_LOG_LINE: &str = "-----------------------------------------------------------------------------------------------------------------------------";
 
-
 type LogFileSender = Sender<String>;
 type Loggers = (
     LogFileSender,

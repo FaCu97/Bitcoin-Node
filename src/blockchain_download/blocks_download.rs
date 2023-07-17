@@ -1,5 +1,21 @@
-use std::{sync::{Arc, RwLock, mpsc::{Sender, Receiver}}, net::TcpStream, collections::HashMap, thread};
-use crate::{config::Config, logwriter::log_writer::{LogSender, write_in_log}, blocks::{block_header::BlockHeader, block::Block}, custom_errors::NodeCustomErrors, messages::{inventory::Inventory, get_data_message::GetDataMessage, block_message::BlockMessage}};
+use crate::{
+    blocks::{block::Block, block_header::BlockHeader},
+    config::Config,
+    custom_errors::NodeCustomErrors,
+    logwriter::log_writer::{write_in_log, LogSender},
+    messages::{
+        block_message::BlockMessage, get_data_message::GetDataMessage, inventory::Inventory,
+    },
+};
+use std::{
+    collections::HashMap,
+    net::TcpStream,
+    sync::{
+        mpsc::{Receiver, Sender},
+        Arc, RwLock,
+    },
+    thread,
+};
 
 /// # Descarga de bloques
 /// Realiza la descarga de bloques de forma concurrente.

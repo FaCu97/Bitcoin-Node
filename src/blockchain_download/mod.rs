@@ -1,24 +1,24 @@
-use crate::custom_errors::NodeCustomErrors;
 use self::blocks_download::download_blocks;
-use self::headers_download::{get_initial_headers, download_headers};
+use self::headers_download::{download_missing_headers, get_initial_headers};
 use super::blocks::block::Block;
 use super::blocks::block_header::BlockHeader;
 use super::config::Config;
 use super::logwriter::log_writer::{write_in_log, LogSender};
+use crate::custom_errors::NodeCustomErrors;
 use std::collections::HashMap;
 use std::net::TcpStream;
 use std::sync::mpsc::channel;
 use std::sync::{Arc, RwLock};
 use std::{thread, vec};
-mod headers_download;
 mod blocks_download;
+mod headers_download;
 
+// TODO: Completar funcion download_full_blockchain_from_single_node
 
 type HeadersBlocksTuple = (
     Arc<RwLock<Vec<BlockHeader>>>,
     Arc<RwLock<HashMap<[u8; 32], Block>>>,
 );
-
 
 /// Recieves a list of TcpStreams that are the connection with nodes already established and downloads
 /// all the headers from the blockchain and the blocks from a config date. Returns the headers and blocks in
@@ -32,102 +32,127 @@ pub fn initial_block_download(
         &log_sender.info_log_sender,
         "EMPIEZA DESCARGA INICIAL DE BLOQUES",
     );
-    if config.ibd_single_node {
-        // download_full_blockchain_from_single_node(config, log_sender, nodes)
-    }
     let headers = vec![];
     let pointer_to_headers = Arc::new(RwLock::new(headers));
+    let blocks: HashMap<[u8; 32], Block> = HashMap::new();
+    let pointer_to_blocks = Arc::new(RwLock::new(blocks));
     get_initial_headers(
         config,
         log_sender,
         pointer_to_headers.clone(),
         nodes.clone(),
-    )?;        
-    let blocks: HashMap<[u8; 32], Block> = HashMap::new();
-    let pointer_to_blocks = Arc::new(RwLock::new(blocks));
+    )?;
+    let amount_of_nodes = nodes
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
+        .len();
+    if config.ibd_single_node || amount_of_nodes < 2 {
+        download_full_blockchain_from_single_node(
+            config,
+            log_sender,
+            nodes,
+            pointer_to_headers.clone(),
+            pointer_to_blocks.clone(),
+        )?;
+    } else {
+        download_full_blockchain_from_multiple_nodes(
+            config,
+            log_sender,
+            nodes,
+            pointer_to_headers.clone(),
+            pointer_to_blocks.clone(),
+        )?;
+    }
+    let (amount_of_headers, amount_of_blocks) =
+        get_amount_of_headers_and_blocks(pointer_to_headers.clone(), pointer_to_blocks.clone())?;
+    write_in_log(
+        &log_sender.info_log_sender,
+        format!("TOTAL DE HEADERS DESCARGADOS: {}", amount_of_headers).as_str(),
+    );
+    write_in_log(
+        &log_sender.info_log_sender,
+        format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", amount_of_blocks).as_str(),
+    );
+    Ok((pointer_to_headers, pointer_to_blocks))
+}
+
+/// Se encarga de descargar todos los headers y bloques de la blockchain en multiples thread, en un thread descarga los headers
+/// y en el otro a medida que se van descargando los headers va pidiendo los bloques correspondientes.
+/// Devuelve error en caso de falla.
+fn download_full_blockchain_from_multiple_nodes(
+    config: &Arc<Config>,
+    log_sender: &LogSender,
+    nodes: Arc<RwLock<Vec<TcpStream>>>,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+) -> Result<(), NodeCustomErrors> {
     // channel to comunicate headers download thread with blocks download thread
     let (tx, rx) = channel();
+    let mut threads_handle = vec![];
+    let config_cloned = config.clone();
+    let log_sender_cloned = log_sender.clone();
+    let nodes_cloned = nodes.clone();
+    let headers_cloned = headers.clone();
     let tx_cloned = tx.clone();
-    let (pointer_to_headers_clone, pointer_to_nodes_clone) =
-        (Arc::clone(&pointer_to_headers), Arc::clone(&nodes));
-    let log_sender_clone = log_sender.clone();
-    let config_cloned = config.clone();
-    let headers_thread = thread::spawn(move || {
-        download_headers(
+    threads_handle.push(thread::spawn(move || {
+        download_missing_headers(
             &config_cloned,
-            &log_sender_clone,
-            pointer_to_nodes_clone,
-            pointer_to_headers_clone,
-            tx,
+            &log_sender_cloned,
+            nodes_cloned,
+            headers_cloned,
+            Some(tx_cloned),
         )
-    });
-    let pointer_to_headers_clone_for_blocks = Arc::clone(&pointer_to_headers);
-    let pointer_to_blocks_clone = Arc::clone(&pointer_to_blocks);
-    let log_sender_clone = log_sender.clone();
-    let config_cloned = config.clone();
-    let blocks_thread = thread::spawn(move || {
-        download_blocks(
-            &config_cloned,
-            &log_sender_clone,
-            nodes,
-            pointer_to_blocks_clone,
-            pointer_to_headers_clone_for_blocks,
-            rx,
-            tx_cloned,
-        )
-    });
-    headers_thread
-        .join()
-        .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
-    blocks_thread
-        .join()
-        .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
-    let headers = &*pointer_to_headers
-        .read()
-        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?;
-    let blocks = &*pointer_to_blocks
-        .read()
-        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?;
-    write_in_log(
-        &log_sender.info_log_sender,
-        format!("TOTAL DE HEADERS DESCARGADOS: {}", headers.len()).as_str(),
-    );
-    write_in_log(
-        &log_sender.info_log_sender,
-        format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", blocks.len()).as_str(),
-    );
-
-    Ok((pointer_to_headers.clone(), pointer_to_blocks.clone()))
+    }));
+    let config = config.clone();
+    let log_sender = log_sender.clone();
+    threads_handle.push(thread::spawn(move || {
+        download_blocks(&config, &log_sender, nodes, blocks, headers, rx, tx)
+    }));
+    join_threads(threads_handle)?;
+    Ok(())
 }
 
-
-
-
-
-/* 
-fn download_full_blockchain_from_single_node(config: &Arc<Config>, log_sender: &LogSender, nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<HeadersBlocksTuple, NodeCustomErrors> {
-    let headers = vec![];
-    let pointer_to_headers = Arc::new(RwLock::new(headers));
-    download_headers(
-        config,
-        log_sender,
-        nodes,
-        pointer_to_headers,
-        None,
-    )
+/// Se encarga de descargar todos los headers y bloques de la blockchain en un solo thread, primero descarga todos los headers
+/// y luego descarga todos los bloques. Devuelve error en caso de falla.
+fn download_full_blockchain_from_single_node(
+    config: &Arc<Config>,
+    log_sender: &LogSender,
+    nodes: Arc<RwLock<Vec<TcpStream>>>,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    _blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+) -> Result<(), NodeCustomErrors> {
+    download_missing_headers(config, log_sender, nodes, headers, None)?;
     // download blocks
+    Ok(())
 }
-*/
 
+/// Recibe un vector de handles de threads y espera a que terminen todos, si alguno falla devuelve error
+fn join_threads(
+    handles: Vec<thread::JoinHandle<Result<(), NodeCustomErrors>>>,
+) -> Result<(), NodeCustomErrors> {
+    for handle in handles {
+        handle
+            .join()
+            .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
+    }
+    Ok(())
+}
 
-
-
-
-
-
-
-
-
+/// Recibe un puntero a un vector de headers y un puntero a un hashmap de bloques y devuelve la cantidad de headers y bloques que hay en cada uno
+fn get_amount_of_headers_and_blocks(
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+) -> Result<(usize, usize), NodeCustomErrors> {
+    let amount_of_headers = headers
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
+        .len();
+    let amount_of_blocks = blocks
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
+        .len();
+    Ok((amount_of_headers, amount_of_blocks))
+}
 
 /*
 /// Once the headers are downloaded, this function recieves the nodes and headers  downloaded
