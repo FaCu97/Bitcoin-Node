@@ -1,3 +1,5 @@
+use self::headers_download::get_initial_headers;
+
 use super::blocks::block::Block;
 use super::blocks::block_header::BlockHeader;
 use super::config::Config;
@@ -665,32 +667,6 @@ pub fn initial_block_download(
     Ok((pointer_to_headers.clone(), pointer_to_blocks.clone()))
 }
 
-/// Gets the first 2.3 million headers.
-/// It reads them from disk. If the file doesn't exist, it is also downloaded.
-/// Returns error if something fails.
-fn get_initial_headers(
-    config: &Arc<Config>,
-    log_sender: &LogSender,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    nodes: Arc<RwLock<Vec<TcpStream>>>,
-) -> Result<(), Box<dyn Error>> {
-    if Path::new(&config.archivo_headers).exists() {
-        read_first_headers_from_disk(config, log_sender, headers).map_err(|err| {
-            write_in_log(
-                &log_sender.error_log_sender,
-                format!("Error al descargar primeros 2 millones de headers de disco. {err}")
-                    .as_str(),
-            );
-            DownloadError::CanNotRead(format!(
-                "Error al leer primeros 2 millones de headers. {}",
-                err
-            ))
-        })?;
-    } else {
-        download_first_headers(config, log_sender, headers, nodes)?;
-    }
-    Ok(())
-}
 
 /// Downloads the headers, stores them into the headers array and create the file and save them on disk.
 /// If a node fails, the download is continud from another nodes.
