@@ -14,7 +14,6 @@ use chrono::{TimeZone, Utc};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
-use std::io::Read;
 use std::net::TcpStream;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, RwLock};
@@ -25,10 +24,6 @@ mod blocks_download;
 
 
 
-const GENESIS_BLOCK: [u8; 32] = [
-    0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79, 0xba,
-    0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43,
-];
 
 type DownloadResult = Result<(), NodeCustomErrors>;
 
@@ -162,48 +157,7 @@ fn download_headers_from_node(
     Ok(node)
 }
 
-/// Checks the last header available on the local chain and requests the followings from the received node.
-/// Returns error if it fails, otherwise return the node.
-fn request_headers_from_node(
-    config: &Arc<Config>,
-    mut node: TcpStream,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-) -> Result<TcpStream, NodeCustomErrors> {
-    // write first getheaders message with genesis block
-    let last_hash_header_downloaded: [u8; 32] = if headers
-        .read()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .is_empty()
-    {
-        GENESIS_BLOCK
-    } else {
-        headers
-            .read()
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            .last()
-            .ok_or("No se pudo obtener el último elemento del vector de 2000 headers")
-            .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?
-            .hash()
-    };
-    GetHeadersMessage::build_getheaders_message(config, vec![last_hash_header_downloaded])
-        .write_to(&mut node)
-        .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
-    Ok(node)
-}
 
-/// Receives the header_message from the node.
-/// Returns an array of BlockHeader or error if something fails.
-fn receive_headers_from_node(
-    log_sender: &LogSender,
-    mut node: TcpStream,
-) -> Result<(TcpStream, Vec<BlockHeader>), NodeCustomErrors> {
-    // read first 2000 headers from headers message answered from node
-    let headers: Vec<BlockHeader> = HeadersMessage::read_from(log_sender, &mut node, None)
-        .map_err(|_| {
-            NodeCustomErrors::ReadNodeError("error al leer primeros 2000 headers".to_string())
-        })?;
-    Ok((node, headers))
-}
 
 /// Download the headers from a node of the list.
 /// If it fails, the node is discarded and try to download from another node.
@@ -573,9 +527,7 @@ pub fn initial_block_download(
         log_sender,
         pointer_to_headers.clone(),
         nodes.clone(),
-    )
-    .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))?;
-
+    )?;
     let blocks: HashMap<[u8; 32], Block> = HashMap::new();
     let pointer_to_blocks = Arc::new(RwLock::new(blocks));
     // channel to comunicate headers download thread with blocks download thread
@@ -634,174 +586,13 @@ pub fn initial_block_download(
 }
 
 
-/// Downloads the headers, stores them into the headers array and create the file and save them on disk.
-/// If a node fails, the download is continud from another nodes.
-fn download_first_headers(
-    config: &Arc<Config>,
-    log_sender: &LogSender,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    nodes: Arc<RwLock<Vec<TcpStream>>>,
-) -> DownloadResult {
-    write_in_log(
-        &log_sender.info_log_sender,
-        "Empiezo descarga de los primeros headers para guardarlos en disco",
-    );
-    let mut file = File::create(&config.archivo_headers)
-        .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
-    // get last node from list, if possible
-    let mut node = nodes
-        .write()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .pop()
-        .ok_or("Error no hay mas nodos para descargar los headers!\n")
-        .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
-    let headers_clone = headers.clone();
-    // first try to download headers from node
-    let mut download_result =
-        download_initial_headers_from_node(config, log_sender, node, headers, &mut file);
-    while let Err(err) = download_result {
-        write_in_log(
-            &log_sender.error_log_sender,
-            format!(
-                "Fallo la descarga con el nodo, lo descarto y voy a intentar con otro. Error: {}",
-                err
-            )
-            .as_str(),
-        );
-        if let NodeCustomErrors::ThreadChannelError(_) = err {
-            return Err(NodeCustomErrors::ThreadChannelError("Error se cerro el channel que comunica la descarga de headers y bloques en paralelo".to_string()));
-        }
-        node = nodes
-            .write()
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            .pop()
-            .ok_or("Error no hay mas nodos para descargar los headers! Todos fallaron \n")
-            .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
-        // try to download headers from that node
-        download_result = download_initial_headers_from_node(
-            config,
-            log_sender,
-            node,
-            headers_clone.clone(),
-            &mut file,
-        );
-    }
-    // get the node which download the headers correctly
-    node = download_result.map_err(|_| {
-        NodeCustomErrors::ReadNodeError(
-            "Descarga fallida con todos los nodos conectados! \n".to_string(),
-        )
-    })?;
-    // return node again to the list of nodes
-    nodes
-        .write()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .push(node);
 
-    Ok(())
-}
 
-/// Downloads the first headers (specified in configuration file) from the node.
-/// Returns an error if something fails
-fn download_initial_headers_from_node(
-    config: &Arc<Config>,
-    log_sender: &LogSender,
-    mut node: TcpStream,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    file: &mut File,
-) -> Result<TcpStream, NodeCustomErrors> {
-    write_in_log(
-        &log_sender.info_log_sender,
-        format!(
-            "Empiezo descarga de headers con nodo: {:?}\n",
-            node.peer_addr()
-        )
-        .as_str(),
-    );
-    while headers
-        .read()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .len()
-        < config.headers_in_disk
-    {
-        println!(
-            "{:?}",
-            headers
-                .read()
-                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-                .len()
-        );
-        node = request_headers_from_node(config, node, headers.clone())?;
-        let headers_read: Vec<BlockHeader>;
-        (node, headers_read) = receive_initial_headers_from_node(log_sender, node, file)?;
-        // store headers in `global` vec `headers_guard`
-        headers
-            .write()
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            .extend_from_slice(&headers_read);
-    }
 
-    println!(
-        "{:?} headers descargados",
-        headers
-            .read()
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            .len()
-    );
-    Ok(node)
-}
 
-/// Receives from the node and write to a file the headers
-fn receive_initial_headers_from_node(
-    log_sender: &LogSender,
-    mut node: TcpStream,
-    file: &mut File,
-) -> Result<(TcpStream, Vec<BlockHeader>), NodeCustomErrors> {
-    // read first 2000 headers from headers message answered from node
-    let headers: Vec<BlockHeader> =
-        HeadersMessage::read_from_node_and_write_to_file(log_sender, &mut node, None, file)
-            .map_err(|_| {
-                NodeCustomErrors::ReadNodeError("error al leer primeros 2000 headers".to_string())
-            })?;
-    Ok((node, headers))
-}
 
-/// Loads the headers from disk
-fn read_first_headers_from_disk(
-    config: &Arc<Config>,
-    log_sender: &LogSender,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-) -> Result<(), Box<dyn Error>> {
-    write_in_log(
-        &log_sender.info_log_sender,
-        "Empiezo lectura de los primeros headers de disco",
-    );
-    let mut data: Vec<u8> = Vec::new();
-    let mut file = File::open(&config.archivo_headers)
-        .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
-    file.read_to_end(&mut data)
-        .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
-    let mut cant = 0;
-    let mut i = 0;
-    while i < data.len() {
-        cant += 2000;
-        let mut message_bytes = Vec::new();
-        message_bytes.extend_from_slice(&data[i..i + 162003]);
-        let unmarshalled_headers = HeadersMessage::unmarshalling(&message_bytes)?;
-        headers
-            .write()
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            .extend_from_slice(&unmarshalled_headers);
-        println!("{:?} headers leidos", cant);
-        i += 162003;
-    }
-    write_in_log(
-        &log_sender.info_log_sender,
-        "Termino lectura de los primeros headers de disco",
-    );
 
-    Ok(())
-}
+
 
 /*
 /// Once the headers are downloaded, this function recieves the nodes and headers  downloaded
