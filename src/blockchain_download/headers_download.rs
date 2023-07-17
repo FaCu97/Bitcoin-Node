@@ -124,7 +124,7 @@ pub fn download_headers(
     log_sender: &LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
-    tx: Sender<Vec<BlockHeader>>,
+    tx: Option<Sender<Vec<BlockHeader>>>,
 ) -> Result<(), NodeCustomErrors> {
     // get last node from list, if possible
     let mut node = get_node_to_download_headers(nodes.clone())?;
@@ -228,7 +228,7 @@ fn download_missing_headers_from_node(
     log_sender: &LogSender,
     node: &mut TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
-    tx: Sender<Vec<BlockHeader>>,
+    tx: Option<Sender<Vec<BlockHeader>>>,
 ) -> Result<(), NodeCustomErrors> {
     write_in_log(
         &log_sender.info_log_sender,
@@ -238,6 +238,12 @@ fn download_missing_headers_from_node(
         )
         .as_str(),
     );
+    let mut multi_thread_download: bool = false;
+    let sender: Sender<Vec<BlockHeader>>;
+    if let Some(tx) = tx {
+        sender = tx;
+        multi_thread_download = true;
+    };
     let mut first_block_found = false;
     request_headers_from_node(config, node, headers.clone())?;
     let mut headers_read= receive_headers_from_node(log_sender, node)?;
@@ -251,32 +257,35 @@ fn download_missing_headers_from_node(
         request_headers_from_node(config, node, headers.clone())?;
         headers_read = receive_headers_from_node(log_sender, node)?;
         validate_headers(log_sender, &headers_read)?;
-        if headers
-            .read()
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            .len()
-            == (config.height_first_block_to_download / 2000) * 2000
-        {
-            // Si no lo encuentra devuelve un error vacío, creo que esto está mal.
-            let first_block_headers_to_download = search_first_header_block_to_download(
-                config,
-                headers_read.clone(),
-                &mut first_block_found,
-            )
-            .map_err(|err| NodeCustomErrors::FirstBlockNotFoundError(err.to_string()))?;
-            write_in_log(
-                &log_sender.info_log_sender,
-                "Encontre primer bloque a descargar! Empieza descarga de bloques\n",
-            );
-            tx.send(first_block_headers_to_download)
-                .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
-            first_headers_had_just_been_sent = true;
+        if multi_thread_download {
+            if headers
+                .read()
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+                .len()
+                == (config.height_first_block_to_download / 2000) * 2000
+            {
+                // Si no lo encuentra devuelve un error vacío, creo que esto está mal.
+                let first_block_headers_to_download = search_first_header_block_to_download(
+                    config,
+                    headers_read.clone(),
+                    &mut first_block_found,
+                )
+                .map_err(|err| NodeCustomErrors::FirstBlockNotFoundError(err.to_string()))?;
+                write_in_log(
+                    &log_sender.info_log_sender,
+                    "Encontre primer bloque a descargar! Empieza descarga de bloques\n",
+                );
+                sender.send(first_block_headers_to_download)
+                    .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+                first_headers_had_just_been_sent = true;
+            }
+            if first_block_found && !first_headers_had_just_been_sent {
+                sender.send(headers_read.clone())
+                    .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+            }
+            first_headers_had_just_been_sent = false;
         }
-        if first_block_found && !first_headers_had_just_been_sent {
-            tx.send(headers_read.clone())
-                .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
-        }
-        first_headers_had_just_been_sent = false;
+        
         // store headers in `global` vec `headers_guard`
         headers
             .write()

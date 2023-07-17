@@ -32,14 +32,19 @@ pub fn initial_block_download(
         &log_sender.info_log_sender,
         "EMPIEZA DESCARGA INICIAL DE BLOQUES",
     );
+    if config.ibd_single_node {
+        // download_full_blockchain_from_single_node(config, log_sender, nodes)
+    }
     let headers = vec![];
     let pointer_to_headers = Arc::new(RwLock::new(headers));
-    get_initial_headers(
-        config,
-        log_sender,
-        pointer_to_headers.clone(),
-        nodes.clone(),
-    )?;
+    if config.read_or_persist_headers_from_disk{
+        get_initial_headers(
+            config,
+            log_sender,
+            pointer_to_headers.clone(),
+            nodes.clone(),
+        )?;    
+    }
     let blocks: HashMap<[u8; 32], Block> = HashMap::new();
     let pointer_to_blocks = Arc::new(RwLock::new(blocks));
     // channel to comunicate headers download thread with blocks download thread
@@ -55,7 +60,7 @@ pub fn initial_block_download(
             &log_sender_clone,
             pointer_to_nodes_clone,
             pointer_to_headers_clone,
-            tx,
+            Some(tx),
         )
     });
     let pointer_to_headers_clone_for_blocks = Arc::clone(&pointer_to_headers);
@@ -101,8 +106,20 @@ pub fn initial_block_download(
 
 
 
-
-
+/* 
+fn download_full_blockchain_from_single_node(config: &Arc<Config>, log_sender: &LogSender, nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<HeadersBlocksTuple, NodeCustomErrors> {
+    let headers = vec![];
+    let pointer_to_headers = Arc::new(RwLock::new(headers));
+    download_headers(
+        config,
+        log_sender,
+        nodes,
+        pointer_to_headers,
+        None,
+    )
+    // download blocks
+}
+*/
 
 
 

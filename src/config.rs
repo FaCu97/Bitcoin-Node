@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
-const CANTIDAD_ATRIBUTOS: usize = 22;
+const CANTIDAD_ATRIBUTOS: usize = 23;
 
 /// Almacena los campos leidos del archivo de configuración
 #[derive(Debug, Clone)]
@@ -32,7 +32,8 @@ pub struct Config {
     pub fecha_inicio_proyecto: String,
     pub formato_fecha_inicio_proyecto: String,
     pub headers_in_disk: usize,
-    pub ibd_single_thread: bool,
+    pub read_or_persist_headers_from_disk: bool,
+    pub ibd_single_node: bool,
     pub height_first_block_to_download: usize,
     pub archivo_headers: String,
     pub logs_folder_path: String,
@@ -87,7 +88,8 @@ impl Config {
             fecha_inicio_proyecto: String::new(),
             formato_fecha_inicio_proyecto: String::new(),
             headers_in_disk: 0,
-            ibd_single_thread: false,
+            read_or_persist_headers_from_disk: false,
+            ibd_single_node: false,
             height_first_block_to_download: 0,
             archivo_headers: String::new(),
             logs_folder_path: String::new(),
@@ -214,8 +216,12 @@ impl Config {
                 self.headers_in_disk = usize::from_str(value)?;
                 *number_of_settings_loaded += 1;
             }
-            "DOWNLOAD_BLOCKCHAIN_FROM_SINGLE_THREAD" => {
-                self.ibd_single_thread = bool::from_str(value)?;
+            "READ_OR_PERSIST_HEADERS_FROM_DISK" => {
+                self.read_or_persist_headers_from_disk = bool::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            }
+            "DOWNLOAD_FULL_BLOCKCHAIN_FROM_SINGLE_NODE" => {
+                self.ibd_single_node = bool::from_str(value)?;
                 *number_of_settings_loaded += 1;
             }
             "HEIGHT_FIRST_BLOCK_TO_DOWNLOAD" => {
