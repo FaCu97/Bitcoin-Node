@@ -4,7 +4,7 @@ use bitcoin::custom_errors::NodeCustomErrors;
 use bitcoin::gtk::interfaz_gtk::Gtk;
 use bitcoin::handshake::handshake_with_nodes;
 use bitcoin::logwriter::log_writer::{
-    set_up_loggers, shutdown_loggers, write_in_log, LogSender, LoggingError,
+    set_up_loggers, shutdown_loggers, write_in_log, LogSender,
 };
 use bitcoin::network::get_active_nodes_from_dns_seed;
 use bitcoin::node::Node;
@@ -20,7 +20,7 @@ pub enum GenericError {
     HandShakeError(NodeCustomErrors),
     ConfigError(Box<dyn Error>),
     ConnectionToDnsError(NodeCustomErrors),
-    LoggingError(LoggingError),
+    LoggingError(NodeCustomErrors),
     NodeHandlerError(NodeCustomErrors),
     NodeServerError(NodeCustomErrors),
 }
