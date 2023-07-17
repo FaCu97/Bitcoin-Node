@@ -9,13 +9,15 @@ use std::sync::Arc;
 
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
-const CANTIDAD_ATRIBUTOS: usize = 19;
+const CANTIDAD_ATRIBUTOS: usize = 21;
 
 /// Almacena los campos leidos del archivo de configuración
 #[derive(Debug, Clone)]
 pub struct Config {
     pub number_of_nodes: usize,
     pub dns_seed: String,
+    pub connect_to_dns_nodes: bool,
+    pub custom_nodes_ips: Vec<String>,
     pub net_port: u16,
     pub start_string: [u8; 4],
     pub protocol_version: i32,
@@ -68,6 +70,8 @@ impl Config {
         let mut cfg = Self {
             number_of_nodes: 0,
             dns_seed: String::new(),
+            connect_to_dns_nodes: true,
+            custom_nodes_ips: Vec::new(),
             net_port: 0,
             start_string: [0; 4],
             protocol_version: 0,
@@ -90,6 +94,10 @@ impl Config {
         let mut number_of_settings_loaded: usize = 0;
         for line in reader.lines() {
             let current_line = line?;
+            // es un comentario, ignorarlo
+            if current_line.starts_with('#') {
+                continue;
+            }
             let setting: Vec<&str> = current_line.split('=').collect();
 
             if setting.len() != 2 {
@@ -136,6 +144,16 @@ impl Config {
             }
             "DNS_SEED" => {
                 self.dns_seed = String::from(value);
+                *number_of_settings_loaded += 1;
+            }
+            "CONNECT_TO_DNS_NODES" => {
+                self.connect_to_dns_nodes = bool::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            }
+            "CUSTOM_NODES_IPS" => {
+                if value != "" {
+                    self.custom_nodes_ips = value.split(',').map(String::from).collect();  
+                }
                 *number_of_settings_loaded += 1;
             }
             "NET_PORT" => {

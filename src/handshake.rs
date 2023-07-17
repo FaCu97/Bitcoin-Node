@@ -1,3 +1,4 @@
+use crate::custom_errors::NodeCustomErrors;
 use crate::logwriter::log_writer::{write_in_log, LogSender};
 use crate::messages::message_header::{
     read_verack_message, write_sendheaders_message, write_verack_message,
@@ -8,102 +9,40 @@ use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::result::Result;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
-use std::{fmt, thread};
 
 use crate::config::Config;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum HandShakeError {
-    ThreadJoinError(String),
-    LockError(String),
-    ReadNodeError(String),
-    WriteNodeError(String),
-    CanNotRead(String),
-}
-
-impl fmt::Display for HandShakeError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            HandShakeError::ThreadJoinError(msg) => write!(f, "ThreadJoinError Error: {}", msg),
-            HandShakeError::LockError(msg) => write!(f, "LockError Error: {}", msg),
-            HandShakeError::ReadNodeError(msg) => {
-                write!(f, "Can not read from socket Error: {}", msg)
-            }
-            HandShakeError::WriteNodeError(msg) => {
-                write!(f, "Can not write in socket Error: {}", msg)
-            }
-            HandShakeError::CanNotRead(msg) => write!(f, "No more elements in list Error: {}", msg),
-        }
-    }
-}
-
-impl Error for HandShakeError {}
-pub struct Handshake;
-
-impl Handshake {
-    /// Realiza la conexión a los nodos con múltiples threads
-    /// Recibe las direcciones IP de los nodos.
-    /// Devuelve un vector de sockets o un error si no se pudo completar.
-    pub fn handshake(
-        config: &Arc<Config>,
-        log_sender: &LogSender,
-        active_nodes: &[Ipv4Addr],
-    ) -> Result<Arc<RwLock<Vec<TcpStream>>>, HandShakeError> {
-        write_in_log(&log_sender.info_log_sender, "INICIO DE HANDSHAKE");
-        let lista_nodos = Arc::new(active_nodes);
-        let chunk_size = (lista_nodos.len() as f64 / config.n_threads as f64).ceil() as usize;
-        let active_nodes_chunks = Arc::new(RwLock::new(
-            lista_nodos
-                .chunks(chunk_size)
-                .map(|chunk| chunk.to_vec())
-                .collect::<Vec<_>>(),
-        ));
-        let sockets = vec![];
-        let sockets_lock = Arc::new(RwLock::new(sockets));
-        let mut thread_handles = vec![];
-
-        for i in 0..config.n_threads {
-            if i >= active_nodes_chunks
-                .read()
-                .map_err(|err| HandShakeError::LockError(err.to_string()))?
-                .len()
-            {
-                // Este caso evita acceder a una posición fuera de rango
-                // Significa que no hay más chunks con bloques para descargar
-                break;
-            }
-            let chunk = active_nodes_chunks
-                .write()
-                .map_err(|err| HandShakeError::LockError(format!("{}", err)))?[i]
-                .clone();
-            let config = config.clone();
-            let log_sender_clone = log_sender.clone();
-            let sockets: Arc<RwLock<Vec<TcpStream>>> = Arc::clone(&sockets_lock);
-            thread_handles.push(thread::spawn(move || {
-                connect_to_nodes(&config, &log_sender_clone, sockets, &chunk)
-            }));
-        }
-
-        for handle in thread_handles {
-            handle
-                .join()
-                .map_err(|err| HandShakeError::ThreadJoinError(format!("{:?}", err)))??;
-        }
-        let cantidad_sockets = sockets_lock
-            .read()
-            .map_err(|err| HandShakeError::LockError(format!("{:?}", err)))?
-            .len();
-
-        write_in_log(
-            &log_sender.info_log_sender,
-            format!("{:?} nodos conectados", cantidad_sockets).as_str(),
-        );
-        write_in_log(
-            &log_sender.info_log_sender,
-            "Se completo correctamente el handshake\n",
-        );
-        Ok(sockets_lock)
-    }
+/// Realiza el handshake con todos los nodos de la lista recibida por parámetro.
+/// Devuelve un vector de sockets con los nodos con los que se pudo establecer la conexión.
+/// En caso de no poder conectarse a ninguno, devuelve un error.
+pub fn handshake_with_nodes(
+    config: &Arc<Config>,
+    log_sender: &LogSender,
+    active_nodes: Vec<Ipv4Addr>,
+) -> Result<Arc<RwLock<Vec<TcpStream>>>, NodeCustomErrors> {
+    write_in_log(&log_sender.info_log_sender, "INICIO DE HANDSHAKE");
+    print!("Realizando hadshake con nodos...{:?}\n", active_nodes);
+    let sockets = vec![];
+    let pointer_to_sockets = Arc::new(RwLock::new(sockets));
+    connect_to_nodes(
+        config,
+        log_sender,
+        pointer_to_sockets.clone(),
+        &active_nodes,
+    )?;
+    let amount_of_ips = pointer_to_sockets
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
+        .len();
+    write_in_log(
+        &log_sender.info_log_sender,
+        format!("{:?} nodos conectados", amount_of_ips).as_str(),
+    );
+    write_in_log(
+        &log_sender.info_log_sender,
+        "Se completo correctamente el handshake\n",
+    );
+    Ok(pointer_to_sockets)
 }
 
 /// Realiza la conexión con todos los nodos de la lista recibida por parámetro.
@@ -113,31 +52,44 @@ fn connect_to_nodes(
     config: &Arc<Config>,
     log_sender: &LogSender,
     sockets: Arc<RwLock<Vec<TcpStream>>>,
-    nodos: &[Ipv4Addr],
-) -> Result<(), HandShakeError> {
-    for nodo in nodos {
-        match connect_to_node(config, log_sender, nodo) {
+    nodes: &[Ipv4Addr],
+) -> Result<(), NodeCustomErrors> {
+    for node in nodes {
+        match connect_to_node(config, log_sender, node) {
             Ok(stream) => {
                 write_in_log(
                     &log_sender.info_log_sender,
-                    format!("Conectado correctamente a: {:?}", nodo).as_str(),
+                    format!("Conectado correctamente a: {:?}", node).as_str(),
                 );
                 sockets
                     .write()
-                    .map_err(|err| HandShakeError::LockError(format!("{}", err)))?
+                    .map_err(|err| NodeCustomErrors::LockError(format!("{}", err)))?
                     .push(stream);
             }
             Err(err) => {
-                write_in_log(&log_sender.error_log_sender,format!("No se pudo conectar al nodo: {:?}, voy a intenar conectarme a otro. Error {:?}.", nodo, err).as_str());
+                write_in_log(
+                    &log_sender.error_log_sender,
+                    format!("No se pudo conectar al nodo: {:?}. Error {:?}.", node, err).as_str(),
+                );
             }
         };
+    }
+    // si no se pudo conectar a ninugn nodo devuelvo error
+    if sockets
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(format!("{}", err)))?
+        .is_empty()
+    {
+        return Err(NodeCustomErrors::HandshakeError(
+            "No se pudo conectar a ningun nodo".to_string(),
+        ));
     }
     Ok(())
 }
 
 /// Realiza la conexión con un nodo.
 /// Envía y recibe los mensajes necesarios para establecer la conexión
-/// De vuelve el socket o un error
+/// Devuelve el socket o un error
 fn connect_to_node(
     config: &Arc<Config>,
     log_sender: &LogSender,
