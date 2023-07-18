@@ -21,7 +21,7 @@ pub fn handshake_with_nodes(
     active_nodes: Vec<Ipv4Addr>,
 ) -> Result<Arc<RwLock<Vec<TcpStream>>>, NodeCustomErrors> {
     write_in_log(&log_sender.info_log_sender, "INICIO DE HANDSHAKE");
-    print!("Realizando hadshake con nodos...{:?}\n", active_nodes);
+    println!("Realizando hadshake con nodos...{:?}\n", active_nodes);
     let sockets = vec![];
     let pointer_to_sockets = Arc::new(RwLock::new(sockets));
     connect_to_nodes(
@@ -74,7 +74,7 @@ fn connect_to_nodes(
             }
         };
     }
-    // si no se pudo conectar a ninugn nodo devuelvo error
+    // si no se pudo conectar a ningun nodo devuelvo error
     if sockets
         .read()
         .map_err(|err| NodeCustomErrors::LockError(format!("{}", err)))?

@@ -2,6 +2,7 @@ use wallet::Wallet;
 
 pub mod account;
 pub mod address_decoder;
+pub mod blockchain_download;
 pub mod blocks;
 pub mod compact_size_uint;
 pub mod config;
@@ -9,7 +10,6 @@ pub mod custom_errors;
 pub mod gtk;
 pub mod handler;
 pub mod handshake;
-pub mod initial_block_download;
 pub mod logwriter;
 pub mod messages;
 pub mod network;

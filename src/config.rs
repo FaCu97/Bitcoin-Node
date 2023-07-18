@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
-const CANTIDAD_ATRIBUTOS: usize = 21;
+const CANTIDAD_ATRIBUTOS: usize = 23;
 
 /// Almacena los campos leidos del archivo de configuración
 #[derive(Debug, Clone)]
@@ -32,6 +32,8 @@ pub struct Config {
     pub fecha_inicio_proyecto: String,
     pub formato_fecha_inicio_proyecto: String,
     pub headers_in_disk: usize,
+    pub read_headers_from_disk: bool,
+    pub ibd_single_node: bool,
     pub height_first_block_to_download: usize,
     pub archivo_headers: String,
     pub logs_folder_path: String,
@@ -86,6 +88,8 @@ impl Config {
             fecha_inicio_proyecto: String::new(),
             formato_fecha_inicio_proyecto: String::new(),
             headers_in_disk: 0,
+            read_headers_from_disk: false,
+            ibd_single_node: false,
             height_first_block_to_download: 0,
             archivo_headers: String::new(),
             logs_folder_path: String::new(),
@@ -151,8 +155,8 @@ impl Config {
                 *number_of_settings_loaded += 1;
             }
             "CUSTOM_NODES_IPS" => {
-                if value != "" {
-                    self.custom_nodes_ips = value.split(',').map(String::from).collect();  
+                if !value.is_empty() {
+                    self.custom_nodes_ips = value.split(',').map(String::from).collect();
                 }
                 *number_of_settings_loaded += 1;
             }
@@ -210,6 +214,14 @@ impl Config {
             }
             "AMOUNT_OF_HEADERS_TO_STORE_IN_DISK" => {
                 self.headers_in_disk = usize::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            }
+            "READ_HEADERS_FROM_DISK" => {
+                self.read_headers_from_disk = bool::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            }
+            "DOWNLOAD_FULL_BLOCKCHAIN_FROM_SINGLE_NODE" => {
+                self.ibd_single_node = bool::from_str(value)?;
                 *number_of_settings_loaded += 1;
             }
             "HEIGHT_FIRST_BLOCK_TO_DOWNLOAD" => {
