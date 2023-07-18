@@ -79,8 +79,7 @@ pub fn download_blocks(
         join_threads(join_handles)?;
         let (amount_of_headers, amount_of_blocks) =
             get_amount_of_headers_and_blocks(headers.clone(), blocks.clone())?;
-        let total_blocks_to_download =
-            amount_of_headers - config.height_first_block_to_download + 1;
+        let total_blocks_to_download = amount_of_headers - config.height_first_block_to_download;
         if amount_of_blocks == total_blocks_to_download {
             write_in_log(&log_sender.info_log_sender, format!("Se terminaron de descargar todos los bloques correctamente! BLOQUES DESCARGADOS: {}\n", amount_of_blocks).as_str());
             return Ok(());

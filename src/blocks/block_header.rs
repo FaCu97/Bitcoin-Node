@@ -97,6 +97,25 @@ impl BlockHeader {
         *hash_block.as_byte_array()
     }
 
+    /// Devuelve un string que representa el hash del bloque en hexadecimal,
+    /// En el formato que se usan los exploradores web como
+    /// https://blockstream.info/testnet/ para mostrar bloques
+    pub fn hex_hash(&self) -> String {
+        let hash_as_bytes = self.hash();
+        let inverted_hash: [u8; 32] = {
+            let mut inverted = [0; 32];
+            for (i, byte) in hash_as_bytes.iter().enumerate() {
+                inverted[31 - i] = *byte;
+            }
+            inverted
+        };
+        let hex_hash = inverted_hash
+            .iter()
+            .map(|byte| format!("{:02x}", byte))
+            .collect();
+        hex_hash
+    }
+
     /// Esta funcion realiza la proof of work
     /// Valida el Block Header.
     /// Devuelve true o false según pasa la validación o no.

@@ -16,10 +16,14 @@ use crate::{
     messages::{getheaders_message::GetHeadersMessage, headers_message::HeadersMessage},
 };
 
-use super::utils::{get_node, return_node_to_vec};
+use super::{
+    utils::{get_node, return_node_to_vec},
+    GENESIS_BLOCK_HEADER,
+};
 
 const HEADERS_MESSAGE_SIZE: usize = 162003;
-const GENESIS_BLOCK: [u8; 32] = [
+
+const GENESIS_BLOCK_HASH: [u8; 32] = [
     0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79, 0xba,
     0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43,
 ];
@@ -141,6 +145,7 @@ fn download_and_persist_headers(
 }
 
 /// Descarga los primeros headers (especificados en el archivo de configuracion) desde un nodo de la blockchain y los guarda en disco
+/// El genesis block no lo descarga de la red, ya lo tiene hardcodeado
 /// Devuelve un error en caso de no poder descargar los headers exitosamente.
 fn download_and_persist_initial_headers_from_node(
     config: &Arc<Config>,
@@ -163,24 +168,18 @@ fn download_and_persist_initial_headers_from_node(
         .len()
         < config.headers_in_disk
     {
+        request_headers_from_node(config, node, headers.clone())?;
+        let headers_read = receive_and_persist_initial_headers_from_node(log_sender, node, file)?;
+        store_headers_in_local_headers_vec(log_sender, headers.clone(), &headers_read)?;
         println!(
-            "{:?}",
+            "{:?} headers descargados y guardados en disco",
             headers
                 .read()
                 .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                 .len()
+                - 1
         );
-        request_headers_from_node(config, node, headers.clone())?;
-        let headers_read = receive_and_persist_initial_headers_from_node(log_sender, node, file)?;
-        store_headers_in_local_headers_vec(log_sender, headers.clone(), &headers_read)?;
     }
-    println!(
-        "{:?} headers descargados y guardados en disco",
-        headers
-            .read()
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            .len()
-    );
     Ok(())
 }
 
@@ -332,15 +331,7 @@ fn request_headers_from_node(
     node: &mut TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
 ) -> Result<(), NodeCustomErrors> {
-    let last_hash_header_downloaded: [u8; 32] = if headers
-        .read()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .is_empty()
-    {
-        GENESIS_BLOCK
-    } else {
-        get_last_hash_header_downloaded(headers)?
-    };
+    let last_hash_header_downloaded: [u8; 32] = get_last_hash_header_downloaded(headers)?;
     GetHeadersMessage::build_getheaders_message(config, vec![last_hash_header_downloaded])
         .write_to(node)
         .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
@@ -435,7 +426,12 @@ fn get_last_hash_header_downloaded(
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
     let last_header = binding.last();
     match last_header {
-        Some(header) => Ok(header.hash()),
+        Some(header) => {
+            if *header == GENESIS_BLOCK_HEADER {
+                return Ok(GENESIS_BLOCK_HASH);
+            }
+            Ok(header.hash())
+        }
         None => Err(NodeCustomErrors::BlockchainDownloadError(
             "Error no hay headers descargados!\n".to_string(),
         )),
