@@ -15,6 +15,20 @@ mod blocks_download;
 mod headers_download;
 mod utils;
 
+// Gensis block header hardcoded to start the download (this is the first block of the blockchain)
+// data taken from: https://en.bitcoin.it/wiki/Genesis_block
+const GENESIS_BLOCK_HEADER: BlockHeader = BlockHeader {
+    version: 1,
+    previous_block_header_hash: [0; 32],
+    merkle_root_hash: [
+        59, 163, 237, 253, 122, 123, 18, 178, 122, 199, 44, 62, 103, 118, 143, 97, 127, 200, 27,
+        195, 136, 138, 81, 50, 58, 159, 184, 170, 75, 30, 94, 74,
+    ],
+    time: 1296677802,
+    n_bits: 486604799,
+    nonce: 414098458,
+};
+
 type HeadersBlocksTuple = (
     Arc<RwLock<Vec<BlockHeader>>>,
     Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -32,7 +46,8 @@ pub fn initial_block_download(
         &log_sender.info_log_sender,
         "EMPIEZA DESCARGA INICIAL DE BLOQUES",
     );
-    let headers = vec![];
+    // el vector de headers empieza con el header del bloque genesis
+    let headers = vec![GENESIS_BLOCK_HEADER];
     let pointer_to_headers = Arc::new(RwLock::new(headers));
     let blocks: HashMap<[u8; 32], Block> = HashMap::new();
     let pointer_to_blocks = Arc::new(RwLock::new(blocks));
@@ -122,7 +137,7 @@ fn download_full_blockchain_from_single_node(
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
 ) -> Result<(), NodeCustomErrors> {
     let (tx, rx) = channel();
-    download_missing_headers(config, log_sender, nodes.clone(), headers.clone(), tx)?;
+    download_missing_headers(config, log_sender, nodes.clone(), headers, tx)?;
     let mut node = get_node(nodes.clone())?;
     for blocks_to_download in rx {
         download_blocks_single_node(

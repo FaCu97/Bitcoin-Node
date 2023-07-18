@@ -33,7 +33,7 @@ impl GetHeadersMessage {
         locator_hashes: Vec<[u8; 32]>,
     ) -> GetHeadersMessage {
         let hash_count = CompactSizeUint::new(1u128);
-        let stop_hash = [0u8; 32];
+        let stop_hash = [0; 32];
         let getheaders_payload = GetHeadersPayload {
             version: config.protocol_version as u32,
             hash_count,
