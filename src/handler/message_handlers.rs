@@ -30,6 +30,11 @@ type NodeSender = Sender<Vec<u8>>;
 const START_STRING: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
 const MSG_TX: u32 = 1;
 const MSG_BLOCK: u32 = 2;
+const GENESIS_BLOCK_HASH: [u8; 32] = [
+    0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79, 0xba,
+    0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43,
+];
+
 
 /*
 ***************************************************************************
@@ -423,6 +428,9 @@ pub fn write_to_node(tx: &NodeSender, message: Vec<u8>) -> NodeMessageHandlerRes
 /// Si no fue encontrado se devuelve el idice 0. En caso de un Error se devuelve un error de tipo NodeCustomErrors
 fn get_index_of_header(header_hash: [u8; 32], headers: Arc<RwLock<Vec<BlockHeader>>>) -> Result<usize, NodeCustomErrors> {
     for (i, header) in headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?.iter().enumerate() {
+        if header_hash == GENESIS_BLOCK_HASH {
+            return Ok(0);
+        }
         if header.hash() == header_hash {
             return Ok(i);
         }
