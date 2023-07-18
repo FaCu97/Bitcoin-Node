@@ -1,12 +1,10 @@
+use bitcoin::blockchain_download::initial_block_download;
 use bitcoin::config::Config;
 use bitcoin::custom_errors::NodeCustomErrors;
 use bitcoin::gtk::interfaz_gtk::Gtk;
-use bitcoin::handshake::{HandShakeError, Handshake};
-use bitcoin::initial_block_download::{initial_block_download, DownloadError};
-use bitcoin::logwriter::log_writer::{
-    set_up_loggers, shutdown_loggers, write_in_log, LogSender, LoggingError,
-};
-use bitcoin::network::{get_active_nodes_from_dns_seed, ConnectionToDnsError};
+use bitcoin::handshake::handshake_with_nodes;
+use bitcoin::logwriter::log_writer::{set_up_loggers, shutdown_loggers, write_in_log, LogSender};
+use bitcoin::network::get_active_nodes_from_dns_seed;
 use bitcoin::node::Node;
 use bitcoin::server::NodeServer;
 use bitcoin::terminal_ui;
@@ -16,11 +14,11 @@ use std::{env, fmt};
 
 #[derive(Debug)]
 pub enum GenericError {
-    DownloadError(DownloadError),
-    HandShakeError(HandShakeError),
+    DownloadError(String),
+    HandShakeError(NodeCustomErrors),
     ConfigError(Box<dyn Error>),
-    ConnectionToDnsError(ConnectionToDnsError),
-    LoggingError(LoggingError),
+    ConnectionToDnsError(NodeCustomErrors),
+    LoggingError(NodeCustomErrors),
     NodeHandlerError(NodeCustomErrors),
     NodeServerError(NodeCustomErrors),
 }
@@ -74,22 +72,20 @@ fn main() -> Result<(), GenericError> {
     );
     let active_nodes = get_active_nodes_from_dns_seed(&config, &logsender)
         .map_err(GenericError::ConnectionToDnsError)?;
-    let pointer_to_nodes = Handshake::handshake(&config, &logsender, &active_nodes)
+    let pointer_to_nodes = handshake_with_nodes(&config, &logsender, active_nodes)
         .map_err(GenericError::HandShakeError)?;
-    // Acá iría la descarga de los headers
     let headers_and_blocks = initial_block_download(&config, &logsender, pointer_to_nodes.clone())
         .map_err(|err| {
             write_in_log(
                 &logsender.error_log_sender,
                 format!("Error al descargar los bloques: {}", err).as_str(),
             );
-            GenericError::DownloadError(err)
+            GenericError::DownloadError(err.to_string())
         })?;
     let (headers, blocks) = headers_and_blocks;
     let mut node = Node::new(&logsender, pointer_to_nodes, headers, blocks)
         .map_err(GenericError::NodeHandlerError)?;
     let wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
-
     let server =
         NodeServer::new(&config, &logsender, &mut node).map_err(GenericError::NodeServerError)?;
     terminal_ui(wallet);
@@ -98,7 +94,6 @@ fn main() -> Result<(), GenericError> {
     server
         .shutdown_server()
         .map_err(GenericError::NodeHandlerError)?;
-
     shutdown_loggers(logsender, error_handler, info_handler, message_handler)
         .map_err(GenericError::LoggingError)?;
 
