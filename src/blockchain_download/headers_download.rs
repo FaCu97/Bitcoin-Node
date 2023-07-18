@@ -18,8 +18,7 @@ use crate::{
 
 use super::utils::{get_node, return_node_to_vec};
 
-// TODO: pasar 162003 como constante
-
+const HEADERS_MESSAGE_SIZE: usize = 162003;
 const GENESIS_BLOCK: [u8; 32] = [
     0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79, 0xba,
     0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43,
@@ -80,7 +79,7 @@ fn read_headers_from_disk(
     while i < data.len() {
         amount += 2000;
         let mut message_bytes = Vec::new();
-        message_bytes.extend_from_slice(&data[i..i + 162003]);
+        message_bytes.extend_from_slice(&data[i..i + HEADERS_MESSAGE_SIZE]);
         let unmarshalled_headers = HeadersMessage::unmarshalling(&message_bytes)
             .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
         headers
@@ -88,7 +87,7 @@ fn read_headers_from_disk(
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .extend_from_slice(&unmarshalled_headers);
         println!("{:?} headers leidos", amount);
-        i += 162003;
+        i += HEADERS_MESSAGE_SIZE;
     }
     write_in_log(
         &log_sender.info_log_sender,
@@ -217,7 +216,7 @@ pub fn download_missing_headers(
     log_sender: &LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
-    tx: Option<Sender<Vec<BlockHeader>>>,
+    tx: Sender<Vec<BlockHeader>>,
 ) -> Result<(), NodeCustomErrors> {
     // get last node from list, if possible
     let mut node = get_node(nodes.clone())?;
@@ -272,7 +271,7 @@ fn download_missing_headers_from_node(
     log_sender: &LogSender,
     node: &mut TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
-    tx: Option<Sender<Vec<BlockHeader>>>,
+    tx: Sender<Vec<BlockHeader>>,
 ) -> Result<(), NodeCustomErrors> {
     write_in_log(
         &log_sender.info_log_sender,
@@ -402,18 +401,16 @@ fn download_first_blocks_in_other_thread(
     config: &Arc<Config>,
     log_sender: &LogSender,
     headers_read: Vec<BlockHeader>,
-    tx: Option<Sender<Vec<BlockHeader>>>,
+    tx: Sender<Vec<BlockHeader>>,
     first_block_found: &mut bool,
 ) -> Result<(), NodeCustomErrors> {
     let first_block_headers_to_download =
         search_first_header_block_to_download(config, headers_read, first_block_found)
             .map_err(|err| NodeCustomErrors::FirstBlockNotFoundError(err.to_string()))?;
-    if tx.is_some() {
-        write_in_log(
-            &log_sender.info_log_sender,
-            "Encontre primer bloque a descargar! Empieza descarga de bloques\n",
-        );
-    }
+    write_in_log(
+        &log_sender.info_log_sender,
+        "Encontre primer bloque a descargar! Empieza descarga de bloques\n",
+    );
     download_blocks_in_other_thread(tx, first_block_headers_to_download)?;
     Ok(())
 }
@@ -421,16 +418,11 @@ fn download_first_blocks_in_other_thread(
 /// Envia por el channel los headers recibidos por parametro para que los respectivos bloques sean descargados en otro thread
 /// Devuelve error en caso de que el channel este cerrado
 fn download_blocks_in_other_thread(
-    tx: Option<Sender<Vec<BlockHeader>>>,
+    tx: Sender<Vec<BlockHeader>>,
     headers_read: Vec<BlockHeader>,
 ) -> Result<(), NodeCustomErrors> {
-    match tx {
-        Some(tx) => {
-            tx.send(headers_read)
-                .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
-        }
-        None => return Ok(()),
-    }
+    tx.send(headers_read)
+        .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
     Ok(())
 }
 
@@ -474,7 +466,7 @@ fn validate_headers(
 /// un vector de headers que tienen timestamp mayor o igual al del primer bloque que
 /// se quiere descargar (definido en configuracion). En caso de no poder obtener
 /// el timestamp del primer bloque devuelve un error
-fn search_first_header_block_to_download(
+pub fn search_first_header_block_to_download(
     config: &Arc<Config>,
     headers: Vec<BlockHeader>,
     found: &mut bool,

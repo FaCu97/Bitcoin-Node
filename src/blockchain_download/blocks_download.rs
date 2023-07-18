@@ -148,7 +148,7 @@ fn download_blocks_single_thread(
             &mut node,
             blocks_to_download,
             block_headers.clone(),
-            tx.clone(),
+            Some(tx.clone()),
         ) {
             Ok(_) => {}
             Err(NodeCustomErrors::WriteNodeError(_)) => return Ok(()),
@@ -159,7 +159,7 @@ fn download_blocks_single_thread(
             &mut node,
             blocks_to_download,
             block_headers.clone(),
-            tx.clone(),
+            Some(tx.clone()),
         ) {
             Ok(blocks) => blocks,
             Err(NodeCustomErrors::ReadNodeError(_)) => return Ok(()),
@@ -183,7 +183,7 @@ fn request_blocks_from_node(
     node: &mut TcpStream,
     blocks_chunk_to_download: &[BlockHeader],
     blocks_to_download: Vec<BlockHeader>,
-    tx: Sender<Vec<BlockHeader>>,
+    tx: Option<Sender<Vec<BlockHeader>>>,
 ) -> Result<(), NodeCustomErrors> {
     //  Acá ya separé los 250 en chunks de 16 para las llamadas
     let mut inventory = vec![];
@@ -194,8 +194,7 @@ fn request_blocks_from_node(
         Ok(_) => Ok(()),
         Err(err) => {
             write_in_log(&log_sender.error_log_sender,format!("Error: No puedo pedir {:?} cantidad de bloques del nodo: {:?}. Se los voy a pedir a otro nodo", blocks_chunk_to_download.len(), node.peer_addr()).as_str());
-            tx.send(blocks_to_download)
-                .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+            try_to_download_blocks_from_other_node(tx, blocks_to_download)?;
             // falló el envio del mensaje, tengo que intentar con otro nodo
             // si hago return, termino el thread.
             // tengo que enviar todos los bloques que tenía ese thread
@@ -213,7 +212,7 @@ fn receive_requested_blocks_from_node(
     node: &mut TcpStream,
     blocks_chunk_to_download: &[BlockHeader],
     blocks_to_download: Vec<BlockHeader>,
-    tx: Sender<Vec<BlockHeader>>,
+    tx: Option<Sender<Vec<BlockHeader>>>,
 ) -> Result<Vec<Block>, NodeCustomErrors> {
     // Acá tengo que recibir los 16 bloques (o menos) de la llamada
     let mut current_blocks: Vec<Block> = Vec::new();
@@ -222,8 +221,7 @@ fn receive_requested_blocks_from_node(
             Ok(block) => block,
             Err(err) => {
                 write_in_log(&log_sender.error_log_sender,format!("No puedo descargar {:?} de bloques del nodo: {:?}. Se los voy a pedir a otro nodo y descarto este. Error: {err}", blocks_chunk_to_download.len(), node.peer_addr()).as_str());
-                tx.send(blocks_to_download)
-                    .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+                try_to_download_blocks_from_other_node(tx, blocks_to_download)?;
                 // falló la recepción del mensaje, tengo que intentar con otro nodo
                 // termino el nodo con el return
                 return Err(NodeCustomErrors::ReadNodeError(format!(
@@ -235,8 +233,7 @@ fn receive_requested_blocks_from_node(
         let validation_result = block.validate();
         if !validation_result.0 {
             write_in_log(&log_sender.error_log_sender,format!("El bloque no pasó la validación. {:?}. Se los voy a pedir a otro nodo y descarto este.", validation_result.1).as_str());
-            tx.send(blocks_to_download)
-                .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+            try_to_download_blocks_from_other_node(tx, blocks_to_download)?;
             return Err(NodeCustomErrors::ReadNodeError(format!(
                 "Error al recibir el mensaje `block`: {:?}",
                 validation_result.1
@@ -246,6 +243,48 @@ fn receive_requested_blocks_from_node(
         current_blocks.push(block);
     }
     Ok(current_blocks)
+}
+
+/// Descarga todos los bloques desde un solo nodo
+/// Devuelve error en caso de falla
+pub fn download_blocks_single_node(
+    config: &Arc<Config>,
+    log_sender: &LogSender,
+    block_headers: Vec<BlockHeader>,
+    node: &mut TcpStream,
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+) -> Result<(), NodeCustomErrors> {
+    let mut current_blocks: HashMap<[u8; 32], Block> = HashMap::new();
+    write_in_log(
+        &log_sender.info_log_sender,
+        format!(
+            "Voy a descargar {:?} bloques del nodo {:?}",
+            block_headers.len(),
+            node.peer_addr()
+        )
+        .as_str(),
+    );
+    for blocks_to_download in block_headers.chunks(config.blocks_download_per_node) {
+        request_blocks_from_node(
+            log_sender,
+            node,
+            blocks_to_download,
+            block_headers.clone(),
+            None,
+        )?;
+        let received_blocks = receive_requested_blocks_from_node(
+            log_sender,
+            node,
+            blocks_to_download,
+            block_headers.clone(),
+            None,
+        )?;
+        for block in received_blocks.into_iter() {
+            current_blocks.insert(block.hash(), block);
+        }
+    }
+    add_blocks_downloaded_to_local_blocks(log_sender, blocks, current_blocks)?;
+    Ok(())
 }
 
 /*
@@ -285,7 +324,7 @@ fn amount_of_block(
 
 /// Recibe un puntero a un hashmap de bloques y un hashmap de bloques descargados y los agrega al hashmap de bloques local
 /// en caso de no poder acceder al hashmap de bloques local devuelve error
-fn add_blocks_downloaded_to_local_blocks(
+pub fn add_blocks_downloaded_to_local_blocks(
     log_sender: &LogSender,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     downloaded_blocks: HashMap<[u8; 32], Block>,
@@ -303,5 +342,21 @@ fn add_blocks_downloaded_to_local_blocks(
         .as_str(),
     );
     println!("{:?} bloques descargados", amount_of_block(blocks)?);
+    Ok(())
+}
+
+/// Envia por el channel los headers recibidos por parametro para que los respectivos bloques sean descargados desde otro nodo
+/// Devuelve error en caso de que el channel este cerrado
+fn try_to_download_blocks_from_other_node(
+    tx: Option<Sender<Vec<BlockHeader>>>,
+    headers_read: Vec<BlockHeader>,
+) -> Result<(), NodeCustomErrors> {
+    match tx {
+        Some(tx) => {
+            tx.send(headers_read)
+                .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+        }
+        None => return Ok(()),
+    }
     Ok(())
 }

@@ -1,6 +1,6 @@
-use self::blocks_download::download_blocks;
+use self::blocks_download::{download_blocks, download_blocks_single_node};
 use self::headers_download::{download_missing_headers, get_initial_headers};
-use self::utils::{get_amount_of_headers_and_blocks, join_threads};
+use self::utils::{get_amount_of_headers_and_blocks, get_node, join_threads, return_node_to_vec};
 use super::blocks::block::Block;
 use super::blocks::block_header::BlockHeader;
 use super::config::Config;
@@ -14,8 +14,6 @@ use std::{thread, vec};
 mod blocks_download;
 mod headers_download;
 mod utils;
-
-// TODO: Completar funcion download_full_blockchain_from_single_node
 
 type HeadersBlocksTuple = (
     Arc<RwLock<Vec<BlockHeader>>>,
@@ -102,7 +100,7 @@ fn download_full_blockchain_from_multiple_nodes(
             &log_sender_cloned,
             nodes_cloned,
             headers_cloned,
-            Some(tx_cloned),
+            tx_cloned,
         )
     }));
     let config = config.clone();
@@ -121,10 +119,21 @@ fn download_full_blockchain_from_single_node(
     log_sender: &LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
-    _blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
 ) -> Result<(), NodeCustomErrors> {
-    download_missing_headers(config, log_sender, nodes, headers, None)?;
-    // download blocks
+    let (tx, rx) = channel();
+    download_missing_headers(config, log_sender, nodes.clone(), headers.clone(), tx)?;
+    let mut node = get_node(nodes.clone())?;
+    for blocks_to_download in rx {
+        download_blocks_single_node(
+            config,
+            log_sender,
+            blocks_to_download,
+            &mut node,
+            blocks.clone(),
+        )?;
+    }
+    return_node_to_vec(nodes, node)?;
     Ok(())
 }
 
