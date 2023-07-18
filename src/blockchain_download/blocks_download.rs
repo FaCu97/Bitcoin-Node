@@ -14,7 +14,12 @@ use std::{
         mpsc::{Receiver, Sender},
         Arc, RwLock,
     },
-    thread,
+    thread::{self, JoinHandle},
+};
+
+use super::{
+    get_amount_of_headers_and_blocks, join_threads,
+    utils::{get_node, return_node_to_vec},
 };
 
 /// # Descarga de bloques
@@ -43,88 +48,71 @@ pub fn download_blocks(
     tx: Sender<Vec<BlockHeader>>,
 ) -> Result<(), NodeCustomErrors> {
     // recieves in the channel the vec of headers sent by the function downloading headers
-    for received in rx {
-        // acá recibo 2000 block headers
-        let mut n_threads = config.n_threads;
-        if received.len() < config.blocks_download_per_node {
-            n_threads = 1;
-        }
-        if received.is_empty() {
+    for blocks_to_download in rx {
+        if blocks_to_download.is_empty() {
             return Err(NodeCustomErrors::ThreadChannelError(
                 "Se recibio una lista con 0 elementos!".to_string(),
             ));
         }
-        let chunk_size = (received.len() as f64 / n_threads as f64).ceil() as usize;
-        // divides the vec into 8 with the same lenght (or same lenght but the last with less)
-        let blocks_headers_chunks = Arc::new(RwLock::new(
-            received
-                .chunks(chunk_size)
-                .map(|chunk| chunk.to_vec())
-                .collect::<Vec<_>>(),
-        ));
-        let mut handle_join = vec![];
-
-        for i in 0..n_threads {
-            // este ciclo crea la cantidad de threads simultaneos
-            let tx_cloned = tx.clone();
-            let nodes_pointer_clone = nodes.clone();
-            let block_headers_chunk_clone = Arc::clone(&blocks_headers_chunks);
-            let blocks_pointer_clone = Arc::clone(&blocks);
-            let node = nodes_pointer_clone
-                .write()
-                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-                .pop()
-                .ok_or("Error no hay mas nodos para descargar los bloques!\n")
-                .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
-
-            if i >= block_headers_chunk_clone
-                .read()
-                .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?
-                .len()
-            {
-                // Este caso evita acceder a una posición fuera de rango
-                // Significa que no hay más chunks con bloques para descargar
-                break;
-            }
-
-            let block_headers = block_headers_chunk_clone
-                .write()
-                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[i]
-                .clone();
-            let log_sender_clone = log_sender.clone();
-            let config_cloned = config.clone();
-            handle_join.push(thread::spawn(move || {
-                download_blocks_single_thread(
-                    &config_cloned,
-                    &log_sender_clone,
-                    block_headers,
-                    node,
-                    tx_cloned,
-                    blocks_pointer_clone,
-                    nodes_pointer_clone,
-                )
-            }));
+        // acá recibo 2000 block headers
+        let mut n_threads = config.n_threads;
+        if blocks_to_download.len() <= config.blocks_download_per_node {
+            n_threads = 1;
         }
-        for h in handle_join {
-            h.join()
-                .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
+        let blocks_to_download_chunks =
+            divide_blocks_to_download_in_equal_chunks(blocks_to_download, n_threads);
+        let mut join_handles = vec![];
+        for blocks_to_download_chunk in blocks_to_download_chunks
+            .read()
+            .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?
+            .iter()
+        {
+            join_handles.push(download_blocks_chunck(
+                config,
+                log_sender,
+                blocks_to_download_chunk.clone(),
+                nodes.clone(),
+                tx.clone(),
+                blocks.clone(),
+            )?);
         }
-        let bloques_descargados = blocks
-            .read()
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            .len();
-        let cantidad_headers_descargados = headers
-            .read()
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            .len();
-        let bloques_a_descargar =
-            cantidad_headers_descargados - config.height_first_block_to_download + 1;
-        if bloques_descargados == bloques_a_descargar {
-            write_in_log(&log_sender.info_log_sender, format!("Se terminaron de descargar todos los bloques correctamente! BLOQUES DESCARGADOS: {}\n", bloques_descargados).as_str());
+        join_threads(join_handles)?;
+        let (amount_of_headers, amount_of_blocks) =
+            get_amount_of_headers_and_blocks(headers.clone(), blocks.clone())?;
+        let total_blocks_to_download =
+            amount_of_headers - config.height_first_block_to_download + 1;
+        if amount_of_blocks == total_blocks_to_download {
+            write_in_log(&log_sender.info_log_sender, format!("Se terminaron de descargar todos los bloques correctamente! BLOQUES DESCARGADOS: {}\n", amount_of_blocks).as_str());
             return Ok(());
         }
     }
     Ok(())
+}
+
+/// Se encarga de crear el thread desde el cual se van a descargar un vector de bloques.
+/// Devuelve el handle del thread creado o error en caso de no poder crearlo.
+fn download_blocks_chunck(
+    config: &Arc<Config>,
+    log_sender: &LogSender,
+    block_headers: Vec<BlockHeader>,
+    nodes: Arc<RwLock<Vec<TcpStream>>>,
+    tx: Sender<Vec<BlockHeader>>,
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+) -> Result<JoinHandle<Result<(), NodeCustomErrors>>, NodeCustomErrors> {
+    let config_cloned = config.clone();
+    let log_sender_cloned = log_sender.clone();
+    let node = get_node(nodes.clone())?;
+    Ok(thread::spawn(move || {
+        download_blocks_single_thread(
+            &config_cloned,
+            &log_sender_cloned,
+            block_headers,
+            node,
+            tx,
+            blocks,
+            nodes,
+        )
+    }))
 }
 
 /// Downloads all the blocks from the same node, in the same thread.
@@ -140,12 +128,11 @@ fn download_blocks_single_thread(
     block_headers: Vec<BlockHeader>,
     mut node: TcpStream,
     tx: Sender<Vec<BlockHeader>>,
-    blocks_pointer_clone: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-    nodes_pointer_clone: Arc<RwLock<Vec<TcpStream>>>,
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<(), NodeCustomErrors> {
     let mut current_blocks: HashMap<[u8; 32], Block> = HashMap::new();
     // el thread recibe 250 bloques
-    let block_headers_thread = block_headers.clone();
     write_in_log(
         &log_sender.info_log_sender,
         format!(
@@ -155,61 +142,35 @@ fn download_blocks_single_thread(
         )
         .as_str(),
     );
-    for chunk_llamada in block_headers.chunks(config.blocks_download_per_node) {
+    for blocks_to_download in block_headers.chunks(config.blocks_download_per_node) {
         match request_blocks_from_node(
             log_sender,
-            &node,
-            chunk_llamada,
-            &block_headers_thread,
+            &mut node,
+            blocks_to_download,
+            block_headers.clone(),
             tx.clone(),
         ) {
             Ok(_) => {}
             Err(NodeCustomErrors::WriteNodeError(_)) => return Ok(()),
             Err(error) => return Err(error),
         }
-        let received_blocks;
-        (node, received_blocks) = match receive_requested_blocks_from_node(
+        let received_blocks = match receive_requested_blocks_from_node(
             log_sender,
-            node,
-            chunk_llamada,
-            &block_headers_thread,
+            &mut node,
+            blocks_to_download,
+            block_headers.clone(),
             tx.clone(),
         ) {
             Ok(blocks) => blocks,
             Err(NodeCustomErrors::ReadNodeError(_)) => return Ok(()),
             Err(error) => return Err(error),
         };
-
         for block in received_blocks.into_iter() {
             current_blocks.insert(block.hash(), block);
         }
     }
-    blocks_pointer_clone
-        .write()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .extend(current_blocks);
-    write_in_log(
-        &log_sender.info_log_sender,
-        format!(
-            "BLOQUES DESCARGADOS: {:?}",
-            blocks_pointer_clone
-                .read()
-                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-                .len()
-        )
-        .as_str(),
-    );
-    println!(
-        "{:?} bloques descargados",
-        blocks_pointer_clone
-            .read()
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            .len()
-    );
-    nodes_pointer_clone
-        .write()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .push(node);
+    add_blocks_downloaded_to_local_blocks(log_sender, blocks, current_blocks)?;
+    return_node_to_vec(nodes, node)?;
     Ok(())
 }
 
@@ -219,22 +180,21 @@ fn download_blocks_single_thread(
 /// they can be downloaded from another node. If this cannot be done, returns an error.
 fn request_blocks_from_node(
     log_sender: &LogSender,
-    mut node: &TcpStream,
-    chunk_llamada: &[BlockHeader],
-    block_headers_thread: &[BlockHeader],
+    node: &mut TcpStream,
+    blocks_chunk_to_download: &[BlockHeader],
+    blocks_to_download: Vec<BlockHeader>,
     tx: Sender<Vec<BlockHeader>>,
 ) -> Result<(), NodeCustomErrors> {
     //  Acá ya separé los 250 en chunks de 16 para las llamadas
     let mut inventory = vec![];
-    for block in chunk_llamada {
+    for block in blocks_chunk_to_download {
         inventory.push(Inventory::new_block(block.hash()));
     }
-    match GetDataMessage::new(inventory).write_to(&mut node) {
+    match GetDataMessage::new(inventory).write_to(node) {
         Ok(_) => Ok(()),
         Err(err) => {
-            write_in_log(&log_sender.error_log_sender,format!("Error: No puedo pedir {:?} cantidad de bloques del nodo: {:?}. Se los voy a pedir a otro nodo", chunk_llamada.len(), node.peer_addr()).as_str());
-
-            tx.send(block_headers_thread.to_vec())
+            write_in_log(&log_sender.error_log_sender,format!("Error: No puedo pedir {:?} cantidad de bloques del nodo: {:?}. Se los voy a pedir a otro nodo", blocks_chunk_to_download.len(), node.peer_addr()).as_str());
+            tx.send(blocks_to_download)
                 .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
             // falló el envio del mensaje, tengo que intentar con otro nodo
             // si hago return, termino el thread.
@@ -250,19 +210,19 @@ fn request_blocks_from_node(
 /// they can be downloaded from another node. If this cannot be done, returns an error.
 fn receive_requested_blocks_from_node(
     log_sender: &LogSender,
-    mut node: TcpStream,
-    chunk_llamada: &[BlockHeader],
-    block_headers_thread: &[BlockHeader],
+    node: &mut TcpStream,
+    blocks_chunk_to_download: &[BlockHeader],
+    blocks_to_download: Vec<BlockHeader>,
     tx: Sender<Vec<BlockHeader>>,
-) -> Result<(TcpStream, Vec<Block>), NodeCustomErrors> {
+) -> Result<Vec<Block>, NodeCustomErrors> {
     // Acá tengo que recibir los 16 bloques (o menos) de la llamada
     let mut current_blocks: Vec<Block> = Vec::new();
-    for _ in 0..chunk_llamada.len() {
-        let bloque = match BlockMessage::read_from(log_sender, &mut node) {
-            Ok(bloque) => bloque,
+    for _ in 0..blocks_chunk_to_download.len() {
+        let block = match BlockMessage::read_from(log_sender, node) {
+            Ok(block) => block,
             Err(err) => {
-                write_in_log(&log_sender.error_log_sender,format!("No puedo descargar {:?} de bloques del nodo: {:?}. Se los voy a pedir a otro nodo y descarto este. Error: {err}", chunk_llamada.len(), node.peer_addr()).as_str());
-                tx.send(block_headers_thread.to_vec())
+                write_in_log(&log_sender.error_log_sender,format!("No puedo descargar {:?} de bloques del nodo: {:?}. Se los voy a pedir a otro nodo y descarto este. Error: {err}", blocks_chunk_to_download.len(), node.peer_addr()).as_str());
+                tx.send(blocks_to_download)
                     .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
                 // falló la recepción del mensaje, tengo que intentar con otro nodo
                 // termino el nodo con el return
@@ -272,18 +232,76 @@ fn receive_requested_blocks_from_node(
                 )));
             }
         };
-        let validation_result = bloque.validate();
+        let validation_result = block.validate();
         if !validation_result.0 {
             write_in_log(&log_sender.error_log_sender,format!("El bloque no pasó la validación. {:?}. Se los voy a pedir a otro nodo y descarto este.", validation_result.1).as_str());
-            tx.send(block_headers_thread.to_vec())
+            tx.send(blocks_to_download)
                 .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
             return Err(NodeCustomErrors::ReadNodeError(format!(
                 "Error al recibir el mensaje `block`: {:?}",
                 validation_result.1
             )));
         }
-        //bloque.set_utxos(); // seteo utxos de las transacciones del bloque
-        current_blocks.push(bloque);
+        //block.set_utxos(); // seteo utxos de las transacciones del bloque
+        current_blocks.push(block);
     }
-    Ok((node, current_blocks))
+    Ok(current_blocks)
+}
+
+/*
+***************************************************************************
+************************ AUXILIAR FUNCTIONS *******************************
+***************************************************************************
+*/
+
+/// Recibe un vector de block headers y devuelve un vector de vectores de block headers, donde cada vector tiene la misma cantidad de elementos.
+/// Los separa en chunks de igual tamaño.
+fn divide_blocks_to_download_in_equal_chunks(
+    blocks_to_download: Vec<BlockHeader>,
+    n_threads: usize,
+) -> Arc<RwLock<Vec<Vec<BlockHeader>>>> {
+    let chunk_size = (blocks_to_download.len() as f64 / n_threads as f64).ceil() as usize;
+    // divides the vec into 8 with the same lenght (or same lenght but the last with less)
+    let blocks_to_download_chunks = Arc::new(RwLock::new(
+        blocks_to_download
+            .chunks(chunk_size)
+            .map(|chunk| chunk.to_vec())
+            .collect::<Vec<_>>(),
+    ));
+    blocks_to_download_chunks
+}
+
+/// Recibe un hashmap de bloques y devuelve la cantidad de bloques que hay en el mismo
+/// Error en caso de no poder leerlo
+fn amount_of_block(
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+) -> Result<usize, NodeCustomErrors> {
+    let amount_of_blocks = blocks
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .len();
+    Ok(amount_of_blocks)
+}
+
+/// Recibe un puntero a un hashmap de bloques y un hashmap de bloques descargados y los agrega al hashmap de bloques local
+/// en caso de no poder acceder al hashmap de bloques local devuelve error
+fn add_blocks_downloaded_to_local_blocks(
+    log_sender: &LogSender,
+    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    downloaded_blocks: HashMap<[u8; 32], Block>,
+) -> Result<(), NodeCustomErrors> {
+    blocks
+        .write()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .extend(downloaded_blocks);
+    write_in_log(
+        &log_sender.info_log_sender,
+        format!(
+            "BLOQUES DESCARGADOS: {:?}",
+            amount_of_block(blocks.clone())?
+        )
+        .as_str(),
+    );
+    println!("{:?} bloques descargados", amount_of_block(blocks)?);
+    Ok(())
 }

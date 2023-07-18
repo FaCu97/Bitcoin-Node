@@ -1,5 +1,6 @@
 use self::blocks_download::download_blocks;
 use self::headers_download::{download_missing_headers, get_initial_headers};
+use self::utils::{get_amount_of_headers_and_blocks, join_threads};
 use super::blocks::block::Block;
 use super::blocks::block_header::BlockHeader;
 use super::config::Config;
@@ -12,6 +13,7 @@ use std::sync::{Arc, RwLock};
 use std::{thread, vec};
 mod blocks_download;
 mod headers_download;
+mod utils;
 
 // TODO: Completar funcion download_full_blockchain_from_single_node
 
@@ -124,34 +126,6 @@ fn download_full_blockchain_from_single_node(
     download_missing_headers(config, log_sender, nodes, headers, None)?;
     // download blocks
     Ok(())
-}
-
-/// Recibe un vector de handles de threads y espera a que terminen todos, si alguno falla devuelve error
-fn join_threads(
-    handles: Vec<thread::JoinHandle<Result<(), NodeCustomErrors>>>,
-) -> Result<(), NodeCustomErrors> {
-    for handle in handles {
-        handle
-            .join()
-            .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
-    }
-    Ok(())
-}
-
-/// Recibe un puntero a un vector de headers y un puntero a un hashmap de bloques y devuelve la cantidad de headers y bloques que hay en cada uno
-fn get_amount_of_headers_and_blocks(
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-) -> Result<(usize, usize), NodeCustomErrors> {
-    let amount_of_headers = headers
-        .read()
-        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
-        .len();
-    let amount_of_blocks = blocks
-        .read()
-        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
-        .len();
-    Ok((amount_of_headers, amount_of_blocks))
 }
 
 /*

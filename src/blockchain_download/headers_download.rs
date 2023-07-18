@@ -16,6 +16,8 @@ use crate::{
     messages::{getheaders_message::GetHeadersMessage, headers_message::HeadersMessage},
 };
 
+use super::utils::{get_node, return_node_to_vec};
+
 // TODO: pasar 162003 como constante
 
 const GENESIS_BLOCK: [u8; 32] = [
@@ -115,7 +117,7 @@ fn download_and_persist_headers(
     let mut file = File::create(&config.archivo_headers)
         .map_err(|err| NodeCustomErrors::OpeningFileError(err.to_string()))?;
     // get last node from list, if possible
-    let mut node = get_node_to_download_headers(nodes.clone())?;
+    let mut node = get_node(nodes.clone())?;
     while let Err(err) = download_and_persist_initial_headers_from_node(
         config,
         log_sender,
@@ -132,13 +134,10 @@ fn download_and_persist_headers(
             )
             .as_str(),
         );
-        node = get_node_to_download_headers(nodes.clone())?;
+        node = get_node(nodes.clone())?;
     }
     // return node that donwloaded the header again to the vec of nodes
-    nodes
-        .write()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .push(node);
+    return_node_to_vec(nodes, node)?;
     Ok(())
 }
 
@@ -221,7 +220,7 @@ pub fn download_missing_headers(
     tx: Option<Sender<Vec<BlockHeader>>>,
 ) -> Result<(), NodeCustomErrors> {
     // get last node from list, if possible
-    let mut node = get_node_to_download_headers(nodes.clone())?;
+    let mut node = get_node(nodes.clone())?;
     while let Err(err) = download_missing_headers_from_node(
         config,
         log_sender,
@@ -241,13 +240,10 @@ pub fn download_missing_headers(
         if let NodeCustomErrors::ThreadChannelError(_) = err {
             return Err(NodeCustomErrors::ThreadChannelError("Error se cerro el channel que comunica la descarga de headers y bloques en paralelo".to_string()));
         }
-        node = get_node_to_download_headers(nodes.clone())?;
+        node = get_node(nodes.clone())?;
     }
     // return node again to the list of nodes
-    nodes
-        .write()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .push(node);
+    return_node_to_vec(nodes, node)?;
     /*
     let last_headers =
         compare_and_ask_for_last_headers(config, log_sender, nodes, headers_clone)?;
@@ -450,24 +446,6 @@ fn get_last_hash_header_downloaded(
         Some(header) => Ok(header.hash()),
         None => Err(NodeCustomErrors::BlockchainDownloadError(
             "Error no hay headers descargados!\n".to_string(),
-        )),
-    }
-}
-
-/// Devuelve el ultimo nodo de la lista de nodos conectados para descargar los headers de la blockchain
-/// En caso de no haber mas nodos disponibles devuelve un error
-fn get_node_to_download_headers(
-    nodes: Arc<RwLock<Vec<TcpStream>>>,
-) -> Result<TcpStream, NodeCustomErrors> {
-    let node = nodes
-        .write()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .pop();
-    match node {
-        Some(node) => Ok(node),
-        None => Err(NodeCustomErrors::BlockchainDownloadError(
-            "Error no hay mas nodos conectados para descargar los headers de la blockchain!\n"
-                .to_string(),
         )),
     }
 }
