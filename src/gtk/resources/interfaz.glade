@@ -1,0 +1,1086 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.40.0 -->
+<interface>
+  <requires lib="gtk+" version="3.24"/>
+  <!-- interface-css-provider-path styles.css -->
+  <object class="GtkAdjustment" id="adjustment1">
+    <property name="upper">100</property>
+    <property name="step-increment">0.01</property>
+    <property name="page-increment">10</property>
+  </object>
+  <object class="GtkImage" id="arrow">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="icon-name">mail-forward</property>
+  </object>
+  <object class="GtkImage" id="image1">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="stock">gtk-missing-image</property>
+  </object>
+  <object class="GtkImage" id="image2">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="stock">gtk-missing-image</property>
+  </object>
+  <object class="GtkImage" id="image3">
+    <property name="width-request">-1</property>
+    <property name="height-request">-1</property>
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="pixbuf">src/gtk/resources/send.png</property>
+  </object>
+  <object class="GtkImage" id="image5">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="stock">gtk-cancel</property>
+  </object>
+  <object class="GtkImage" id="image6">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="stock">gtk-goto-bottom</property>
+  </object>
+  <object class="GtkWindow" id="initial-window">
+    <property name="width-request">800</property>
+    <property name="height-request">500</property>
+    <property name="can-focus">False</property>
+    <child>
+      <object class="GtkFixed">
+        <property name="width-request">800</property>
+        <property name="height-request">500</property>
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <child>
+          <object class="GtkImage">
+            <property name="width-request">815</property>
+            <property name="height-request">500</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="halign">center</property>
+            <property name="valign">center</property>
+            <property name="pixbuf">src/gtk/resources/initial_background.jpg</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="start-button">
+            <property name="label" translatable="yes">Start</property>
+            <property name="width-request">168</property>
+            <property name="height-request">80</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <style>
+              <class name="start-button"/>
+            </style>
+          </object>
+          <packing>
+            <property name="x">345</property>
+            <property name="y">36</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkListStore" id="liststore1">
+    <columns>
+      <!-- column-name gchararray1 -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0" translatable="yes">BTC</col>
+      </row>
+      <row>
+        <col id="0" translatable="yes">mBTC</col>
+      </row>
+      <row>
+        <col id="0" translatable="yes">uBTC (bits)</col>
+      </row>
+      <row>
+        <col id="0" translatable="yes">Satoshi (sat)</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="liststore2">
+    <columns>
+      <!-- column-name status -->
+      <column type="gchar"/>
+    </columns>
+  </object>
+  <object class="GtkWindow" id="main-window">
+    <property name="width-request">800</property>
+    <property name="height-request">500</property>
+    <property name="can-focus">False</property>
+    <child>
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <property name="hexpand">True</property>
+        <property name="vexpand">True</property>
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkFixed" id="fixed1">
+            <property name="width-request">800</property>
+            <property name="height-request">500</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <child>
+              <object class="GtkStack" id="stack1">
+                <property name="width-request">800</property>
+                <property name="height-request">500</property>
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <child>
+                  <object class="GtkFixed" id="stk_fxd_1">
+                    <property name="width-request">800</property>
+                    <property name="height-request">500</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <property name="halign">start</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Available:</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">10</property>
+                        <property name="y">60</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="available label">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">50.00000000</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">159</property>
+                        <property name="y">60</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Pending:</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">10</property>
+                        <property name="y">100</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="pending label">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">0.00000000</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">169</property>
+                        <property name="y">100</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Immature:</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">10</property>
+                        <property name="y">140</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="immature label">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">500.00000000</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">149</property>
+                        <property name="y">140</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Total:</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">10</property>
+                        <property name="y">207</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="total label">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">550.00000000</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">149</property>
+                        <property name="y">207</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Transaction1</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">400</property>
+                        <property name="y">60</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">BTC</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">270</property>
+                        <property name="y">207</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">BTC</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">270</property>
+                        <property name="y">140</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">BTC</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">270</property>
+                        <property name="y">100</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">BTC</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">270</property>
+                        <property name="y">60</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkSeparator" id="tx-box">
+                        <property name="width-request">350</property>
+                        <property name="height-request">270</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <style>
+                          <class name="separator"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">383</property>
+                        <property name="y">6</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkSeparator">
+                        <property name="width-request">320</property>
+                        <property name="height-request">0</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="orientation">vertical</property>
+                      </object>
+                      <packing>
+                        <property name="x">12</property>
+                        <property name="y">187</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel">
+                        <property name="width-request">195</property>
+                        <property name="height-request">50</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Recent Transactions</property>
+                        <style>
+                          <class name="headers"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">398</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel">
+                        <property name="width-request">95</property>
+                        <property name="height-request">50</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Balance</property>
+                        <style>
+                          <class name="headers"/>
+                        </style>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSeparator" id="balance- box">
+                        <property name="width-request">320</property>
+                        <property name="height-request">250</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <style>
+                          <class name="separator"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">3</property>
+                        <property name="y">7</property>
+                      </packing>
+                    </child>
+                    <style>
+                      <class name="frames"/>
+                    </style>
+                  </object>
+                  <packing>
+                    <property name="name">page0</property>
+                    <property name="title" translatable="yes">Overview</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFixed" id="stk_fxd_2">
+                    <property name="width-request">800</property>
+                    <property name="height-request">500</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkEntry" id="pay to entry">
+                        <property name="width-request">500</property>
+                        <property name="height-request">34</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="placeholder-text" translatable="yes">Enter a Bitcoin Address (e.g. bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh)</property>
+                        <style>
+                          <class name="input-user"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">85</property>
+                        <property name="y">24</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel">
+                        <property name="width-request">100</property>
+                        <property name="height-request">80</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Pay to :</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkEntry" id="amount-entry">
+                        <property name="width-request">168</property>
+                        <property name="height-request">34</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="placeholder-text" translatable="yes">0.00000000</property>
+                        <style>
+                          <class name="input-user"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">85</property>
+                        <property name="y">76</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel">
+                        <property name="width-request">100</property>
+                        <property name="height-request">80</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Amount :</property>
+                      </object>
+                      <packing>
+                        <property name="y">54</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry" id="fee">
+                        <property name="width-request">168</property>
+                        <property name="height-request">34</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="placeholder-text" translatable="yes">0.0000000</property>
+                        <style>
+                          <class name="input-user"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">345</property>
+                        <property name="y">76</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel">
+                        <property name="width-request">100</property>
+                        <property name="height-request">80</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Fee : </property>
+                      </object>
+                      <packing>
+                        <property name="x">262</property>
+                        <property name="y">54</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkSeparator" id="main-box">
+                        <property name="width-request">790</property>
+                        <property name="height-request">400</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <style>
+                          <class name="separator"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">7</property>
+                        <property name="y">6</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton">
+                        <property name="label" translatable="yes">Send</property>
+                        <property name="width-request">80</property>
+                        <property name="height-request">34</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">True</property>
+                        <property name="image">image3</property>
+                        <property name="always-show-image">True</property>
+                        <style>
+                          <class name="app-button"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">18</property>
+                        <property name="y">435</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkSeparator" id="secondary-box">
+                        <property name="width-request">790</property>
+                        <property name="height-request">60</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <style>
+                          <class name="separator"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">7</property>
+                        <property name="y">422</property>
+                      </packing>
+                    </child>
+                    <style>
+                      <class name="frames"/>
+                    </style>
+                  </object>
+                  <packing>
+                    <property name="name">page1</property>
+                    <property name="title" translatable="yes">Send</property>
+                    <property name="position">1</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFixed" id="stk_fxd_4">
+                    <property name="width-request">800</property>
+                    <property name="height-request">500</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkScrolledWindow">
+                        <property name="width-request">700</property>
+                        <property name="height-request">450</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="shadow-type">in</property>
+                        <child>
+                          <object class="GtkViewport">
+                            <property name="visible">True</property>
+                            <property name="can-focus">True</property>
+                            <child>
+                              <object class="GtkTreeView" id="tx_table">
+                                <property name="visible">True</property>
+                                <property name="can-focus">True</property>
+                                <property name="model">liststore2</property>
+                                <property name="headers-clickable">False</property>
+                                <property name="show-expanders">False</property>
+                                <property name="enable-grid-lines">both</property>
+                                <property name="enable-tree-lines">True</property>
+                                <property name="tooltip-column">0</property>
+                                <child>
+                                  <object class="GtkTreeViewColumn" id="status">
+                                    <property name="resizable">True</property>
+                                    <property name="min-width">15</property>
+                                    <property name="max-width">3</property>
+                                    <property name="title" translatable="yes">status</property>
+                                    <property name="expand">True</property>
+                                    <child>
+                                      <object class="GtkCellRendererText">
+                                        <property name="text">asdasdsad</property>
+                                      </object>
+                                      <attributes>
+                                        <attribute name="wrap-width">1</attribute>
+                                      </attributes>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkTreeViewColumn" id="date">
+                                    <property name="title" translatable="yes">date</property>
+                                    <property name="expand">True</property>
+                                    <child>
+                                      <object class="GtkCellRendererText"/>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkTreeViewColumn" id="type">
+                                    <property name="title" translatable="yes">type</property>
+                                    <property name="expand">True</property>
+                                    <child>
+                                      <object class="GtkCellRendererText"/>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkTreeViewColumn" id="label">
+                                    <property name="title" translatable="yes">label</property>
+                                    <property name="expand">True</property>
+                                    <child>
+                                      <object class="GtkCellRendererText"/>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkTreeViewColumn" id="amount">
+                                    <property name="title" translatable="yes">amount(satoshis)</property>
+                                    <property name="expand">True</property>
+                                    <child>
+                                      <object class="GtkCellRendererText"/>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="x">50</property>
+                        <property name="y">47</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="name">page3</property>
+                    <property name="title" translatable="yes">Transactions</property>
+                    <property name="position">2</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFixed" id="stk_fxd_3">
+                    <property name="width-request">800</property>
+                    <property name="height-request">500</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkFrame">
+                        <property name="width-request">761</property>
+                        <property name="height-request">190</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label-xalign">0</property>
+                        <property name="label-yalign">0</property>
+                        <property name="shadow-type">in</property>
+                        <child>
+                          <object class="GtkAlignment">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <child>
+                              <placeholder/>
+                            </child>
+                          </object>
+                        </child>
+                        <child type="label_item">
+                          <placeholder/>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="x">5</property>
+                        <property name="y">5</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="width-request">75</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Label:</property>
+                        <property name="xalign">1</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">10</property>
+                        <property name="y">40</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="width-request">75</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Message:</property>
+                        <property name="xalign">1</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">10</property>
+                        <property name="y">120</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="width-request">75</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Amount:</property>
+                        <property name="xalign">1</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">10</property>
+                        <property name="y">80</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry">
+                        <property name="width-request">600</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                      </object>
+                      <packing>
+                        <property name="x">90</property>
+                        <property name="y">37</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry">
+                        <property name="width-request">600</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                      </object>
+                      <packing>
+                        <property name="x">90</property>
+                        <property name="y">117</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkSpinButton">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="text" translatable="yes">0.00000000</property>
+                        <property name="xalign">1</property>
+                        <property name="placeholder-text" translatable="yes">0,00000000</property>
+                        <property name="adjustment">adjustment1</property>
+                        <property name="digits">8</property>
+                      </object>
+                      <packing>
+                        <property name="x">90</property>
+                        <property name="y">74</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkComboBox">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="model">liststore1</property>
+                        <property name="has-entry">True</property>
+                        <property name="entry-text-column">0</property>
+                        <child internal-child="entry">
+                          <object class="GtkEntry">
+                            <property name="can-focus">False</property>
+                          </object>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="x">277</property>
+                        <property name="y">76</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkCheckButton">
+                        <property name="label" translatable="yes">Generate negative segwit (Bech32) address</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">False</property>
+                        <property name="draw-indicator">True</property>
+                      </object>
+                      <packing>
+                        <property name="x">482</property>
+                        <property name="y">80</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton">
+                        <property name="label" translatable="yes">Create new receiving address</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">True</property>
+                        <property name="image">image2</property>
+                        <property name="always-show-image">True</property>
+                      </object>
+                      <packing>
+                        <property name="x">90</property>
+                        <property name="y">154</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton">
+                        <property name="label" translatable="yes">button</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">True</property>
+                        <property name="always-show-image">True</property>
+                      </object>
+                      <packing>
+                        <property name="x">306</property>
+                        <property name="y">154</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkFrame">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label-xalign">0</property>
+                        <property name="label-yalign">1</property>
+                        <child>
+                          <object class="GtkAlignment">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <property name="border-width">1</property>
+                            <child>
+                              <object class="GtkFixed">
+                                <property name="width-request">32</property>
+                                <property name="visible">True</property>
+                                <property name="can-focus">False</property>
+                                <child>
+                                  <!-- n-columns=7 n-rows=3 -->
+                                  <object class="GtkGrid">
+                                    <property name="visible">True</property>
+                                    <property name="can-focus">False</property>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="width-request">150</property>
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="margin-bottom">1</property>
+                                        <property name="label" translatable="yes">Date</property>
+                                        <attributes>
+                                          <attribute name="font-desc" value="Sans 12"/>
+                                        </attributes>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">0</property>
+                                        <property name="top-attach">0</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkSeparator">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="orientation">vertical</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">1</property>
+                                        <property name="top-attach">0</property>
+                                        <property name="height">3</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkSeparator">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="orientation">vertical</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">3</property>
+                                        <property name="top-attach">0</property>
+                                        <property name="height">3</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkSeparator">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="orientation">vertical</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">5</property>
+                                        <property name="top-attach">0</property>
+                                        <property name="height">3</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkSeparator">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">0</property>
+                                        <property name="top-attach">1</property>
+                                        <property name="width">7</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="width-request">150</property>
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="label" translatable="yes">Label</property>
+                                        <attributes>
+                                          <attribute name="font-desc" value="Sans 12"/>
+                                        </attributes>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">2</property>
+                                        <property name="top-attach">0</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="width-request">150</property>
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="label" translatable="yes">Message</property>
+                                        <attributes>
+                                          <attribute name="font-desc" value="Sans 12"/>
+                                        </attributes>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">4</property>
+                                        <property name="top-attach">0</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="width-request">200</property>
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="label" translatable="yes">Amount (BTC)</property>
+                                        <attributes>
+                                          <attribute name="font-desc" value="Sans 12"/>
+                                        </attributes>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">6</property>
+                                        <property name="top-attach">0</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="halign">start</property>
+                                        <property name="label" translatable="yes">02/06/2023</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">0</property>
+                                        <property name="top-attach">2</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="opacity">0.50196078431372548</property>
+                                        <property name="halign">start</property>
+                                        <property name="label" translatable="yes">bc1qxy2kgdygjrsqtzq...</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">2</property>
+                                        <property name="top-attach">2</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="width-request">150</property>
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="halign">start</property>
+                                        <property name="label" translatable="yes">este es un mensaje</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">4</property>
+                                        <property name="top-attach">2</property>
+                                      </packing>
+                                    </child>
+                                    <child>
+                                      <object class="GtkLabel">
+                                        <property name="visible">True</property>
+                                        <property name="can-focus">False</property>
+                                        <property name="halign">end</property>
+                                        <property name="label" translatable="yes">50.00000000</property>
+                                      </object>
+                                      <packing>
+                                        <property name="left-attach">6</property>
+                                        <property name="top-attach">2</property>
+                                      </packing>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                        <child type="label_item">
+                          <placeholder/>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="x">10</property>
+                        <property name="y">240</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Requested Payments History</property>
+                        <attributes>
+                          <attribute name="font-desc" value="Sans Bold 12"/>
+                        </attributes>
+                      </object>
+                      <packing>
+                        <property name="x">10</property>
+                        <property name="y">220</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Use this form to request payments. All fields are optional</property>
+                      </object>
+                      <packing>
+                        <property name="x">90</property>
+                        <property name="y">10</property>
+                      </packing>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="name">page2</property>
+                    <property name="title" translatable="yes">Recieve</property>
+                    <property name="position">3</property>
+                  </packing>
+                </child>
+                <style>
+                  <class name="frames"/>
+                </style>
+              </object>
+              <packing>
+                <property name="y">34</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkStackSwitcher">
+                <property name="width-request">584</property>
+                <property name="height-request">34</property>
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <property name="homogeneous">True</property>
+                <property name="stack">stack1</property>
+                <style>
+                  <class name="switcher"/>
+                </style>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkTreeStore" id="treestore1">
+    <columns>
+      <!-- column-name status -->
+      <column type="gchar"/>
+      <!-- column-name date -->
+      <column type="gdouble"/>
+    </columns>
+  </object>
+</interface>
