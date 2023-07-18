@@ -169,19 +169,7 @@ impl Block {
     /// En el formato que se usan los exploradores web como
     /// https://blockstream.info/testnet/ para mostrar bloques
     pub fn hex_hash(&self) -> String {
-        let hash_as_bytes = self.block_header.hash();
-        let inverted_hash: [u8; 32] = {
-            let mut inverted = [0; 32];
-            for (i, byte) in hash_as_bytes.iter().enumerate() {
-                inverted[31 - i] = *byte;
-            }
-            inverted
-        };
-        let hex_hash = inverted_hash
-            .iter()
-            .map(|byte| format!("{:02x}", byte))
-            .collect();
-        hex_hash
+        self.block_header.hex_hash()
     }
 
     /// Notifica si el bloque contiene una transacción que se encontraba pendiente.
