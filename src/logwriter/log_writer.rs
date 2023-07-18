@@ -1,7 +1,5 @@
 use chrono::{Datelike, Local, Timelike};
 use std::{
-    error::Error,
-    fmt,
     fs::{File, OpenOptions},
     io::Write,
     path::PathBuf,
@@ -12,43 +10,10 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use crate::config::Config;
+use crate::{config::Config, custom_errors::NodeCustomErrors};
 
 const CENTER_DATE_LINE: &str = "-------------------------------------------";
 const FINAL_LOG_LINE: &str = "-----------------------------------------------------------------------------------------------------------------------------";
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum LoggingError {
-    WritingInFileError(String),
-    ClosingFileError(String),
-    OpeningFileError(String),
-    ThreadJoinError(String),
-}
-
-impl fmt::Display for LoggingError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            LoggingError::ClosingFileError(msg) => {
-                write!(f, "Error trying to close the log file: {}", msg)
-            }
-            LoggingError::OpeningFileError(msg) => {
-                write!(f, "Error trying to open/create the log file: {}", msg)
-            }
-            LoggingError::WritingInFileError(msg) => {
-                write!(
-                    f,
-                    "Error trying to write the log file or send through log thread channel: {}",
-                    msg
-                )
-            }
-            LoggingError::ThreadJoinError(msg) => {
-                write!(f, "Error trying to join the log thread: {}", msg)
-            }
-        }
-    }
-}
-
-impl Error for LoggingError {}
 
 type LogFileSender = Sender<String>;
 type Loggers = (
@@ -77,7 +42,7 @@ pub fn set_up_loggers(
     error_file_path: String,
     info_file_path: String,
     message_file_path: String,
-) -> Result<Loggers, LoggingError> {
+) -> Result<Loggers, NodeCustomErrors> {
     let (error_log_sender, error_handler) =
         LogWriter::new(error_file_path).create_logger(config)?;
     let (info_log_sender, info_handler) = LogWriter::new(info_file_path).create_logger(config)?;
@@ -99,7 +64,7 @@ pub fn shutdown_loggers(
     error_handler: JoinHandle<()>,
     info_handler: JoinHandle<()>,
     message_handler: JoinHandle<()>,
-) -> Result<(), LoggingError> {
+) -> Result<(), NodeCustomErrors> {
     shutdown_logger(log_sender.info_log_sender, info_handler)?;
     shutdown_logger(log_sender.error_log_sender, error_handler)?;
     shutdown_logger(log_sender.messege_log_sender, message_handler)?;
@@ -153,7 +118,7 @@ impl LogWriter {
     pub fn create_logger(
         &self,
         config: &Arc<Config>,
-    ) -> Result<(LogFileSender, JoinHandle<()>), LoggingError> {
+    ) -> Result<(LogFileSender, JoinHandle<()>), NodeCustomErrors> {
         let (tx, rx): (Sender<String>, Receiver<String>) = channel();
         let mut file = open_log_file(config, &self.log_file)?;
         let local = Local::now();
@@ -172,7 +137,7 @@ impl LogWriter {
             println!(
                 "Error al escribir la fecha de logging: {}, {}",
                 date,
-                LoggingError::WritingInFileError(err.to_string())
+                NodeCustomErrors::WritingInFileError(err.to_string())
             );
         }
         let handle = thread::spawn(move || {
@@ -186,7 +151,7 @@ impl LogWriter {
                 if let Err(err) = writeln!(file, "{}: {}", date, log) {
                     println!(
                         "Error {} al escribir en el log: {}",
-                        LoggingError::WritingInFileError(err.to_string()),
+                        NodeCustomErrors::WritingInFileError(err.to_string()),
                         log
                     );
                 };
@@ -197,31 +162,31 @@ impl LogWriter {
 }
 
 /// Abre el file donde va a imprimir el log
-fn open_log_file(config: &Arc<Config>, log_file: &String) -> Result<File, LoggingError> {
+fn open_log_file(config: &Arc<Config>, log_file: &String) -> Result<File, NodeCustomErrors> {
     let logs_dir = PathBuf::from(config.logs_folder_path.clone());
     let log_path = logs_dir.join(log_file);
 
     // Crea el directorio "logs" si no existe
     if !logs_dir.exists() {
         std::fs::create_dir(&logs_dir)
-            .map_err(|err| LoggingError::OpeningFileError(err.to_string()))?;
+            .map_err(|err| NodeCustomErrors::OpeningFileError(err.to_string()))?;
     }
     let log_open_file = OpenOptions::new()
         .create(true)
         .append(true)
         .open(log_path)
-        .map_err(|err| LoggingError::OpeningFileError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::OpeningFileError(err.to_string()))?;
     Ok(log_open_file)
 }
 /// Dado el extremo para escribir por el channel y un JoinHandle del thread que esta escribiendo en el archivo log,
 /// imprime que va a cerrar el archivo, cierra el extremo del channel y le hace join al thread para que termine. Devuelve
 /// error en caso de que no se pueda mandar el mensaje por el channel o no se pueda hacer join correctamente al thread
-fn shutdown_logger(tx: LogFileSender, handler: JoinHandle<()>) -> Result<(), LoggingError> {
+fn shutdown_logger(tx: LogFileSender, handler: JoinHandle<()>) -> Result<(), NodeCustomErrors> {
     tx.send(format!("Closing log \n\n{}", FINAL_LOG_LINE))
-        .map_err(|err| LoggingError::WritingInFileError(err.to_string()))?;
+        .map_err(|err| NodeCustomErrors::WritingInFileError(err.to_string()))?;
     drop(tx);
     handler
         .join()
-        .map_err(|err| LoggingError::ThreadJoinError(format!("{:?}", err)))?;
+        .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))?;
     Ok(())
 }

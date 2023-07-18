@@ -9,13 +9,15 @@ use std::sync::Arc;
 
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
-const CANTIDAD_ATRIBUTOS: usize = 19;
+const CANTIDAD_ATRIBUTOS: usize = 23;
 
 /// Almacena los campos leidos del archivo de configuración
 #[derive(Debug, Clone)]
 pub struct Config {
     pub number_of_nodes: usize,
     pub dns_seed: String,
+    pub connect_to_dns_nodes: bool,
+    pub custom_nodes_ips: Vec<String>,
     pub net_port: u16,
     pub start_string: [u8; 4],
     pub protocol_version: i32,
@@ -30,6 +32,8 @@ pub struct Config {
     pub fecha_inicio_proyecto: String,
     pub formato_fecha_inicio_proyecto: String,
     pub headers_in_disk: usize,
+    pub read_headers_from_disk: bool,
+    pub ibd_single_node: bool,
     pub height_first_block_to_download: usize,
     pub archivo_headers: String,
     pub logs_folder_path: String,
@@ -68,6 +72,8 @@ impl Config {
         let mut cfg = Self {
             number_of_nodes: 0,
             dns_seed: String::new(),
+            connect_to_dns_nodes: true,
+            custom_nodes_ips: Vec::new(),
             net_port: 0,
             start_string: [0; 4],
             protocol_version: 0,
@@ -82,6 +88,8 @@ impl Config {
             fecha_inicio_proyecto: String::new(),
             formato_fecha_inicio_proyecto: String::new(),
             headers_in_disk: 0,
+            read_headers_from_disk: false,
+            ibd_single_node: false,
             height_first_block_to_download: 0,
             archivo_headers: String::new(),
             logs_folder_path: String::new(),
@@ -90,6 +98,10 @@ impl Config {
         let mut number_of_settings_loaded: usize = 0;
         for line in reader.lines() {
             let current_line = line?;
+            // es un comentario, ignorarlo
+            if current_line.starts_with('#') {
+                continue;
+            }
             let setting: Vec<&str> = current_line.split('=').collect();
 
             if setting.len() != 2 {
@@ -136,6 +148,16 @@ impl Config {
             }
             "DNS_SEED" => {
                 self.dns_seed = String::from(value);
+                *number_of_settings_loaded += 1;
+            }
+            "CONNECT_TO_DNS_NODES" => {
+                self.connect_to_dns_nodes = bool::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            }
+            "CUSTOM_NODES_IPS" => {
+                if !value.is_empty() {
+                    self.custom_nodes_ips = value.split(',').map(String::from).collect();
+                }
                 *number_of_settings_loaded += 1;
             }
             "NET_PORT" => {
@@ -192,6 +214,14 @@ impl Config {
             }
             "AMOUNT_OF_HEADERS_TO_STORE_IN_DISK" => {
                 self.headers_in_disk = usize::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            }
+            "READ_HEADERS_FROM_DISK" => {
+                self.read_headers_from_disk = bool::from_str(value)?;
+                *number_of_settings_loaded += 1;
+            }
+            "DOWNLOAD_FULL_BLOCKCHAIN_FROM_SINGLE_NODE" => {
+                self.ibd_single_node = bool::from_str(value)?;
                 *number_of_settings_loaded += 1;
             }
             "HEIGHT_FIRST_BLOCK_TO_DOWNLOAD" => {

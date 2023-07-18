@@ -12,6 +12,14 @@ pub enum NodeCustomErrors {
     ThreadChannelError(String),
     UnmarshallingError(String),
     SocketError(String),
+    HandshakeError(String),
+    FirstBlockNotFoundError(String),
+    InvalidHeaderError(String),
+    ReadingFileError(String),
+    WritingInFileError(String),
+    ClosingFileError(String),
+    OpeningFileError(String),
+    BlockchainDownloadError(String),
     OtherError(String),
 }
 
@@ -42,6 +50,30 @@ impl fmt::Display for NodeCustomErrors {
             }
             NodeCustomErrors::SocketError(msg) => {
                 write!(f, "Socket-TcpStream Error: {}", msg)
+            }
+            NodeCustomErrors::HandshakeError(msg) => {
+                write!(f, "HandShake Error: {}", msg)
+            }
+            NodeCustomErrors::FirstBlockNotFoundError(msg) => {
+                write!(f, "FirstBlockNotFound Error: {}", msg)
+            }
+            NodeCustomErrors::InvalidHeaderError(msg) => {
+                write!(f, "InvalidHeader Error: {}", msg)
+            }
+            NodeCustomErrors::ReadingFileError(msg) => {
+                write!(f, "Failed to read file. File Error: {}", msg)
+            }
+            NodeCustomErrors::WritingInFileError(msg) => {
+                write!(f, "Failed to write in file. File Error: {}", msg)
+            }
+            NodeCustomErrors::ClosingFileError(msg) => {
+                write!(f, "Failed to close file. File Error: {}", msg)
+            }
+            NodeCustomErrors::OpeningFileError(msg) => {
+                write!(f, "Failed to open file. File Error: {}", msg)
+            }
+            NodeCustomErrors::BlockchainDownloadError(msg) => {
+                write!(f, "Error during the Blockchain download: {}", msg)
             }
         }
     }

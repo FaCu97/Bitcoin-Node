@@ -1,7 +1,7 @@
 use super::message_header::{is_terminated, HeaderMessage};
 use crate::blocks::block_header::BlockHeader;
 use crate::compact_size_uint::CompactSizeUint;
-use crate::logwriter::log_writer::{LogSender, LoggingError};
+use crate::logwriter::log_writer::{write_in_log, LogSender};
 use std::fs::File;
 use std::io::{Read, Write};
 use std::net::TcpStream;
@@ -79,15 +79,13 @@ impl HeadersMessage {
         let mut vec: Vec<u8> = vec![];
         vec.extend_from_slice(&buffer_num);
         let headers = Self::unmarshalling(&vec)?;
-
         // imprimo en el archivo
         if let Err(err) = file.write_all(&vec) {
-            println!(
-                "Error al escribir en el archivo de headers, {}",
-                LoggingError::WritingInFileError(err.to_string())
+            write_in_log(
+                &log_sender.error_log_sender,
+                format!("Error al escribir en el archivo: {}", err).as_str(),
             );
         }
-
         Ok(headers)
     }
 }
