@@ -48,7 +48,10 @@ impl GetHeadersMessage {
             locator_hashes,
             stop_hash,
         };
-        let header_of_getheaders = HeaderMessage::new("getheaders".to_string(), Some(&getheaders_payload.to_le_bytes()));
+        let header_of_getheaders = HeaderMessage::new(
+            "getheaders".to_string(),
+            Some(&getheaders_payload.to_le_bytes()),
+        );
         GetHeadersMessage {
             header: header_of_getheaders,
             payload: getheaders_payload,

@@ -35,7 +35,6 @@ const GENESIS_BLOCK_HASH: [u8; 32] = [
     0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43,
 ];
 
-
 /*
 ***************************************************************************
 ****************************** HANDLERS ***********************************
@@ -73,8 +72,6 @@ pub fn handle_headers_message(
     Ok(())
 }
 
-
-
 pub fn handle_getheaders_message(
     tx: NodeSender,
     payload: &[u8],
@@ -87,19 +84,39 @@ pub fn handle_getheaders_message(
     let first_header_asked = getheaders_payload.locator_hashes[0];
     // check if stop hash is provided
     let stop_hash_provided = getheaders_payload.stop_hash != [0u8; 32];
-    let amount_of_headers = headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?.len();
-    let mut index_of_first_header_asked: usize = get_index_of_header(first_header_asked, headers.clone())?;
+    let amount_of_headers = headers
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .len();
+    let mut index_of_first_header_asked: usize =
+        get_index_of_header(first_header_asked, headers.clone())?;
     index_of_first_header_asked += 1;
     let mut headers_to_send: Vec<BlockHeader> = Vec::new();
     if !stop_hash_provided {
-        if index_of_first_header_asked + 2000 >=  amount_of_headers {
-            headers_to_send.copy_from_slice(&headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index_of_first_header_asked..]);
+        if index_of_first_header_asked + 2000 >= amount_of_headers {
+            headers_to_send.copy_from_slice(
+                &headers
+                    .read()
+                    .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+                    [index_of_first_header_asked..],
+            );
         } else {
-            headers_to_send.copy_from_slice(&headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index_of_first_header_asked..index_of_first_header_asked + 2000]);
-        }    
+            headers_to_send.copy_from_slice(
+                &headers
+                    .read()
+                    .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+                    [index_of_first_header_asked..index_of_first_header_asked + 2000],
+            );
+        }
     } else {
-        let index_of_stop_hash: usize = get_index_of_header(getheaders_payload.stop_hash, headers.clone())?;
-        headers_to_send.copy_from_slice(&headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index_of_first_header_asked..index_of_stop_hash]);
+        let index_of_stop_hash: usize =
+            get_index_of_header(getheaders_payload.stop_hash, headers.clone())?;
+        headers_to_send.copy_from_slice(
+            &headers
+                .read()
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+                [index_of_first_header_asked..index_of_stop_hash],
+        );
     }
     write_to_node(&tx, HeadersMessage::marshalling(headers_to_send))?;
     Ok(())
@@ -412,7 +429,6 @@ fn get_tx_message(tx: &Transaction) -> Vec<u8> {
     let mut tx_message = vec![];
     tx_message.extend_from_slice(&header.to_le_bytes());
     tx_message.extend_from_slice(&tx_payload);
-
     tx_message
 }
 
@@ -426,16 +442,24 @@ pub fn write_to_node(tx: &NodeSender, message: Vec<u8>) -> NodeMessageHandlerRes
 /// Recibe el hash de un header a buscar en la cadena de header y los headers
 /// Recorre los headers hasta encontrar el hash buscado y devuelve el indice en el que se enecuntra
 /// Si no fue encontrado se devuelve el idice 0. En caso de un Error se devuelve un error de tipo NodeCustomErrors
-fn get_index_of_header(header_hash: [u8; 32], headers: Arc<RwLock<Vec<BlockHeader>>>) -> Result<usize, NodeCustomErrors> {
-    for (i, header) in headers.read().map_err(|err| NodeCustomErrors::LockError(err.to_string()))?.iter().enumerate() {
-        if header_hash == GENESIS_BLOCK_HASH {
-            return Ok(0);
-        }
+fn get_index_of_header(
+    header_hash: [u8; 32],
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+) -> Result<usize, NodeCustomErrors> {
+    if header_hash == GENESIS_BLOCK_HASH {
+        return Ok(0);
+    }
+    for (i, header) in headers
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .iter()
+        .enumerate()
+    {
         if header.hash() == header_hash {
             return Ok(i);
         }
     }
-    // If the receiving peer does not find a common header hash within the list, 
+    // If the receiving peer does not find a common header hash within the list,
     // it will assume the last common block was the genesis block (block zero)
-    return Ok(0);
+    Ok(0)
 }
