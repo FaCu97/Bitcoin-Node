@@ -211,6 +211,7 @@ pub fn handle_messages_from_node(
                         tx.clone(),
                         &payload,
                         node_pointers.headers.clone(),
+                        node_pointers.clone(),
                     )
                 }),
                 "getdata" => handle_message(&mut error, || {

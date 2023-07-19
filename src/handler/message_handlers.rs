@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    sync::{mpsc::Sender, Arc, RwLock},
-};
-
+use crate::blockchain_download::headers_download::load_header_heights;
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
@@ -20,6 +16,10 @@ use crate::{
     node_data_pointers::NodeDataPointers,
     transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
+};
+use std::{
+    collections::HashMap,
+    sync::{mpsc::Sender, Arc, RwLock},
 };
 
 use crate::custom_errors::NodeCustomErrors;
@@ -48,6 +48,7 @@ pub fn handle_headers_message(
     tx: NodeSender,
     payload: &[u8],
     headers: Arc<RwLock<Vec<BlockHeader>>>,
+    node_pointers: NodeDataPointers,
 ) -> NodeMessageHandlerResult {
     let new_headers = HeadersMessage::unmarshalling(&payload.to_vec())
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
@@ -68,6 +69,12 @@ pub fn handle_headers_message(
                     .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
             }
         }
+        load_header_heights(
+            &vec![header],
+            &node_pointers.header_heights,
+            &headers,
+            &log_sender,
+        )?;
     }
     Ok(())
 }

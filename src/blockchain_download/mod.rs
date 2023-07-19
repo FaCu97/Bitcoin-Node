@@ -12,7 +12,7 @@ use std::sync::mpsc::channel;
 use std::sync::{Arc, RwLock};
 use std::{thread, vec};
 mod blocks_download;
-mod headers_download;
+pub(crate) mod headers_download;
 mod utils;
 
 // Gensis block header hardcoded to start the download (this is the first block of the blockchain)
