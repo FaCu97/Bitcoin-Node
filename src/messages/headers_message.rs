@@ -96,6 +96,7 @@ impl HeadersMessage {
         for header in headers {
             let mut header_bytes = vec![];
             header.marshalling(&mut header_bytes);
+            header_bytes.extend_from_slice(&[0x00]); // este es el transaction_count
             headers_message_payload.extend_from_slice(&header_bytes);
         }
         let header = HeaderMessage::new("headers".to_string(), Some(&headers_message_payload));
