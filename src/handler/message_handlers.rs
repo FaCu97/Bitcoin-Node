@@ -94,14 +94,14 @@ pub fn handle_getheaders_message(
     let mut headers_to_send: Vec<BlockHeader> = Vec::new();
     if !stop_hash_provided {
         if index_of_first_header_asked + 2000 >= amount_of_headers {
-            headers_to_send.copy_from_slice(
+            headers_to_send.extend_from_slice(
                 &headers
                     .read()
                     .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
                     [index_of_first_header_asked..],
             );
         } else {
-            headers_to_send.copy_from_slice(
+            headers_to_send.extend_from_slice(
                 &headers
                     .read()
                     .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
@@ -111,7 +111,7 @@ pub fn handle_getheaders_message(
     } else {
         let index_of_stop_hash: usize =
             get_index_of_header(getheaders_payload.stop_hash, headers.clone())?;
-        headers_to_send.copy_from_slice(
+        headers_to_send.extend_from_slice(
             &headers
                 .read()
                 .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
