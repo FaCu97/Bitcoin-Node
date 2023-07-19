@@ -7,7 +7,6 @@ use std::{
     sync::{mpsc::Sender, Arc, RwLock},
 };
 
-use bitcoin_hashes::Hash;
 use chrono::{TimeZone, Utc};
 
 use crate::{
@@ -59,7 +58,7 @@ pub fn get_initial_headers(
             return Ok(());
         }
     }
-    download_and_persist_headers(config, log_sender, headers, header_heights.clone(), nodes)?;
+    download_and_persist_headers(config, log_sender, headers, header_heights, nodes)?;
     Ok(())
 }
 
@@ -93,12 +92,7 @@ fn read_headers_from_disk(
         let unmarshalled_headers = HeadersMessage::unmarshalling(&message_bytes)
             .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
 
-        load_header_heights(
-            &unmarshalled_headers,
-            &header_heights,
-            &headers,
-            &log_sender,
-        )?;
+        load_header_heights(&unmarshalled_headers, &header_heights, &headers)?;
 
         headers
             .write()
@@ -119,7 +113,6 @@ pub fn load_header_heights(
     headers: &Vec<BlockHeader>,
     header_heights: &Arc<RwLock<HashMap<[u8; 32], usize>>>,
     headers_vec: &Arc<RwLock<Vec<BlockHeader>>>,
-    log_sender: &LogSender,
 ) -> Result<(), NodeCustomErrors> {
     let mut height = headers_vec
         .read()
@@ -210,7 +203,7 @@ fn download_and_persist_initial_headers_from_node(
     {
         request_headers_from_node(config, node, headers.clone())?;
         let headers_read = receive_and_persist_initial_headers_from_node(log_sender, node, file)?;
-        load_header_heights(&headers_read, &header_heights, &headers, &log_sender)?;
+        load_header_heights(&headers_read, &header_heights, &headers)?;
         store_headers_in_local_headers_vec(log_sender, headers.clone(), &headers_read)?;
         println!(
             "{:?} headers descargados y guardados en disco",
@@ -328,13 +321,13 @@ fn download_missing_headers_from_node(
     request_headers_from_node(config, node, headers.clone())?;
     let mut headers_read = receive_headers_from_node(log_sender, node)?;
 
-    load_header_heights(&headers_read, &header_heights, &headers, &log_sender)?;
+    load_header_heights(&headers_read, &header_heights, &headers)?;
 
     store_headers_in_local_headers_vec(log_sender, headers.clone(), &headers_read)?;
     while headers_read.len() == 2000 {
         request_headers_from_node(config, node, headers.clone())?;
         headers_read = receive_headers_from_node(log_sender, node)?;
-        load_header_heights(&headers_read, &header_heights, &headers, &log_sender)?;
+        load_header_heights(&headers_read, &header_heights, &headers)?;
         store_headers_in_local_headers_vec(log_sender, headers.clone(), &headers_read)?;
         match first_block_found {
             true => {

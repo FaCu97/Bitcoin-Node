@@ -69,12 +69,7 @@ pub fn handle_headers_message(
                     .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
             }
         }
-        load_header_heights(
-            &vec![header],
-            &node_pointers.header_heights,
-            &headers,
-            &log_sender,
-        )?;
+        load_header_heights(&vec![header], &node_pointers.header_heights, &headers)?;
     }
     Ok(())
 }
@@ -97,7 +92,7 @@ pub fn handle_getheaders_message(
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .len();
     let mut index_of_first_header_asked: usize =
-        get_index_of_header(first_header_asked, headers.clone(), node_pointers.clone())?;
+        get_index_of_header(first_header_asked, node_pointers.clone())?;
     index_of_first_header_asked += 1;
     let mut headers_to_send: Vec<BlockHeader> = Vec::new();
     if !stop_hash_provided {
@@ -117,11 +112,8 @@ pub fn handle_getheaders_message(
             );
         }
     } else {
-        let index_of_stop_hash: usize = get_index_of_header(
-            getheaders_payload.stop_hash,
-            headers.clone(),
-            node_pointers.clone(),
-        )?;
+        let index_of_stop_hash: usize =
+            get_index_of_header(getheaders_payload.stop_hash, node_pointers)?;
         headers_to_send.extend_from_slice(
             &headers
                 .read()
@@ -455,7 +447,6 @@ pub fn write_to_node(tx: &NodeSender, message: Vec<u8>) -> NodeMessageHandlerRes
 /// Si no fue encontrado se devuelve el idice 0. En caso de un Error se devuelve un error de tipo NodeCustomErrors
 fn get_index_of_header(
     header_hash: [u8; 32],
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
     node_pointers: NodeDataPointers,
 ) -> Result<usize, NodeCustomErrors> {
     if header_hash == GENESIS_BLOCK_HASH {
@@ -467,9 +458,9 @@ fn get_index_of_header(
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .get(&header_hash)
     {
-        Some(height) => return Ok(*height),
+        Some(height) => Ok(*height),
         // If the receiving peer does not find a common header hash within the list,
         // it will assume the last common block was the genesis block (block zero)
-        None => return Ok(0),
+        None => Ok(0),
     }
 }
