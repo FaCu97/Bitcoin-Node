@@ -114,7 +114,8 @@ fn read_headers_from_disk(
     Ok(())
 }
 
-fn load_header_heights(
+/// Carga los hashes de los headers en un hashmap para poder obtener la altura de un header en O(1)
+pub fn load_header_heights(
     headers: &Vec<BlockHeader>,
     header_heights: &Arc<RwLock<HashMap<[u8; 32], usize>>>,
     headers_vec: &Arc<RwLock<Vec<BlockHeader>>>,
