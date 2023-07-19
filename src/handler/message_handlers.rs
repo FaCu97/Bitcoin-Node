@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    sync::{mpsc::Sender, Arc, RwLock},
-};
-
+use crate::blockchain_download::headers_download::load_header_heights;
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
@@ -15,11 +11,15 @@ use crate::{
         inventory::Inventory,
         message_header::{get_checksum, HeaderMessage},
         notfound_message::get_notfound_message,
-        payload::get_data_payload::unmarshalling,
+        payload::{get_data_payload::unmarshalling, getheaders_payload::GetHeadersPayload},
     },
     node_data_pointers::NodeDataPointers,
     transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
+};
+use std::{
+    collections::HashMap,
+    sync::{mpsc::Sender, Arc, RwLock},
 };
 
 use crate::custom_errors::NodeCustomErrors;
@@ -28,6 +28,12 @@ type NodeMessageHandlerResult = Result<(), NodeCustomErrors>;
 type NodeSender = Sender<Vec<u8>>;
 
 const START_STRING: [u8; 4] = [0x0b, 0x11, 0x09, 0x07];
+const MSG_TX: u32 = 1;
+const MSG_BLOCK: u32 = 2;
+const GENESIS_BLOCK_HASH: [u8; 32] = [
+    0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79, 0xba,
+    0xae, 0xc3, 0xce, 0xd9, 0x0f, 0xa3, 0xf4, 0x08, 0x71, 0x95, 0x26, 0xf8, 0xd7, 0x7f, 0x49, 0x43,
+];
 
 /*
 ***************************************************************************
@@ -42,6 +48,7 @@ pub fn handle_headers_message(
     tx: NodeSender,
     payload: &[u8],
     headers: Arc<RwLock<Vec<BlockHeader>>>,
+    node_pointers: NodeDataPointers,
 ) -> NodeMessageHandlerResult {
     let new_headers = HeadersMessage::unmarshalling(&payload.to_vec())
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
@@ -62,7 +69,59 @@ pub fn handle_headers_message(
                     .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
             }
         }
+        load_header_heights(&vec![header], &node_pointers.header_heights, &headers)?;
     }
+    Ok(())
+}
+
+pub fn handle_getheaders_message(
+    tx: NodeSender,
+    payload: &[u8],
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    node_pointers: NodeDataPointers,
+) -> NodeMessageHandlerResult {
+    println!("HANDLEO GETHEADERS!!!\n");
+    let getheaders_payload = GetHeadersPayload::read_from(payload)
+        .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
+    // check first header in common (provided in locator hashes)
+    let first_header_asked = getheaders_payload.locator_hashes[0];
+    // check if stop hash is provided
+    let stop_hash_provided = getheaders_payload.stop_hash != [0u8; 32];
+    let amount_of_headers = headers
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .len();
+    let mut index_of_first_header_asked: usize =
+        get_index_of_header(first_header_asked, node_pointers.clone())?;
+    index_of_first_header_asked += 1;
+    let mut headers_to_send: Vec<BlockHeader> = Vec::new();
+    if !stop_hash_provided {
+        if index_of_first_header_asked + 2000 >= amount_of_headers {
+            headers_to_send.extend_from_slice(
+                &headers
+                    .read()
+                    .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+                    [index_of_first_header_asked..],
+            );
+        } else {
+            headers_to_send.extend_from_slice(
+                &headers
+                    .read()
+                    .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+                    [index_of_first_header_asked..index_of_first_header_asked + 2000],
+            );
+        }
+    } else {
+        let index_of_stop_hash: usize =
+            get_index_of_header(getheaders_payload.stop_hash, node_pointers)?;
+        headers_to_send.extend_from_slice(
+            &headers
+                .read()
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+                [index_of_first_header_asked..index_of_stop_hash],
+        );
+    }
+    write_to_node(&tx, HeadersMessage::marshalling(headers_to_send))?;
     Ok(())
 }
 
@@ -78,85 +137,94 @@ pub fn handle_getdata_message(
 ) -> Result<(), NodeCustomErrors> {
     // idea: mover a GetDataPayload, que devuelva una lista de inventories
     let mut message_to_send: Vec<u8> = Vec::new();
-
     let inventories = unmarshalling(payload)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
-
     let mut notfound_inventories: Vec<Inventory> = Vec::new();
-
     for inv in inventories {
-        //  MSG_TX == 1
-        if inv.type_identifier == 1 {
-            for account in &*accounts
-                .read()
-                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-                .read()
-                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            {
-                for tx in &*account
-                    .pending_transactions
-                    .read()
-                    .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-                {
-                    if tx.hash() == inv.hash {
-                        // mover get_tx_message a otro módulo?
-                        let tx_message = get_tx_message(tx);
-                        node_sender
-                            .send(tx_message)
-                            .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
-                        write_in_log(
-                            &log_sender.info_log_sender,
-                            format!("transaccion {:?} enviada", tx.hex_hash()).as_str(),
-                        );
-                    }
-                }
-            }
+        if inv.type_identifier == MSG_TX {
+            handle_tx_inventory(log_sender, &inv, &accounts, &node_sender)?;
         }
-        //  MSG_BLOCK == 2
-        if inv.type_identifier == 2 {
-            let block_hash = inv.hash;
-            // buscar el bloque en la blockchain
-            match blocks
-                .read()
-                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-                .get(&block_hash)
-            {
-                Some(block) => {
-                    message_to_send.extend_from_slice(&get_block_message(block));
-                }
-                None => {
-                    write_in_log(
-                        &log_sender.error_log_sender,
-                        &format!(
-                            "No se encontro el bloque en la blockchain: {}",
-                            crate::account::bytes_to_hex_string(&inv.hash)
-                        ),
-                    );
-                    notfound_inventories.push(inv);
-                }
-            }
+        if inv.type_identifier == MSG_BLOCK {
+            handle_block_inventory(
+                log_sender,
+                &inv,
+                &blocks,
+                &mut message_to_send,
+                &mut notfound_inventories,
+            )?;
         }
     }
     if !notfound_inventories.is_empty() {
+        // Hay un bloque o mas que no fueron encontrados en la blockchain
         let notfound_message = get_notfound_message(notfound_inventories);
         message_to_send.extend_from_slice(&notfound_message);
     }
-    node_sender
-        .send(message_to_send)
-        .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+    write_to_node(&node_sender, message_to_send)?;
     Ok(())
 }
 
-// Devuelve el mensaje tx según la transacción recibida
-fn get_tx_message(tx: &Transaction) -> Vec<u8> {
-    let mut tx_payload = vec![];
-    tx.marshalling(&mut tx_payload);
-    let header = HeaderMessage::new("tx".to_string(), Some(&tx_payload));
-    let mut tx_message = vec![];
-    tx_message.extend_from_slice(&header.to_le_bytes());
-    tx_message.extend_from_slice(&tx_payload);
+/// Recibe un inventory, un puntero a la cadena de bloques, un puntero al sender del nodo y un puntero al sender de logs.
+/// Se fija si el bloque del inventory esta en la blockchain y si es asi lo agrega al mensaje a enviar. Si no esta en la blockchain
+/// lo agrega a la lista de inventories notfound. Devuelve Ok(()) en caso de poder agregarlo correctamente o error del tipo NodeHandlerError en caso de no poder.
+fn handle_block_inventory(
+    log_sender: &LogSender,
+    inventory: &Inventory,
+    blocks: &Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    message_to_send: &mut Vec<u8>,
+    notfound_inventories: &mut Vec<Inventory>,
+) -> Result<(), NodeCustomErrors> {
+    let block_hash = inventory.hash;
+    match blocks
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .get(&block_hash)
+    {
+        Some(block) => {
+            message_to_send.extend_from_slice(&get_block_message(block));
+        }
+        None => {
+            write_in_log(
+                &log_sender.error_log_sender,
+                &format!(
+                    "No se encontro el bloque en la blockchain: {}",
+                    crate::account::bytes_to_hex_string(&inventory.hash)
+                ),
+            );
+            notfound_inventories.push(inventory.clone());
+        }
+    }
+    Ok(())
+}
 
-    tx_message
+/// Se fija si la transaccion del inventory esta en alguna de las cuentas de la wallet y si es asi la envia por el channel para que se escriba en el nodo
+fn handle_tx_inventory(
+    log_sender: &LogSender,
+    inventory: &Inventory,
+    accounts: &Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
+    node_sender: &NodeSender,
+) -> Result<(), NodeCustomErrors> {
+    for account in &*accounts
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+    {
+        for tx in &*account
+            .pending_transactions
+            .read()
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        {
+            if tx.hash() == inventory.hash {
+                let tx_message = get_tx_message(tx);
+                write_to_node(node_sender, tx_message)?;
+                write_in_log(
+                    &log_sender.info_log_sender,
+                    format!("transaccion {:?} enviada", tx.hex_hash()).as_str(),
+                );
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Deserializa el payload del mensaje blocks y en caso de que el bloque es valido y todavia no este incluido, agrega el header a la cadena de headers
@@ -354,4 +422,45 @@ fn update_accounts_utxo_set(
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
     }
     Ok(())
+}
+
+// Devuelve el mensaje tx según la transacción recibida
+fn get_tx_message(tx: &Transaction) -> Vec<u8> {
+    let mut tx_payload = vec![];
+    tx.marshalling(&mut tx_payload);
+    let header = HeaderMessage::new("tx".to_string(), Some(&tx_payload));
+    let mut tx_message = vec![];
+    tx_message.extend_from_slice(&header.to_le_bytes());
+    tx_message.extend_from_slice(&tx_payload);
+    tx_message
+}
+
+/// Manda por el channel el mensaje recibido para que se escriba en el nodo
+pub fn write_to_node(tx: &NodeSender, message: Vec<u8>) -> NodeMessageHandlerResult {
+    tx.send(message)
+        .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
+    Ok(())
+}
+
+/// Recibe el hash de un header a buscar en la cadena de header y los headers
+/// Recorre los headers hasta encontrar el hash buscado y devuelve el indice en el que se enecuntra
+/// Si no fue encontrado se devuelve el idice 0. En caso de un Error se devuelve un error de tipo NodeCustomErrors
+fn get_index_of_header(
+    header_hash: [u8; 32],
+    node_pointers: NodeDataPointers,
+) -> Result<usize, NodeCustomErrors> {
+    if header_hash == GENESIS_BLOCK_HASH {
+        return Ok(0);
+    }
+    match node_pointers
+        .header_heights
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .get(&header_hash)
+    {
+        Some(height) => Ok(*height),
+        // If the receiving peer does not find a common header hash within the list,
+        // it will assume the last common block was the genesis block (block zero)
+        None => Ok(0),
+    }
 }

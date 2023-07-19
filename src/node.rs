@@ -25,6 +25,7 @@ pub struct Node {
     pub connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
     pub headers: Arc<RwLock<Vec<BlockHeader>>>,
     pub block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    pub header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
     pub utxo_set: UtxoSetPointer,
     pub accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     pub peers_handler: NodeMessageHandler,
@@ -38,6 +39,7 @@ impl Node {
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+        header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
     ) -> Result<Self, NodeCustomErrors> {
         let pointer_to_utxo_set: UtxoSetPointer = Arc::new(RwLock::new(HashMap::new()));
         generate_utxo_set(&block_chain, pointer_to_utxo_set.clone())?;
@@ -47,6 +49,7 @@ impl Node {
             connected_nodes.clone(),
             headers.clone(),
             block_chain.clone(),
+            header_heights.clone(),
             pointer_to_accounts_in_node.clone(),
             pointer_to_utxo_set.clone(),
         );
@@ -56,6 +59,7 @@ impl Node {
             connected_nodes,
             headers,
             block_chain,
+            header_heights,
             utxo_set: pointer_to_utxo_set,
             accounts: pointer_to_accounts_in_node,
             peers_handler,

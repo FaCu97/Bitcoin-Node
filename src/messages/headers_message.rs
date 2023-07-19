@@ -88,6 +88,23 @@ impl HeadersMessage {
         }
         Ok(headers)
     }
+    /// Dado un vector de block headers, arma el mensaje headers y lo devuelve en un vector de bytes
+    pub fn marshalling(headers: Vec<BlockHeader>) -> Vec<u8> {
+        let mut headers_message_payload: Vec<u8> = Vec::new();
+        let count = CompactSizeUint::new(headers.len() as u128);
+        headers_message_payload.extend_from_slice(count.value());
+        for header in headers {
+            let mut header_bytes = vec![];
+            header.marshalling(&mut header_bytes);
+            header_bytes.extend_from_slice(&[0x00]); // este es el transaction_count
+            headers_message_payload.extend_from_slice(&header_bytes);
+        }
+        let header = HeaderMessage::new("headers".to_string(), Some(&headers_message_payload));
+        let mut headers_message: Vec<u8> = Vec::new();
+        headers_message.extend_from_slice(&header.to_le_bytes());
+        headers_message.extend_from_slice(&headers_message_payload);
+        headers_message
+    }
 }
 
 #[cfg(test)]

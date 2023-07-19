@@ -120,15 +120,20 @@ impl NodeServer {
         let socket_addr = stream
             .peer_addr()
             .map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
+        println!("ENTRO!\n");
         VersionMessage::read_from(log_sender, &mut stream)
             .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
+        println!("Se leyo corerectamente el version message\n");
         let version_message = get_version_message(config, socket_addr, local_ip_addr)
             .map_err(|err| NodeCustomErrors::OtherError(err.to_string()))?;
+        println!("Se creo correctamente el version message\n");
         version_message
             .write_to(&mut stream)
             .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
+        println!("Se escribio correctamente el version message\n");
         read_verack_message(log_sender, &mut stream)
             .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
+        println!("Se leyo correctamente el verack message\n");
         write_verack_message(&mut stream)
             .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
         println!("HANDSHAKE REALIZADO CON EXITO!\n");

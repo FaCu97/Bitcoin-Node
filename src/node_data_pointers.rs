@@ -18,6 +18,7 @@ pub struct NodeDataPointers {
     pub connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
     pub headers: Arc<RwLock<Vec<BlockHeader>>>,
     pub block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    pub header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
     pub accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     pub utxo_set: UtxoSetPointer,
 }
@@ -28,6 +29,7 @@ impl NodeDataPointers {
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+        header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         utxo_set: UtxoSetPointer,
     ) -> Self {
@@ -35,6 +37,7 @@ impl NodeDataPointers {
             connected_nodes,
             headers,
             block_chain,
+            header_heights,
             accounts,
             utxo_set,
         }
