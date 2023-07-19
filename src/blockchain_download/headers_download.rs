@@ -125,11 +125,13 @@ pub fn load_header_heights(
         .read()
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .len();
+
+    let mut header_heights_lock = header_heights
+        .write()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
+
     for header in headers {
-        header_heights
-            .write()
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            .insert(header.hash(), height);
+        header_heights_lock.insert(header.hash(), height);
         height += 1;
     }
     Ok(())
