@@ -17,18 +17,18 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, RwLock};
 use std::{fmt, thread, vec};
 
-
 // Informacion obtenida de https://blockchair.com/es/bitcoin/testnet/block/000000000933ea01ad0ee984209779baaec3ced90fa3f408719526f8d77f4943
 const GENESIS_BLOCK_HEADER: BlockHeader = BlockHeader {
     version: 1i32,
     previous_block_header_hash: [0u8; 32],
-    merkle_root_hash: [59, 163, 237, 253, 122, 123, 18, 178, 122, 199, 44, 62, 103, 118, 143, 97, 127, 200, 27, 195, 136, 138, 81, 50, 58, 159, 184, 170, 75, 30, 94, 74],
-    time: 1296688560, // 2011-02-02 20:16:42 GMT -3  
+    merkle_root_hash: [
+        59, 163, 237, 253, 122, 123, 18, 178, 122, 199, 44, 62, 103, 118, 143, 97, 127, 200, 27,
+        195, 136, 138, 81, 50, 58, 159, 184, 170, 75, 30, 94, 74,
+    ],
+    time: 1296688560, // 2011-02-02 20:16:42 GMT -3
     n_bits: 486604799,
     nonce: 414098458,
 };
-
-
 
 const GENESIS_BLOCK_HASH: [u8; 32] = [
     0x00, 0x00, 0x00, 0x00, 0x09, 0x33, 0xea, 0x01, 0xad, 0x0e, 0xe9, 0x84, 0x20, 0x97, 0x79, 0xba,
@@ -210,14 +210,13 @@ fn request_headers_from_node(
     headers: Arc<RwLock<Vec<BlockHeader>>>,
 ) -> Result<TcpStream, DownloadError> {
     // write first getheaders message with genesis block
-    let last_hash_header_downloaded: [u8; 32] = 
-        headers
-            .read()
-            .map_err(|err| DownloadError::LockError(err.to_string()))?
-            .last()
-            .ok_or("No se pudo obtener el último elemento del vector de 2000 headers")
-            .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
-            .hash();
+    let last_hash_header_downloaded: [u8; 32] = headers
+        .read()
+        .map_err(|err| DownloadError::LockError(err.to_string()))?
+        .last()
+        .ok_or("No se pudo obtener el último elemento del vector de 2000 headers")
+        .map_err(|err| DownloadError::CanNotRead(err.to_string()))?
+        .hash();
     GetHeadersMessage::build_getheaders_message(config, vec![last_hash_header_downloaded])
         .write_to(&mut node)
         .map_err(|err| DownloadError::WriteNodeError(err.to_string()))?;
@@ -867,8 +866,6 @@ fn read_first_headers_from_disk(
     Ok(())
 }
 
-
-
 /*
 /// Once the headers are downloaded, this function recieves the nodes and headers  downloaded
 /// and sends a getheaders message to each node to compare and get a header that was not downloaded.
@@ -942,5 +939,3 @@ fn compare_and_ask_for_last_headers(
     Ok(new_headers)
 }
 */
-
-

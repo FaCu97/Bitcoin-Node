@@ -86,7 +86,6 @@ fn read_headers_from_disk(
         .map_err(|err| NodeCustomErrors::ReadingFileError(err.to_string()))?;
     let mut amount = 0;
     let mut i = 0;
-    let mut height: usize = 0;
     while i < data.len() {
         amount += 2000;
         let mut message_bytes = Vec::new();
@@ -162,6 +161,7 @@ fn download_and_persist_headers(
         log_sender,
         &mut node,
         headers.clone(),
+        header_heights.clone(),
         &mut file,
     ) {
         write_in_log(
@@ -188,6 +188,7 @@ fn download_and_persist_initial_headers_from_node(
     log_sender: &LogSender,
     node: &mut TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
+    header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
     file: &mut File,
 ) -> Result<(), NodeCustomErrors> {
     write_in_log(
@@ -206,6 +207,7 @@ fn download_and_persist_initial_headers_from_node(
     {
         request_headers_from_node(config, node, headers.clone())?;
         let headers_read = receive_and_persist_initial_headers_from_node(log_sender, node, file)?;
+        load_header_heights(&headers_read, &header_heights, &headers, &log_sender)?;
         store_headers_in_local_headers_vec(log_sender, headers.clone(), &headers_read)?;
         println!(
             "{:?} headers descargados y guardados en disco",
