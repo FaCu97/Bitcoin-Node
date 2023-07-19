@@ -859,10 +859,6 @@ fn read_first_headers_from_disk(
         &log_sender.info_log_sender,
         "Termino lectura de los primeros headers de disco",
     );
-    println!("GENESIS BLOCK: {:?}", headers.read().unwrap()[0]);
-    println!("GENESIS BLOCK HASH: {:?}", GENESIS_BLOCK_HEADER.hash());
-    println!("BLOCK 1: {:?}", headers.read().unwrap()[1]);
-    println!("BLOCK 1 HASH: {:?}", headers.read().unwrap()[1].hash());
     Ok(())
 }
 
