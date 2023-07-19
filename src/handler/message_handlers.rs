@@ -80,7 +80,6 @@ pub fn handle_getheaders_message(
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     node_pointers: NodeDataPointers,
 ) -> NodeMessageHandlerResult {
-    println!("HANDLEO GETHEADERS!!!\n");
     let getheaders_payload = GetHeadersPayload::read_from(payload)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
     // check first header in common (provided in locator hashes)
