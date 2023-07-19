@@ -233,7 +233,12 @@ pub fn handle_messages_from_node(
                     handle_tx_message(&log_sender, &payload, node_pointers.accounts.clone())
                 }),
                 "getheaders" => handle_message(&mut error, || {
-                    handle_getheaders_message(tx.clone(), &payload, node_pointers.headers.clone())
+                    handle_getheaders_message(
+                        tx.clone(),
+                        &payload,
+                        node_pointers.headers.clone(),
+                        node_pointers.clone(),
+                    )
                 }),
                 _ => {
                     write_in_log(

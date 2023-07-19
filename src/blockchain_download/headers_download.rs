@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::File,
     io::Read,
     net::TcpStream,
@@ -6,6 +7,7 @@ use std::{
     sync::{mpsc::Sender, Arc, RwLock},
 };
 
+use bitcoin_hashes::Hash;
 use chrono::{TimeZone, Utc};
 
 use crate::{
@@ -41,10 +43,13 @@ pub fn get_initial_headers(
     config: &Arc<Config>,
     log_sender: &LogSender,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
+    header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<(), NodeCustomErrors> {
     if config.read_headers_from_disk && Path::new(&config.archivo_headers).exists() {
-        if let Err(err) = read_headers_from_disk(config, log_sender, headers.clone()) {
+        if let Err(err) =
+            read_headers_from_disk(config, log_sender, headers.clone(), header_heights.clone())
+        {
             // si no se pudo descargar de disco, intento desde la red y guardo en disco
             write_in_log(
                 &log_sender.error_log_sender,
@@ -54,7 +59,7 @@ pub fn get_initial_headers(
             return Ok(());
         }
     }
-    download_and_persist_headers(config, log_sender, headers, nodes)?;
+    download_and_persist_headers(config, log_sender, headers, header_heights.clone(), nodes)?;
     Ok(())
 }
 
@@ -64,6 +69,7 @@ fn read_headers_from_disk(
     config: &Arc<Config>,
     log_sender: &LogSender,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
+    header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
 ) -> Result<(), NodeCustomErrors> {
     write_in_log(
         &log_sender.info_log_sender,
@@ -80,12 +86,21 @@ fn read_headers_from_disk(
         .map_err(|err| NodeCustomErrors::ReadingFileError(err.to_string()))?;
     let mut amount = 0;
     let mut i = 0;
+    let mut height: usize = 0;
     while i < data.len() {
         amount += 2000;
         let mut message_bytes = Vec::new();
         message_bytes.extend_from_slice(&data[i..i + HEADERS_MESSAGE_SIZE]);
         let unmarshalled_headers = HeadersMessage::unmarshalling(&message_bytes)
             .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
+
+        load_header_heights(
+            &unmarshalled_headers,
+            &header_heights,
+            &headers,
+            &log_sender,
+        )?;
+
         headers
             .write()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
@@ -100,6 +115,26 @@ fn read_headers_from_disk(
     Ok(())
 }
 
+fn load_header_heights(
+    headers: &Vec<BlockHeader>,
+    header_heights: &Arc<RwLock<HashMap<[u8; 32], usize>>>,
+    headers_vec: &Arc<RwLock<Vec<BlockHeader>>>,
+    log_sender: &LogSender,
+) -> Result<(), NodeCustomErrors> {
+    let mut height = headers_vec
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .len();
+    for header in headers {
+        header_heights
+            .write()
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+            .insert(header.hash(), height);
+        height += 1;
+    }
+    Ok(())
+}
+
 /// Descarga los primeros headers de la blockchain, crea el archivo para guardarlos y los guarda en disco
 /// En caso de que un nodo falle en la descarga, intenta con otro siempre y cuando tenga peers disponibles
 /// Devuelve un error en caso de no poder descargar los headers desde nignun nodo peer
@@ -107,6 +142,7 @@ fn download_and_persist_headers(
     config: &Arc<Config>,
     log_sender: &LogSender,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
+    header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<(), NodeCustomErrors> {
     write_in_log(
@@ -215,6 +251,7 @@ pub fn download_missing_headers(
     log_sender: &LogSender,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
+    header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
     tx: Sender<Vec<BlockHeader>>,
 ) -> Result<(), NodeCustomErrors> {
     // get last node from list, if possible
@@ -224,6 +261,7 @@ pub fn download_missing_headers(
         log_sender,
         &mut node,
         headers.clone(),
+        header_heights.clone(),
         tx.clone(),
     ) {
         write_in_log(
@@ -270,6 +308,7 @@ fn download_missing_headers_from_node(
     log_sender: &LogSender,
     node: &mut TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
+    header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
     tx: Sender<Vec<BlockHeader>>,
 ) -> Result<(), NodeCustomErrors> {
     write_in_log(
@@ -283,10 +322,14 @@ fn download_missing_headers_from_node(
     let mut first_block_found = false;
     request_headers_from_node(config, node, headers.clone())?;
     let mut headers_read = receive_headers_from_node(log_sender, node)?;
+
+    load_header_heights(&headers_read, &header_heights, &headers, &log_sender)?;
+
     store_headers_in_local_headers_vec(log_sender, headers.clone(), &headers_read)?;
     while headers_read.len() == 2000 {
         request_headers_from_node(config, node, headers.clone())?;
         headers_read = receive_headers_from_node(log_sender, node)?;
+        load_header_heights(&headers_read, &header_heights, &headers, &log_sender)?;
         store_headers_in_local_headers_vec(log_sender, headers.clone(), &headers_read)?;
         match first_block_found {
             true => {

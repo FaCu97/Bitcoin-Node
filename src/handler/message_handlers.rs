@@ -76,6 +76,7 @@ pub fn handle_getheaders_message(
     tx: NodeSender,
     payload: &[u8],
     headers: Arc<RwLock<Vec<BlockHeader>>>,
+    node_pointers: NodeDataPointers,
 ) -> NodeMessageHandlerResult {
     println!("HANDLEO GETHEADERS!!!\n");
     let getheaders_payload = GetHeadersPayload::read_from(payload)
@@ -89,7 +90,7 @@ pub fn handle_getheaders_message(
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .len();
     let mut index_of_first_header_asked: usize =
-        get_index_of_header(first_header_asked, headers.clone())?;
+        get_index_of_header(first_header_asked, headers.clone(), node_pointers.clone())?;
     index_of_first_header_asked += 1;
     let mut headers_to_send: Vec<BlockHeader> = Vec::new();
     if !stop_hash_provided {
@@ -109,8 +110,11 @@ pub fn handle_getheaders_message(
             );
         }
     } else {
-        let index_of_stop_hash: usize =
-            get_index_of_header(getheaders_payload.stop_hash, headers.clone())?;
+        let index_of_stop_hash: usize = get_index_of_header(
+            getheaders_payload.stop_hash,
+            headers.clone(),
+            node_pointers.clone(),
+        )?;
         headers_to_send.extend_from_slice(
             &headers
                 .read()
@@ -445,21 +449,20 @@ pub fn write_to_node(tx: &NodeSender, message: Vec<u8>) -> NodeMessageHandlerRes
 fn get_index_of_header(
     header_hash: [u8; 32],
     headers: Arc<RwLock<Vec<BlockHeader>>>,
+    node_pointers: NodeDataPointers,
 ) -> Result<usize, NodeCustomErrors> {
     if header_hash == GENESIS_BLOCK_HASH {
         return Ok(0);
     }
-    for (i, header) in headers
+    match node_pointers
+        .header_heights
         .read()
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .iter()
-        .enumerate()
+        .get(&header_hash)
     {
-        if header.hash() == header_hash {
-            return Ok(i);
-        }
+        Some(height) => return Ok(*height),
+        // If the receiving peer does not find a common header hash within the list,
+        // it will assume the last common block was the genesis block (block zero)
+        None => return Ok(0),
     }
-    // If the receiving peer does not find a common header hash within the list,
-    // it will assume the last common block was the genesis block (block zero)
-    Ok(0)
 }

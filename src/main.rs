@@ -82,9 +82,15 @@ fn main() -> Result<(), GenericError> {
             );
             GenericError::DownloadError(err.to_string())
         })?;
-    let (headers, blocks) = headers_and_blocks;
-    let mut node = Node::new(&logsender, pointer_to_nodes, headers, blocks)
-        .map_err(GenericError::NodeHandlerError)?;
+    let (headers, blocks, header_heights) = headers_and_blocks;
+    let mut node = Node::new(
+        &logsender,
+        pointer_to_nodes,
+        headers,
+        blocks,
+        header_heights,
+    )
+    .map_err(GenericError::NodeHandlerError)?;
     let wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
     let server =
         NodeServer::new(&config, &logsender, &mut node).map_err(GenericError::NodeServerError)?;
