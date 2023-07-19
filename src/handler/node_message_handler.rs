@@ -233,7 +233,7 @@ pub fn handle_messages_from_node(
                 }),
                 _ => {
                     write_in_log(
-                        &log_sender.messege_log_sender,
+                        &log_sender.message_log_sender,
                         format!(
                             "IGNORADO -- Recibo: {} -- Nodo: {:?}",
                             header.command_name,
@@ -247,7 +247,7 @@ pub fn handle_messages_from_node(
             if command_name != "inv" {
                 // Se imprimen en el log_message todos los mensajes menos el inv
                 write_in_log(
-                    &log_sender.messege_log_sender,
+                    &log_sender.message_log_sender,
                     format!(
                         "Recibo correctamente: {} -- Nodo: {:?}",
                         command_name,
