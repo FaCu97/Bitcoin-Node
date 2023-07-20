@@ -1,7 +1,12 @@
-use std::{sync::mpsc::Sender, cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, sync::mpsc::Sender};
 
-use gtk::{gdk, prelude::*, CssProvider, ProgressBar, StyleContext, Application, ApplicationWindow, glib::{self, Priority}};
 use crate::wallet_event::WalletEvent;
+use gtk::{
+    gdk,
+    glib::{self, Priority},
+    prelude::*,
+    Application, ApplicationWindow, CssProvider, ProgressBar, StyleContext,
+};
 
 use super::ui_events::UIEvent;
 pub struct Gtk;
@@ -42,9 +47,6 @@ impl Gtk {
     }
 }
 
-
-
-
 pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<WalletEvent>) {
     let app = Application::builder()
         .application_id("org.gtk-rs.bitcoin")
@@ -55,7 +57,11 @@ pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<W
     app.run();
 }
 
-fn build_ui(app: &Application, ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<WalletEvent>) {
+fn build_ui(
+    app: &Application,
+    ui_sender: &Sender<glib::Sender<UIEvent>>,
+    sender_to_node: &Sender<WalletEvent>,
+) {
     let glade_src = include_str!("resources/interfaz.glade");
     let builder = gtk::Builder::from_string(glade_src);
     let main_window: ApplicationWindow = builder.object("main-window").unwrap();
@@ -70,20 +76,13 @@ fn build_ui(app: &Application, ui_sender: &Sender<glib::Sender<UIEvent>>, sender
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
     let (tx, rx) = glib::MainContext::channel(Priority::default());
-    ui_sender
-        .send(tx)
-        .expect("could not send sender to client");
+    ui_sender.send(tx).expect("could not send sender to client");
     let notebook = Rc::new(RefCell::new(Notebook::new(&main_window)));
     let notebook_clone = notebook.clone();
     rx.attach(None, move |msg| {
         notebook_clone.borrow_mut().update(msg);
         Continue(true)
     });
-
-
-
-
-
 
     let initial_window: ApplicationWindow = builder.object("initial-window").unwrap();
     let main_window: ApplicationWindow = builder.object("main-window").unwrap();
@@ -95,7 +94,6 @@ fn build_ui(app: &Application, ui_sender: &Sender<glib::Sender<UIEvent>>, sender
     });
 }
 
-
 pub struct Notebook {
     pub notebook: gtk::Notebook,
     overview_tab: OverViewTab,
@@ -103,7 +101,6 @@ pub struct Notebook {
     transactions_tab: TransactionsTab,
     blocks_tab: BlocksTab,
 }
-
 
 impl Notebook {
     pub fn new(main_window: &ApplicationWindow) -> Self {
@@ -116,7 +113,11 @@ impl Notebook {
         };
         Self::create_tab("Overview", &notebook, &notebook.overview_tab.container);
         Self::create_tab("Send", &notebook, &notebook.send_tab.container);
-        Self::create_tab("Transactions", &notebook, &notebook.transactions_tab.container);
+        Self::create_tab(
+            "Transactions",
+            &notebook,
+            &notebook.transactions_tab.container,
+        );
         Self::create_tab("Blocks", &notebook, &notebook.blocks_tab.container);
         notebook
     }
@@ -128,10 +129,9 @@ impl Notebook {
     }
     fn create_tab(title: &str, notebook: &Notebook, container: &gtk::Box) -> u32 {
         let label = gtk::Label::new(Some(title));
-        notebook.notebook.append_page(container, Some(&label))        
+        notebook.notebook.append_page(container, Some(&label))
     }
 }
-
 
 pub struct OverViewTab {
     pub container: gtk::Box,
@@ -163,7 +163,6 @@ impl SendTab {
             _ => {}
         }
     }
-
 }
 
 pub struct TransactionsTab {
@@ -180,7 +179,6 @@ impl TransactionsTab {
             _ => {}
         }
     }
-
 }
 pub struct BlocksTab {
     pub container: gtk::Box,
@@ -191,13 +189,10 @@ impl BlocksTab {
         let container = gtk::Box::new(gtk::Orientation::Vertical, 0);
         Self { container }
     }
-    
+
     pub fn update(&mut self, event: &UIEvent) {
         match event {
             _ => {}
         }
     }
-
 }
-
-

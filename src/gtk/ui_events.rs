@@ -1,6 +1,9 @@
-use std::{sync::mpsc::Sender, collections::HashMap};
+use std::{collections::HashMap, sync::mpsc::Sender};
 
-use crate::{logwriter::log_writer::{LogSender, write_in_log}, blocks::block::Block};
+use crate::{
+    blocks::block::Block,
+    logwriter::log_writer::{write_in_log, LogSender},
+};
 
 pub enum UIEvent {
     InitializeUI(HashMap<[u8; 32], Block>),
@@ -15,22 +18,26 @@ pub struct UIEventSender {
     ui_sender: Option<Sender<UIEvent>>,
 }
 
-
 impl UIEventSender {
     pub fn withou_ui() -> Self {
         UIEventSender { ui_sender: None }
     }
 
     pub fn with_ui(sender: Sender<UIEvent>) -> Self {
-        UIEventSender { ui_sender: Some(sender) }
+        UIEventSender {
+            ui_sender: Some(sender),
+        }
     }
 
     pub fn initialize_ui(&self, log_sender: &LogSender, blocks: HashMap<[u8; 32], Block>) {
         self.send_initialize_ui_event_to_ui(log_sender, blocks);
     }
 
-
-    pub fn send_initialize_ui_event_to_ui(&self, log_sender: &LogSender, blocks: HashMap<[u8; 32], Block>) {
+    pub fn send_initialize_ui_event_to_ui(
+        &self,
+        log_sender: &LogSender,
+        blocks: HashMap<[u8; 32], Block>,
+    ) {
         self.send_event_to_ui(log_sender, UIEvent::InitializeUI(blocks));
     }
 
