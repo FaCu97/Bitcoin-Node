@@ -1,15 +1,17 @@
-use std::{collections::HashMap, sync::mpsc::Sender};
+use std::{collections::HashMap, sync::{mpsc::Sender, RwLock, Arc}};
 
 use crate::{
     blocks::block::Block,
     logwriter::log_writer::{write_in_log, LogSender},
 };
 
+type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
 pub enum UIEvent {
     InitializeUI(HashMap<[u8; 32], Block>),
     ShowConfirmedTransaction(),
     AddAccount(),
     ShowPendingTransaction(),
+    InitializeUITabs(Blocks)
 }
 
 #[derive(Debug, Clone)]

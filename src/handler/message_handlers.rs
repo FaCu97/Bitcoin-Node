@@ -1,4 +1,7 @@
+use gtk::glib;
+
 use crate::blockchain_download::headers_download::load_header_heights;
+use crate::gtk::ui_events::UIEvent;
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
@@ -230,6 +233,7 @@ fn handle_tx_inventory(
 /// y el bloque a la cadena de bloques. Se fija si alguna transaccion del bloque involucra a alguna de las cuentas del programa.
 pub fn handle_block_message(
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     payload: &[u8],
     node_pointers: NodeDataPointers,
 ) -> NodeMessageHandlerResult {

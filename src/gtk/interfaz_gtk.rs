@@ -1,6 +1,6 @@
-use std::{cell::RefCell, rc::Rc, sync::mpsc::Sender};
+use std::{cell::RefCell, rc::Rc, sync::{mpsc::Sender, RwLock, Arc}, collections::HashMap};
 
-use crate::wallet_event::WalletEvent;
+use crate::{wallet_event::WalletEvent, blocks::{self, block::Block}};
 use gtk::{
     gdk,
     glib::{self, Priority},
@@ -144,8 +144,14 @@ impl OverViewTab {
     }
     pub fn update(&mut self, event: &UIEvent) {
         match event {
-            _ => {}
+            UIEvent::InitializeUITabs(_) => {
+                self.initialize();
+            }
+            _ => ()
         }
+    }
+    fn initialize(&self) {
+        println!("Initialize Overview tab");
     }
 }
 
@@ -160,8 +166,14 @@ impl SendTab {
     }
     pub fn update(&mut self, event: &UIEvent) {
         match event {
-            _ => {}
+            UIEvent::InitializeUITabs(_) => {
+                self.initialize();
+            }
+            _ => ()
         }
+    }
+    fn initialize(&self) {
+        println!("Initialize send tab");
     }
 }
 
@@ -176,8 +188,14 @@ impl TransactionsTab {
     }
     pub fn update(&mut self, event: &UIEvent) {
         match event {
-            _ => {}
+            UIEvent::InitializeUITabs(_) => {
+                self.initialize();
+            }
+            _ => ()
         }
+    }
+    fn initialize(&self) {
+        println!("Initialize transactions tab");
     }
 }
 pub struct BlocksTab {
@@ -192,7 +210,17 @@ impl BlocksTab {
 
     pub fn update(&mut self, event: &UIEvent) {
         match event {
+            UIEvent::InitializeUITabs(blocks) => {
+                self.initialize(blocks);
+            }
             _ => {}
+        }
+    }
+
+    fn initialize(&self, blocks: &Arc<RwLock<HashMap<[u8; 32], Block>>>) {
+        let blocks = blocks.read().unwrap();
+        for (hash, block) in blocks.iter() {
+            println!("Hash: {:?} Block: {:?}", hash, block);
         }
     }
 }

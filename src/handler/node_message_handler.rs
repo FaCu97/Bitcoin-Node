@@ -1,8 +1,10 @@
+use gtk::glib;
+
 use crate::{
     custom_errors::NodeCustomErrors,
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{message_header::is_terminated, message_header::HeaderMessage},
-    node_data_pointers::NodeDataPointers,
+    node_data_pointers::NodeDataPointers, gtk::ui_events::UIEvent,
 };
 use std::{
     io::{self, Read, Write},
@@ -43,6 +45,7 @@ impl NodeMessageHandler {
     /// NodeMessageHandler con sus respectivos campos
     pub fn new(
         log_sender: &LogSender,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         node_pointers: NodeDataPointers,
     ) -> Result<Self, NodeCustomErrors> {
         write_in_log(
@@ -65,6 +68,7 @@ impl NodeMessageHandler {
             );
             nodes_handle.push(handle_messages_from_node(
                 log_sender,
+                ui_sender,
                 (tx, rx),
                 transactions_recieved.clone(),
                 node_pointers.clone(),
@@ -137,6 +141,7 @@ impl NodeMessageHandler {
     pub fn add_connection(
         &mut self,
         log_sender: &LogSender,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         node_pointers: NodeDataPointers,
         connection: TcpStream,
     ) -> NodeMessageHandlerResult {
@@ -151,6 +156,7 @@ impl NodeMessageHandler {
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .push(handle_messages_from_node(
                 log_sender,
+                ui_sender,
                 (tx, rx),
                 self.transactions_recieved.clone(),
                 node_pointers,
@@ -167,6 +173,7 @@ impl NodeMessageHandler {
 /// con lo que devuelve el loop. Ok(()) en caso de salir todo bien o NodeHandlerError en caso de algun error.
 pub fn handle_messages_from_node(
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     (tx, rx): (NodeSender, NodeReceiver),
     transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>>,
     node_pointers: NodeDataPointers,
@@ -174,6 +181,7 @@ pub fn handle_messages_from_node(
     finish: Option<Arc<RwLock<bool>>>,
 ) -> JoinHandle<()> {
     let log_sender = log_sender.clone();
+    let ui_sender = ui_sender.clone();
     thread::spawn(move || {
         // si ocurre algun error se guarda en esta variable
         let mut error: Option<NodeCustomErrors> = None;
@@ -224,7 +232,7 @@ pub fn handle_messages_from_node(
                     )
                 }),
                 "block" => handle_message(&mut error, || {
-                    handle_block_message(&log_sender, &payload, node_pointers.clone())
+                    handle_block_message(&log_sender, &ui_sender, &payload, node_pointers.clone())
                 }),
                 "inv" => handle_message(&mut error, || {
                     handle_inv_message(tx.clone(), &payload, transactions_recieved.clone())

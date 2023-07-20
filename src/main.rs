@@ -61,10 +61,11 @@ fn run_node(
     let active_nodes = get_active_nodes_from_dns_seed(&config, &log_sender)?;
     let pointer_to_nodes = handshake_with_nodes(&config, &log_sender, active_nodes)?;
     let (headers, blocks, headers_height) = initial_block_download(&config, &log_sender, pointer_to_nodes.clone())?;
-    let mut node = Node::new(&log_sender, pointer_to_nodes, headers, blocks, headers_height)?;
+    send_event_to_ui(&ui_sender, UIEvent::InitializeUITabs(blocks.clone()));
+    let mut node = Node::new(&log_sender, &ui_sender, pointer_to_nodes, headers, blocks, headers_height)?;
     let mut wallet = Wallet::new(node.clone())?;
-    let server = NodeServer::new(&config, &log_sender, &mut node)?;
-    handle_ui_requests(&mut wallet, ui_sender.clone(), node_rx);
+    let server = NodeServer::new(&config, &log_sender, &ui_sender, &mut node)?;
+    handle_ui_requests(&mut wallet, &ui_sender, node_rx);
     shut_down(node, server, log_sender, log_sender_handles)?;
     Ok(())
 }
@@ -84,7 +85,7 @@ fn shut_down(
 
 fn handle_ui_requests(
     wallet: &mut Wallet,
-    ui_sender: Option<glib::Sender<UIEvent>>,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     node_rx: Option<Receiver<WalletEvent>>,
 ) {
     if let Some(rx) = node_rx {
