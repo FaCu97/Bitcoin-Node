@@ -1,8 +1,9 @@
 use std::{sync::mpsc::Sender, cell::RefCell, rc::Rc};
 
 use gtk::{gdk, prelude::*, CssProvider, ProgressBar, StyleContext, Application, ApplicationWindow, glib::{self, Priority}};
-use super::ui_events::UIEvent;
+use crate::wallet_event::WalletEvent;
 
+use super::ui_events::UIEvent;
 pub struct Gtk;
 
 impl Gtk {
@@ -54,7 +55,7 @@ pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<W
     app.run();
 }
 
-fn build_ui(app: &Application, ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<UIEvent>) {
+fn build_ui(app: &Application, ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<WalletEvent>) {
     let glade_src = include_str!("resources/interfaz.glade");
     let builder = gtk::Builder::from_string(glade_src);
     let main_window: ApplicationWindow = builder.object("main-window").unwrap();

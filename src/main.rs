@@ -1,7 +1,6 @@
 use bitcoin::blockchain_download::initial_block_download;
 use bitcoin::config::Config;
 use bitcoin::custom_errors::NodeCustomErrors;
-use bitcoin::gtk::app::initialize_ui;
 use bitcoin::gtk::interfaz_gtk::run_ui;
 use bitcoin::gtk::ui_events::UIEvent;
 use bitcoin::handshake::handshake_with_nodes;
@@ -11,11 +10,11 @@ use bitcoin::node::Node;
 use bitcoin::server::NodeServer;
 use bitcoin::terminal_ui;
 use bitcoin::wallet::Wallet;
+use bitcoin::wallet_event::WalletEvent;
 use gtk::glib;
 use std::{env, thread};
 use std::sync::mpsc::{channel, Receiver};
 
-type UISender = glib::Sender<UIEvent>;
 fn main() -> Result<(), NodeCustomErrors> {
     let args: Vec<String> = env::args().collect();
     if args.len() == 3 && args[2] == *"-i" {
@@ -27,7 +26,7 @@ fn main() -> Result<(), NodeCustomErrors> {
 }
 
 fn run_with_ui(args: Vec<String>) -> Result<(), NodeCustomErrors> {
-    // this channel is used to receive the UISender from the ui that creates the channel
+    // this channel is used to receive the UISender (glib::Sender<UIEvent>) from the ui that creates the channel
     // an sends via this channel the UISender to the node
     let (tx, rx) = channel();  
     // channel to comunicate the ui with the node 
@@ -55,15 +54,7 @@ fn run_node(args: &[String], ui_sender: Option<glib::Sender<UIEvent>>, node_rx: 
     let mut node = Node::new(&log_sender, pointer_to_nodes, headers, blocks)?;
     let mut wallet = Wallet::new(node.clone())?;
     let server = NodeServer::new(&config, &log_sender, &mut node)?;
-    if ui_sender.is_none() {
-        terminal_ui(&mut wallet);
-    } else {
-        //initialize_ui(ui_sender, &log_sender, node.block_chain.read().unwrap().clone());
-        if let Some(rx) = node_rx {
-            handle_ui_requests(&mut wallet, rx);
-        }
-            
-    }
+    handle_ui_requests(&mut wallet, ui_sender.clone(), node_rx);
     shut_down(node, server, log_sender, log_sender_handles)?;
     Ok(())
 }
@@ -76,27 +67,29 @@ fn shut_down(node: Node, server: NodeServer, log_sender: LogSender, log_sender_h
     Ok(())
 }
 
-fn handle_ui_requests(wallet: &mut Wallet, rx: Receiver<WalletEvent>) {
-    for event in rx {
-        match event {
-            // handle add_account_request
-            // handle make_transaction_request
-            // handle poi of transaction request
-            _ => ()
+fn handle_ui_requests(wallet: &mut Wallet, ui_sender: Option<glib::Sender<UIEvent>>, node_rx: Option<Receiver<WalletEvent>>) {
+    if let Some(rx) = node_rx {
+        for event in rx {
+            match event {
+                WalletEvent::AddAccountRequest(wif, address) => {
+                    wallet.add_account(wif, address);       
+                }
+                WalletEvent::MakeTransactionRequest(account_index, address, amount, fee) => {
+                    wallet.make_transaction(account_index, &address, amount, fee);
+                }
+                WalletEvent::PoiOfTransactionRequest(block_hash, transaction_hash) => {
+                    wallet.tx_proof_of_inclusion(block_hash, transaction_hash);
+                }
+                _ => ()
+            }
         }
+    } else {
+        terminal_ui(wallet)
     }
-
 }
 
-type Address = String;
-type AccountIndex = usize;
-type Amount = i64;
-type Fee = i64;
-type BlockHash = String;
-type TransactionHash = String;
-
-pub enum WalletEvent<'a> {
-    AddAccountRequest(&'a str, Address),
-    MakeTransactionRequest(AccountIndex, Address, Amount, Fee),
-    PoiOfTransactionRequest(BlockHash, TransactionHash),
+pub fn send_event_to_ui(ui_sender: &Option<glib::Sender<UIEvent>>, event: UIEvent) {
+    if let Some(ui_sender) = ui_sender {
+        ui_sender.send(event).expect("Error al enviar el evento a la interfaz");
+    }
 }
