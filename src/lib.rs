@@ -22,7 +22,7 @@ pub mod wallet;
 
 /// Muestra las opciones para interactuar con el programa, espera algun comando
 /// y lo handlea o muestra un mensaje de error
-pub fn terminal_ui(mut wallet: Wallet) {
+pub fn terminal_ui(wallet: &mut Wallet) {
     show_options();
     loop {
         let mut input = String::new();
@@ -38,16 +38,16 @@ pub fn terminal_ui(mut wallet: Wallet) {
                             break;
                         }
                         1 => {
-                            handle_add_account_request(&mut wallet);
+                            handle_add_account_request(wallet);
                         }
                         2 => {
-                            handle_balance_request(&mut wallet);
+                            handle_balance_request(wallet);
                         }
                         3 => {
-                            handle_transaccion_request(&mut wallet);
+                            handle_transaccion_request(wallet);
                         }
                         4 => {
-                            handle_poi_request(&mut wallet);
+                            handle_poi_request(wallet);
                         }
                         _ => {
                             println!("Número no reconocido. Inténtalo de nuevo! \n");
