@@ -64,7 +64,6 @@ impl NodeServer {
             .set_nonblocking(true)
             .map_err(|err| NodeCustomErrors::SocketError(err.to_string()))?;
         let amount_of_connections = 0;
-        println!("Empiezo a escuchar por conecciones entrantes!\n");
         write_in_log(
             &log_sender.info_log_sender,
             "Empiezo a escuchar por conecciones entrantes!",
@@ -83,7 +82,6 @@ impl NodeServer {
                     if amount_of_connections > config.max_connections_to_server {
                         break;
                     }
-                    println!("RECIBO NUEVA CONEXION ENTRANTE!\n");
                     write_in_log(
                         &log_sender.info_log_sender,
                         format!(
@@ -96,7 +94,6 @@ impl NodeServer {
                 }
                 Err(ref err) if err.kind() == std::io::ErrorKind::WouldBlock => {
                     // This doesen't mean an error ocurred, there just wasn't a connection at the moment
-                    // println!("ERROR DE WOULDBLOCK");
                     continue;
                 }
                 Err(err) => return Err(NodeCustomErrors::CanNotRead(err.to_string())),
@@ -131,7 +128,6 @@ impl NodeServer {
             .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
         write_verack_message(&mut stream)
             .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
-        println!("HANDSHAKE REALIZADO CON EXITO!\n");
         write_in_log(
             &log_sender.info_log_sender,
             format!("Handshake con nodo {:?} realizado con exito!", socket_addr).as_str(),

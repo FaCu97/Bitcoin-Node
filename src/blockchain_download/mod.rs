@@ -12,7 +12,7 @@ use std::sync::mpsc::channel;
 use std::sync::{Arc, RwLock};
 use std::{thread, vec};
 mod blocks_download;
-mod headers_download;
+pub(crate) mod headers_download;
 mod utils;
 
 // Gensis block header hardcoded to start the download (this is the first block of the blockchain)
@@ -32,6 +32,7 @@ const GENESIS_BLOCK_HEADER: BlockHeader = BlockHeader {
 type HeadersBlocksTuple = (
     Arc<RwLock<Vec<BlockHeader>>>,
     Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    Arc<RwLock<HashMap<[u8; 32], usize>>>,
 );
 
 /// Recieves a list of TcpStreams that are the connection with nodes already established and downloads
@@ -51,10 +52,15 @@ pub fn initial_block_download(
     let pointer_to_headers = Arc::new(RwLock::new(headers));
     let blocks: HashMap<[u8; 32], Block> = HashMap::new();
     let pointer_to_blocks = Arc::new(RwLock::new(blocks));
+    let mut heights_hashmap: HashMap<[u8; 32], usize> = HashMap::new();
+    heights_hashmap.insert([0u8; 32], 0); // genesis hash
+    let header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>> =
+        Arc::new(RwLock::new(heights_hashmap));
     get_initial_headers(
         config,
         log_sender,
         pointer_to_headers.clone(),
+        header_heights.clone(),
         nodes.clone(),
     )?;
     let amount_of_nodes = nodes
@@ -68,6 +74,7 @@ pub fn initial_block_download(
             nodes,
             pointer_to_headers.clone(),
             pointer_to_blocks.clone(),
+            header_heights.clone(),
         )?;
     } else {
         download_full_blockchain_from_multiple_nodes(
@@ -76,6 +83,7 @@ pub fn initial_block_download(
             nodes,
             pointer_to_headers.clone(),
             pointer_to_blocks.clone(),
+            header_heights.clone(),
         )?;
     }
     let (amount_of_headers, amount_of_blocks) =
@@ -88,7 +96,7 @@ pub fn initial_block_download(
         &log_sender.info_log_sender,
         format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", amount_of_blocks).as_str(),
     );
-    Ok((pointer_to_headers, pointer_to_blocks))
+    Ok((pointer_to_headers, pointer_to_blocks, header_heights))
 }
 
 /// Se encarga de descargar todos los headers y bloques de la blockchain en multiples thread, en un thread descarga los headers
@@ -100,6 +108,7 @@ fn download_full_blockchain_from_multiple_nodes(
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
 ) -> Result<(), NodeCustomErrors> {
     // channel to comunicate headers download thread with blocks download thread
     let (tx, rx) = channel();
@@ -115,6 +124,7 @@ fn download_full_blockchain_from_multiple_nodes(
             &log_sender_cloned,
             nodes_cloned,
             headers_cloned,
+            header_heights,
             tx_cloned,
         )
     }));
@@ -135,9 +145,17 @@ fn download_full_blockchain_from_single_node(
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
 ) -> Result<(), NodeCustomErrors> {
     let (tx, rx) = channel();
-    download_missing_headers(config, log_sender, nodes.clone(), headers, tx)?;
+    download_missing_headers(
+        config,
+        log_sender,
+        nodes.clone(),
+        headers,
+        header_heights,
+        tx,
+    )?;
     let mut node = get_node(nodes.clone())?;
     for blocks_to_download in rx {
         download_blocks_single_node(

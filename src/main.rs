@@ -60,8 +60,8 @@ fn run_node(
     let (log_sender, log_sender_handles) = set_up_loggers(&config)?;
     let active_nodes = get_active_nodes_from_dns_seed(&config, &log_sender)?;
     let pointer_to_nodes = handshake_with_nodes(&config, &log_sender, active_nodes)?;
-    let (headers, blocks) = initial_block_download(&config, &log_sender, pointer_to_nodes.clone())?;
-    let mut node = Node::new(&log_sender, pointer_to_nodes, headers, blocks)?;
+    let (headers, blocks, headers_height) = initial_block_download(&config, &log_sender, pointer_to_nodes.clone())?;
+    let mut node = Node::new(&log_sender, pointer_to_nodes, headers, blocks, headers_height)?;
     let mut wallet = Wallet::new(node.clone())?;
     let server = NodeServer::new(&config, &log_sender, &mut node)?;
     handle_ui_requests(&mut wallet, ui_sender.clone(), node_rx);

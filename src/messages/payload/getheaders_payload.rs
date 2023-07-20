@@ -1,12 +1,16 @@
+use std::error::Error;
+
 use crate::compact_size_uint::CompactSizeUint;
+
+const SIZE_OF_HASH: usize = 32;
 
 #[derive(Clone, Debug)]
 /// Representa el payload del mensaje getheaders segun el protocolo de bitcoin
 pub struct GetHeadersPayload {
     pub version: u32, // The protocol version
     pub hash_count: CompactSizeUint,
-    pub locator_hashes: Vec<[u8; 32]>, // Locator hashes — ordered newest to oldest. The remote peer will reply with its longest known chain, starting from a locator hash if possible and block 1 otherwise.
-    pub stop_hash: [u8; 32], // References the header to stop at, or zero to just fetch the maximum 2000 headers
+    pub locator_hashes: Vec<[u8; SIZE_OF_HASH]>, // Locator hashes — ordered newest to oldest. The remote peer will reply with its longest known chain, starting from a locator hash if possible and block 1 otherwise.
+    pub stop_hash: [u8; SIZE_OF_HASH], // References the header to stop at, or zero to just fetch the maximum 2000 headers
 }
 
 impl GetHeadersPayload {
@@ -21,6 +25,30 @@ impl GetHeadersPayload {
         }
         getheaders_payload_bytes.extend(self.stop_hash);
         getheaders_payload_bytes
+    }
+    /// Dado un vector de bytes, intenta interpretar el mismo como un payload del mensaje getheaders
+    pub fn read_from(payload: &[u8]) -> Result<Self, Box<dyn Error>> {
+        let mut offset = 0;
+        let mut version_bytes: [u8; 4] = [0u8; 4];
+        version_bytes.copy_from_slice(&payload[0..4]);
+        let version = u32::from_le_bytes(version_bytes);
+        offset += 4;
+        let hash_count = CompactSizeUint::unmarshalling(payload, &mut offset)?;
+        let mut locator_hashes: Vec<[u8; SIZE_OF_HASH]> = vec![];
+        for _ in 0..hash_count.decoded_value() {
+            let mut hash: [u8; SIZE_OF_HASH] = [0u8; SIZE_OF_HASH];
+            hash.copy_from_slice(&payload[offset..offset + SIZE_OF_HASH]);
+            locator_hashes.push(hash);
+            offset += SIZE_OF_HASH;
+        }
+        let mut stop_hash: [u8; SIZE_OF_HASH] = [0u8; SIZE_OF_HASH];
+        stop_hash.copy_from_slice(&payload[offset..offset + SIZE_OF_HASH]);
+        Ok(GetHeadersPayload {
+            version,
+            hash_count,
+            locator_hashes,
+            stop_hash,
+        })
     }
 }
 
