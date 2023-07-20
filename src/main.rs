@@ -108,10 +108,4 @@ fn handle_ui_requests(
     }
 }
 
-pub fn send_event_to_ui(ui_sender: &Option<glib::Sender<UIEvent>>, event: UIEvent) {
-    if let Some(ui_sender) = ui_sender {
-        ui_sender
-            .send(event)
-            .expect("Error al enviar el evento a la interfaz");
-    }
-}
+

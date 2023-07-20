@@ -1,7 +1,7 @@
 use gtk::glib;
 
 use crate::blockchain_download::headers_download::load_header_heights;
-use crate::gtk::ui_events::UIEvent;
+use crate::gtk::ui_events::{UIEvent, send_event_to_ui};
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
@@ -250,6 +250,7 @@ pub fn handle_block_message(
             )?;
             include_new_block(
                 log_sender,
+                ui_sender,
                 new_block.clone(),
                 node_pointers.block_chain.clone(),
             )?;
@@ -353,18 +354,21 @@ fn ask_for_incoming_tx(tx: NodeSender, inventories: Vec<Inventory>) -> NodeMessa
 /// Devuelve Ok(()) en caso de poder agregarlo correctamente o error del tipo NodeHandlerError en caso de no poder.
 fn include_new_block(
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     block: Block,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
 ) -> NodeMessageHandlerResult {
-    println!("\nRECIBO NUEVO BLOQUE: {} \n", block.hex_hash());
-    write_in_log(
-        &log_sender.info_log_sender,
-        format!("NUEVO BLOQUE AGREGADO: -- {} --", block.hex_hash()).as_str(),
-    );
     blocks
         .write()
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .insert(block.hash(), block);
+    println!("\nRECIBO NUEVO BLOQUE: {} \n", block.hex_hash());
+    send_event_to_ui(ui_sender, UIEvent::AddBlock(block.clone()));
+    write_in_log(
+        &log_sender.info_log_sender,
+        format!("NUEVO BLOQUE AGREGADO: -- {} --", block.hex_hash()).as_str(),
+    );
+
     Ok(())
 }
 
