@@ -20,7 +20,7 @@ use std::{env, thread};
 fn main() -> Result<(), NodeCustomErrors> {
     let args: Vec<String> = env::args().collect();
     if args.len() == 3 && args[2] == *"-i" {
-        run_with_ui(args.clone())?;
+        run_with_ui(args)?;
     } else {
         run_without_ui(&args)?;
     }
