@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc, sync::{mpsc::Sender, RwLock, Arc}, collections::HashMap};
 
-use crate::{wallet_event::WalletEvent, blocks::{self, block::Block}};
+use crate::{wallet_event::WalletEvent, blocks::{self, block::Block}, transactions::transaction::Transaction, account::Account};
 use gtk::{
     gdk,
     glib::{self, Priority},
@@ -191,11 +191,17 @@ impl TransactionsTab {
             UIEvent::InitializeUITabs(_) => {
                 self.initialize();
             }
+            UIEvent::ShowPendingTransaction(account, tx) => {
+                self.show_pending_transaction(account, tx);
+            }
             _ => ()
         }
     }
     fn initialize(&self) {
         println!("Initialize transactions tab");
+    }
+    fn show_pending_transaction(&self, account: &Account, tx: &Transaction) {
+        println!("Transaction: {:?} involves account: {}", tx, account.address);
     }
 }
 pub struct BlocksTab {

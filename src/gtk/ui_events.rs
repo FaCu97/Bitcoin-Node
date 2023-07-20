@@ -2,14 +2,14 @@ use std::{collections::HashMap, sync::{RwLock, Arc}};
 
 use gtk::glib;
 
-use crate::blocks::block::Block;
+use crate::{blocks::block::Block, transactions::transaction::Transaction, account::Account};
 
 type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
 pub enum UIEvent {
     InitializeUI(HashMap<[u8; 32], Block>),
     ShowConfirmedTransaction(),
     AddAccount(),
-    ShowPendingTransaction(),
+    ShowPendingTransaction(Account, Transaction),
     AddBlock(Block),
     InitializeUITabs(Blocks)
 }

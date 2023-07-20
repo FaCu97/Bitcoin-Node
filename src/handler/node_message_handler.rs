@@ -239,7 +239,7 @@ pub fn handle_messages_from_node(
                 }),
                 "ping" => handle_message(&mut error, || handle_ping_message(tx.clone(), &payload)),
                 "tx" => handle_message(&mut error, || {
-                    handle_tx_message(&log_sender, &payload, node_pointers.accounts.clone())
+                    handle_tx_message(&log_sender, &ui_sender, &payload, node_pointers.accounts.clone())
                 }),
                 "getheaders" => handle_message(&mut error, || {
                     handle_getheaders_message(

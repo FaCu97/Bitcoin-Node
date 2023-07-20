@@ -326,12 +326,13 @@ pub fn handle_ping_message(tx: NodeSender, payload: &[u8]) -> NodeMessageHandler
 /// en caso de que se pueda leer bien el payload y recorrer las tx o error en caso contrario
 pub fn handle_tx_message(
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     payload: &[u8],
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
 ) -> NodeMessageHandlerResult {
     let tx = Transaction::unmarshalling(&payload.to_vec(), &mut 0)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
-    tx.check_if_tx_involves_user_account(log_sender, accounts)?;
+    tx.check_if_tx_involves_user_account(log_sender, ui_sender, accounts)?;
     Ok(())
 }
 
@@ -361,7 +362,7 @@ fn include_new_block(
     blocks
         .write()
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .insert(block.hash(), block);
+        .insert(block.hash(), block.clone());
     println!("\nRECIBO NUEVO BLOQUE: {} \n", block.hex_hash());
     send_event_to_ui(ui_sender, UIEvent::AddBlock(block.clone()));
     write_in_log(
