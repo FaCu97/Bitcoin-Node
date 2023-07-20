@@ -92,13 +92,19 @@ fn handle_ui_requests(
         for event in rx {
             match event {
                 WalletEvent::AddAccountRequest(wif, address) => {
-                    wallet.add_account(wif, address);
+                    if wallet.add_account(wif, address).is_err() {
+                        println!("Error al agregar la cuenta");
+                    }
                 }
                 WalletEvent::MakeTransactionRequest(account_index, address, amount, fee) => {
-                    wallet.make_transaction(account_index, &address, amount, fee);
+                    if wallet.make_transaction(account_index, &address, amount, fee).is_err() {
+                        println!("Error al crear la transaccion");
+                    }
                 }
                 WalletEvent::PoiOfTransactionRequest(block_hash, transaction_hash) => {
-                    wallet.tx_proof_of_inclusion(block_hash, transaction_hash);
+                    if wallet.tx_proof_of_inclusion(block_hash, transaction_hash).is_err() {
+                        println!("Error al crear la prueba de inclusion");
+                    }
                 }
                 _ => (),
             }
