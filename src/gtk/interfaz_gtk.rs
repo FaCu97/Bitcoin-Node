@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc, sync::{mpsc::Sender, RwLock, Arc}, collections::HashMap};
 
-use crate::{wallet_event::WalletEvent, blocks::{self, block::Block}, transactions::transaction::Transaction, account::Account};
+use crate::{wallet_event::WalletEvent, blocks::block::Block, transactions::transaction::Transaction, account::Account};
 use gtk::{
     gdk,
     glib::{self, Priority},
@@ -51,7 +51,9 @@ pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<W
     let app = Application::builder()
         .application_id("org.gtk-rs.bitcoin")
         .build();
+    
     app.connect_activate(move |app| {
+        println!("UI thread");
         build_ui(app, &ui_sender, &sender_to_node);
     });
     app.run();
@@ -81,6 +83,7 @@ fn build_ui(
     let notebook = Rc::new(RefCell::new(Notebook::new(&initial_window, &main_window)));
     let notebook_clone = notebook.clone();
     rx.attach(None, move |msg| {
+        println!("new event: {:?}", msg);
         notebook_clone.borrow_mut().update(msg);
         Continue(true)
     });
@@ -118,7 +121,7 @@ impl Notebook {
     }
     pub fn update(&mut self, event: UIEvent) {
         match event {
-            UIEvent::InitializeUI(_) => {
+            UIEvent::InitializeUI => {
                 self.notebook.show_all();
             }
             _ => (),
@@ -147,7 +150,7 @@ impl InitialWindow {
     }
     pub fn upadte(&self, event: &UIEvent) {
         match event {
-            UIEvent::InitializeUI(_) => {
+            UIEvent::InitializeUI => {
                 self.container.close();
             }
             UIEvent::ActualizeBlocksDownloaded(blocks_downloaded) => {
@@ -221,14 +224,20 @@ impl TransactionsTab {
             UIEvent::ShowPendingTransaction(account, tx) => {
                 self.show_pending_transaction(account, tx);
             }
+            UIEvent::ShowConfirmedTransaction(block, account, tx) => {
+                self.show_confirmed_transaction(block, account, tx);
+            }
             _ => ()
         }
     }
     fn initialize(&self) {
         println!("Initialize transactions tab");
     }
+    fn show_confirmed_transaction(&self, block: &Block, account: &Account, tx: &Transaction) {
+        println!("Confirmed transaction: {:?} involves account: {}", tx, account.address);
+    }
     fn show_pending_transaction(&self, account: &Account, tx: &Transaction) {
-        println!("Transaction: {:?} involves account: {}", tx, account.address);
+        println!("Pending transaction: {:?} involves account: {}", tx, account.address);
     }
 }
 pub struct BlocksTab {
@@ -246,6 +255,9 @@ impl BlocksTab {
             UIEvent::InitializeUITabs(blocks) => {
                 self.initialize(blocks);
             }
+            UIEvent::AddBlock(block) => {
+                self.add_block(block);
+            }
             _ => {}
         }
     }
@@ -255,5 +267,8 @@ impl BlocksTab {
         for (hash, block) in blocks.iter() {
             println!("Hash: {:?} Block: {:?}", hash, block);
         }
+    }
+    fn add_block(&self, block: &Block) {
+        println!("Add block: {:?}", block);
     }
 }

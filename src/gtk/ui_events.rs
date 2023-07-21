@@ -7,8 +7,8 @@ use crate::{blocks::block::Block, transactions::transaction::Transaction, accoun
 type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
 #[derive(Clone, Debug)]
 pub enum UIEvent {
-    InitializeUI(HashMap<[u8; 32], Block>),
-    ShowConfirmedTransaction(),
+    InitializeUI,
+    ShowConfirmedTransaction(Block, Account, Transaction),
     AddAccount(Account),
     ShowPendingTransaction(Account, Transaction),
     AddBlock(Block),

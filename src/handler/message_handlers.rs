@@ -254,7 +254,7 @@ pub fn handle_block_message(
                 new_block.clone(),
                 node_pointers.block_chain.clone(),
             )?;
-            new_block.contains_pending_tx(log_sender, node_pointers.accounts.clone())?;
+            new_block.contains_pending_tx(log_sender, ui_sender, node_pointers.accounts.clone())?;
             new_block
                 .give_me_utxos(node_pointers.utxo_set.clone())
                 .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;

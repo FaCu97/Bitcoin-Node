@@ -38,7 +38,10 @@ fn run_with_ui(mut args: Vec<String>) -> Result<(), NodeCustomErrors> {
         // sender to comunicate with the ui
         let ui_tx = rx
             .recv()
-            .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?; // receive the ui sender from the client
+            .map_err(|err| {
+                println!("ERROR AL RECIBIR!");
+                NodeCustomErrors::ThreadChannelError(err.to_string())
+            })?; // receive the ui sender from the client
         run_node(&args, Some(ui_tx), Some(receiver_from_ui_to_node)) // run the node with the ui sender
     });
     run_ui(tx, sender_from_ui_to_node);
@@ -107,7 +110,6 @@ fn handle_ui_requests(
                         println!("Error al crear la prueba de inclusion");
                     }
                 }
-                _ => (),
             }
         }
     } else {

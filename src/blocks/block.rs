@@ -5,6 +5,8 @@ use std::{
 };
 
 
+use gtk::glib;
+
 use super::{
     block_header::BlockHeader, merkle_tree::MerkleTree, utils_block::concatenate_and_hash,
 };
@@ -14,7 +16,7 @@ use crate::{
     custom_errors::NodeCustomErrors,
     logwriter::log_writer::{write_in_log, LogSender},
     transactions::transaction::Transaction,
-    utxo_tuple::UtxoTuple,
+    utxo_tuple::UtxoTuple, gtk::ui_events::{UIEvent, send_event_to_ui},
 };
 
 /// Representa un bloque del protocolo bitcoin.
@@ -179,6 +181,7 @@ impl Block {
     pub fn contains_pending_tx(
         &self,
         log_sender: &LogSender,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     ) -> Result<(), NodeCustomErrors> {
         for tx in &self.txn {
@@ -200,6 +203,7 @@ impl Block {
                         tx.hex_hash(),
                         account.address
                     );
+                    send_event_to_ui(ui_sender, UIEvent::ShowConfirmedTransaction(self.clone(), account.clone(), tx.clone()));
                     let pending_transaction_index = account
                         .pending_transactions
                         .read()
