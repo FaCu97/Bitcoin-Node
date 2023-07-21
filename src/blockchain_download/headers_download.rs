@@ -60,7 +60,7 @@ pub fn get_initial_headers(
             return Ok(());
         }
     }
-    download_and_persist_headers(config, log_sender, headers, header_heights, nodes)?;
+    download_and_persist_headers(config, log_sender, ui_sender, headers, header_heights, nodes)?;
     Ok(())
 }
 
@@ -101,10 +101,10 @@ fn read_headers_from_disk(
             .write()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .extend_from_slice(&unmarshalled_headers);
-        //println!("{:?} headers leidos", amount);
+        println!("{:?} headers leidos", amount);
         send_event_to_ui(
             ui_sender,
-            UIEvent::ActualizeHeadersDownloaded(amount),
+            UIEvent::ActualizeHeadersDownloaded(amount as usize),
         );
         i += HEADERS_MESSAGE_SIZE;
     }
@@ -143,6 +143,7 @@ pub fn load_header_heights(
 fn download_and_persist_headers(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
@@ -162,6 +163,7 @@ fn download_and_persist_headers(
     while let Err(err) = download_and_persist_initial_headers_from_node(
         config,
         log_sender,
+        ui_sender,
         &mut node,
         headers.clone(),
         header_heights.clone(),
@@ -189,6 +191,7 @@ fn download_and_persist_headers(
 fn download_and_persist_initial_headers_from_node(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     node: &mut TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
@@ -212,13 +215,14 @@ fn download_and_persist_initial_headers_from_node(
         let headers_read = receive_and_persist_initial_headers_from_node(log_sender, node, file)?;
         load_header_heights(&headers_read, &header_heights, &headers)?;
         store_headers_in_local_headers_vec(log_sender, headers.clone(), &headers_read)?;
+        let amount_of_headers = amount_of_headers(&headers)?;
         println!(
             "{:?} headers descargados y guardados en disco",
-            headers
-                .read()
-                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-                .len()
-                - 1
+            amount_of_headers
+        );
+        send_event_to_ui(
+            ui_sender,
+            UIEvent::ActualizeHeadersDownloaded(amount_of_headers),
         );
     }
     Ok(())
@@ -254,6 +258,7 @@ fn receive_and_persist_initial_headers_from_node(
 pub fn download_missing_headers(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
@@ -264,6 +269,7 @@ pub fn download_missing_headers(
     while let Err(err) = download_missing_headers_from_node(
         config,
         log_sender,
+        ui_sender,
         &mut node,
         headers.clone(),
         header_heights.clone(),
@@ -311,6 +317,7 @@ pub fn download_missing_headers(
 fn download_missing_headers_from_node(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     node: &mut TcpStream,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
@@ -355,13 +362,12 @@ fn download_missing_headers_from_node(
                 }
             }
         }
+        let amount_of_headers = amount_of_headers(&headers)?;
         println!(
             "{:?} headers descargados",
-            headers
-                .read()
-                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-                .len()
+            amount_of_headers
         );
+        send_event_to_ui(ui_sender, UIEvent::ActualizeHeadersDownloaded(amount_of_headers));
     }
     Ok(())
 }
@@ -542,4 +548,13 @@ fn get_first_block_timestamp(config: &Config) -> Result<u32, NodeCustomErrors> {
         .map_err(|err| NodeCustomErrors::OtherError(err.to_string()))?;
     let timestamp = date_time.timestamp() as u32;
     Ok(timestamp)
+}
+
+/// Devuelve la cantidad de headers que hay en el vector de headers
+pub fn amount_of_headers(headers: &Arc<RwLock<Vec<BlockHeader>>>) -> Result<usize, NodeCustomErrors> {
+    let amount_of_headers = headers
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
+        .len();
+    Ok(amount_of_headers)
 }

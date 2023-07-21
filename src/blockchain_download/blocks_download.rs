@@ -5,7 +5,7 @@ use crate::{
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
         block_message::BlockMessage, get_data_message::GetDataMessage, inventory::Inventory,
-    },
+    }, gtk::ui_events::{send_event_to_ui, UIEvent},
 };
 use std::{
     collections::HashMap,
@@ -78,7 +78,7 @@ pub fn download_blocks(
         }
         join_threads(join_handles)?;
         let (amount_of_headers, amount_of_blocks) =
-            get_amount_of_headers_and_blocks(headers.clone(), blocks.clone())?;
+            get_amount_of_headers_and_blocks(&headers, &blocks)?;
         let total_blocks_to_download = amount_of_headers - config.height_first_block_to_download;
         if amount_of_blocks == total_blocks_to_download {
             write_in_log(&log_sender.info_log_sender, format!("Se terminaron de descargar todos los bloques correctamente! BLOQUES DESCARGADOS: {}\n", amount_of_blocks).as_str());
@@ -311,8 +311,8 @@ fn divide_blocks_to_download_in_equal_chunks(
 
 /// Recibe un hashmap de bloques y devuelve la cantidad de bloques que hay en el mismo
 /// Error en caso de no poder leerlo
-fn amount_of_block(
-    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+pub fn amount_of_blocks(
+    blocks: &Arc<RwLock<HashMap<[u8; 32], Block>>>,
 ) -> Result<usize, NodeCustomErrors> {
     let amount_of_blocks = blocks
         .read()
@@ -336,11 +336,13 @@ pub fn add_blocks_downloaded_to_local_blocks(
         &log_sender.info_log_sender,
         format!(
             "BLOQUES DESCARGADOS: {:?}",
-            amount_of_block(blocks.clone())?
+            amount_of_blocks(&blocks)?
         )
         .as_str(),
     );
-    println!("{:?} bloques descargados", amount_of_block(blocks)?);
+    let amount_of_blocks = amount_of_blocks(&blocks)?;
+    println!("{:?} bloques descargados", amount_of_blocks);
+    send_event_to_ui(ui_sender, UIEvent::ActualizeBlocksDownloaded(amount_of_blocks));
     Ok(())
 }
 

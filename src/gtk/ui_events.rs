@@ -9,12 +9,12 @@ type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
 pub enum UIEvent {
     InitializeUI(HashMap<[u8; 32], Block>),
     ShowConfirmedTransaction(),
-    AddAccount(),
+    AddAccount(Account),
     ShowPendingTransaction(Account, Transaction),
     AddBlock(Block),
     InitializeUITabs(Blocks),
-    ActualizeHeadersDownloaded(i32),
-    ActualizeBlocksDownloaded(i32),
+    ActualizeHeadersDownloaded(usize),
+    ActualizeBlocksDownloaded(usize),
 }
 
 pub fn send_event_to_ui(ui_sender: &Option<glib::Sender<UIEvent>>, event: UIEvent) {

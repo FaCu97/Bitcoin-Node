@@ -76,6 +76,7 @@ pub fn initial_block_download(
         download_full_blockchain_from_single_node(
             config,
             log_sender,
+            ui_sender,
             nodes,
             pointer_to_headers.clone(),
             pointer_to_blocks.clone(),
@@ -85,6 +86,7 @@ pub fn initial_block_download(
         download_full_blockchain_from_multiple_nodes(
             config,
             log_sender,
+            ui_sender,
             nodes,
             pointer_to_headers.clone(),
             pointer_to_blocks.clone(),
@@ -92,7 +94,7 @@ pub fn initial_block_download(
         )?;
     }
     let (amount_of_headers, amount_of_blocks) =
-        get_amount_of_headers_and_blocks(pointer_to_headers.clone(), pointer_to_blocks.clone())?;
+        get_amount_of_headers_and_blocks(&pointer_to_headers, &pointer_to_blocks)?;
     write_in_log(
         &log_sender.info_log_sender,
         format!("TOTAL DE HEADERS DESCARGADOS: {}", amount_of_headers).as_str(),
@@ -110,6 +112,7 @@ pub fn initial_block_download(
 fn download_full_blockchain_from_multiple_nodes(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -123,10 +126,12 @@ fn download_full_blockchain_from_multiple_nodes(
     let nodes_cloned = nodes.clone();
     let headers_cloned = headers.clone();
     let tx_cloned = tx.clone();
+    let ui_sender = ui_sender.clone();
     threads_handle.push(thread::spawn(move || {
         download_missing_headers(
             &config_cloned,
             &log_sender_cloned,
+            &ui_sender,
             nodes_cloned,
             headers_cloned,
             header_heights,
@@ -147,6 +152,7 @@ fn download_full_blockchain_from_multiple_nodes(
 fn download_full_blockchain_from_single_node(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -156,6 +162,7 @@ fn download_full_blockchain_from_single_node(
     download_missing_headers(
         config,
         log_sender,
+        ui_sender,
         nodes.clone(),
         headers,
         header_heights,
