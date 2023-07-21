@@ -1,3 +1,5 @@
+use gtk::glib;
+
 use self::blocks_download::{download_blocks, download_blocks_single_node};
 use self::headers_download::{download_missing_headers, get_initial_headers};
 use self::utils::{get_amount_of_headers_and_blocks, get_node, join_threads, return_node_to_vec};
@@ -6,6 +8,7 @@ use super::blocks::block_header::BlockHeader;
 use super::config::Config;
 use super::logwriter::log_writer::{write_in_log, LogSender};
 use crate::custom_errors::NodeCustomErrors;
+use crate::gtk::ui_events::UIEvent;
 use std::collections::HashMap;
 use std::net::TcpStream;
 use std::sync::mpsc::channel;
@@ -41,6 +44,7 @@ type HeadersBlocksTuple = (
 pub fn initial_block_download(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<HeadersBlocksTuple, NodeCustomErrors> {
     write_in_log(
@@ -59,6 +63,7 @@ pub fn initial_block_download(
     get_initial_headers(
         config,
         log_sender,
+        ui_sender,
         pointer_to_headers.clone(),
         header_heights.clone(),
         nodes.clone(),

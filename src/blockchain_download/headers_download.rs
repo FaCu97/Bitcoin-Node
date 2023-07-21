@@ -8,13 +8,14 @@ use std::{
 };
 
 use chrono::{TimeZone, Utc};
+use gtk::glib;
 
 use crate::{
     blocks::block_header::BlockHeader,
     config::Config,
     custom_errors::NodeCustomErrors,
     logwriter::log_writer::{write_in_log, LogSender},
-    messages::{getheaders_message::GetHeadersMessage, headers_message::HeadersMessage},
+    messages::{getheaders_message::GetHeadersMessage, headers_message::HeadersMessage}, gtk::ui_events::{UIEvent, send_event_to_ui},
 };
 
 use super::{
@@ -41,13 +42,14 @@ const GENESIS_BLOCK_HASH: [u8; 32] = [
 pub fn get_initial_headers(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<(), NodeCustomErrors> {
     if config.read_headers_from_disk && Path::new(&config.archivo_headers).exists() {
         if let Err(err) =
-            read_headers_from_disk(config, log_sender, headers.clone(), header_heights.clone())
+            read_headers_from_disk(config, log_sender, ui_sender, headers.clone(), header_heights.clone())
         {
             // si no se pudo descargar de disco, intento desde la red y guardo en disco
             write_in_log(
@@ -67,6 +69,7 @@ pub fn get_initial_headers(
 fn read_headers_from_disk(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
 ) -> Result<(), NodeCustomErrors> {
@@ -98,7 +101,11 @@ fn read_headers_from_disk(
             .write()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .extend_from_slice(&unmarshalled_headers);
-        println!("{:?} headers leidos", amount);
+        //println!("{:?} headers leidos", amount);
+        send_event_to_ui(
+            ui_sender,
+            UIEvent::ActualizeHeadersDownloaded(amount),
+        );
         i += HEADERS_MESSAGE_SIZE;
     }
     write_in_log(

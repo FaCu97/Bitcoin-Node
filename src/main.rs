@@ -27,7 +27,8 @@ fn main() -> Result<(), NodeCustomErrors> {
     Ok(())
 }
 
-fn run_with_ui(args: Vec<String>) -> Result<(), NodeCustomErrors> {
+fn run_with_ui(mut args: Vec<String>) -> Result<(), NodeCustomErrors> {
+    args.pop();
     // this channel is used to receive the UISender (glib::Sender<UIEvent>) from the ui that creates the channel
     // an sends via this channel the UISender to the node
     let (tx, rx) = channel();
@@ -35,7 +36,7 @@ fn run_with_ui(args: Vec<String>) -> Result<(), NodeCustomErrors> {
     let (sender_from_ui_to_node, receiver_from_ui_to_node) = channel();
     let app_thread = thread::spawn(move || -> Result<(), NodeCustomErrors> {
         // sender to comunicate with the ui
-        let ui_tx: glib::Sender<UIEvent> = rx
+        let ui_tx = rx
             .recv()
             .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?; // receive the ui sender from the client
         run_node(&args, Some(ui_tx), Some(receiver_from_ui_to_node)) // run the node with the ui sender
@@ -60,7 +61,7 @@ fn run_node(
     let (log_sender, log_sender_handles) = set_up_loggers(&config)?;
     let active_nodes = get_active_nodes_from_dns_seed(&config, &log_sender)?;
     let pointer_to_nodes = handshake_with_nodes(&config, &log_sender, active_nodes)?;
-    let (headers, blocks, headers_height) = initial_block_download(&config, &log_sender, pointer_to_nodes.clone())?;
+    let (headers, blocks, headers_height) = initial_block_download(&config, &log_sender, &ui_sender, pointer_to_nodes.clone())?;
     send_event_to_ui(&ui_sender, UIEvent::InitializeUITabs(blocks.clone()));
     let mut node = Node::new(&log_sender, &ui_sender, pointer_to_nodes, headers, blocks, headers_height)?;
     let mut wallet = Wallet::new(node.clone())?;

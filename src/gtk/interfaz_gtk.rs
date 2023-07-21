@@ -64,7 +64,6 @@ fn build_ui(
 ) {
     let glade_src = include_str!("resources/interfaz.glade");
     let builder = gtk::Builder::from_string(glade_src);
-    let main_window: ApplicationWindow = builder.object("main-window").unwrap();
     let css_provider: CssProvider = CssProvider::new();
     css_provider
         .load_from_path("src/gtk/resources/styles.css")
@@ -75,27 +74,22 @@ fn build_ui(
         &css_provider,
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
+    let initial_window: ApplicationWindow = builder.object("initial-window").unwrap();
+    let main_window: ApplicationWindow = builder.object("main-window").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
-    let notebook = Rc::new(RefCell::new(Notebook::new(&main_window)));
+    let notebook = Rc::new(RefCell::new(Notebook::new(&initial_window, &main_window)));
     let notebook_clone = notebook.clone();
     rx.attach(None, move |msg| {
         notebook_clone.borrow_mut().update(msg);
         Continue(true)
     });
-
-    let initial_window: ApplicationWindow = builder.object("initial-window").unwrap();
-    let main_window: ApplicationWindow = builder.object("main-window").unwrap();
-    let start_button: gtk::Button = builder.object("start-button").unwrap();
-    initial_window.show_all();
-    start_button.connect_clicked(move |_| {
-        main_window.show_all();
-        initial_window.close();
-    });
+    notebook.borrow().initial_window.container.show_all();
 }
 
 pub struct Notebook {
     pub notebook: gtk::Notebook,
+    pub initial_window: InitialWindow,
     overview_tab: OverViewTab,
     send_tab: SendTab,
     transactions_tab: TransactionsTab,
@@ -103,13 +97,14 @@ pub struct Notebook {
 }
 
 impl Notebook {
-    pub fn new(main_window: &ApplicationWindow) -> Self {
+    pub fn new(initial_window: &ApplicationWindow, main_window: &ApplicationWindow) -> Self {
         let notebook = Notebook {
             notebook: gtk::Notebook::new(),
-            overview_tab: OverViewTab::new(),
-            send_tab: SendTab::new(),
-            transactions_tab: TransactionsTab::new(),
-            blocks_tab: BlocksTab::new(),
+            initial_window: InitialWindow::new(initial_window),
+            overview_tab: OverViewTab::new(main_window),
+            send_tab: SendTab::new(main_window),
+            transactions_tab: TransactionsTab::new(main_window),
+            blocks_tab: BlocksTab::new(main_window),
         };
         Self::create_tab("Overview", &notebook, &notebook.overview_tab.container);
         Self::create_tab("Send", &notebook, &notebook.send_tab.container);
@@ -122,6 +117,13 @@ impl Notebook {
         notebook
     }
     pub fn update(&mut self, event: UIEvent) {
+        match event {
+            UIEvent::InitializeUI(_) => {
+                self.notebook.show_all();
+            }
+            _ => (),
+        }
+        self.initial_window.upadte(&event);
         self.overview_tab.update(&event);
         self.send_tab.update(&event);
         self.transactions_tab.update(&event);
@@ -133,12 +135,37 @@ impl Notebook {
     }
 }
 
+
+pub struct InitialWindow {
+    pub container: gtk::ApplicationWindow,
+}
+
+impl InitialWindow {
+    pub fn new(application_window: &ApplicationWindow) -> Self {
+        let container = application_window.clone();
+        Self { container }
+    }
+    pub fn upadte(&self, event: &UIEvent) {
+        match event {
+            UIEvent::InitializeUI(_) => {
+                self.container.close();
+            }
+            UIEvent::ActualizeBlocksDownloaded(blocks_downloaded) => {
+                println!("Actualize blocks downloaded: {}", blocks_downloaded);
+            }
+            UIEvent::ActualizeHeadersDownloaded(headers_downloaded) => {
+                println!("Actualize headers downloaded: {}", headers_downloaded);
+            }
+            _ => ()
+        }
+    }
+}
 pub struct OverViewTab {
     pub container: gtk::Box,
 }
 
 impl OverViewTab {
-    pub fn new() -> Self {
+    pub fn new(main_window: &ApplicationWindow) -> Self {
         let container = gtk::Box::new(gtk::Orientation::Vertical, 0);
         Self { container }
     }
@@ -160,7 +187,7 @@ pub struct SendTab {
 }
 
 impl SendTab {
-    pub fn new() -> Self {
+    pub fn new(main_window: &ApplicationWindow) -> Self {
         let container = gtk::Box::new(gtk::Orientation::Vertical, 0);
         Self { container }
     }
@@ -182,7 +209,7 @@ pub struct TransactionsTab {
 }
 
 impl TransactionsTab {
-    pub fn new() -> Self {
+    pub fn new(main_window: &ApplicationWindow) -> Self {
         let container = gtk::Box::new(gtk::Orientation::Vertical, 0);
         Self { container }
     }
@@ -209,7 +236,7 @@ pub struct BlocksTab {
 }
 
 impl BlocksTab {
-    pub fn new() -> Self {
+    pub fn new(main_window: &ApplicationWindow) -> Self {
         let container = gtk::Box::new(gtk::Orientation::Vertical, 0);
         Self { container }
     }
