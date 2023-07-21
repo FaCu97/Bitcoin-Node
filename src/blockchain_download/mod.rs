@@ -126,12 +126,12 @@ fn download_full_blockchain_from_multiple_nodes(
     let nodes_cloned = nodes.clone();
     let headers_cloned = headers.clone();
     let tx_cloned = tx.clone();
-    let ui_sender = ui_sender.clone();
+    let ui_sender_clone = ui_sender.clone();
     threads_handle.push(thread::spawn(move || {
         download_missing_headers(
             &config_cloned,
             &log_sender_cloned,
-            &ui_sender,
+            &ui_sender_clone,
             nodes_cloned,
             headers_cloned,
             header_heights,
@@ -140,8 +140,9 @@ fn download_full_blockchain_from_multiple_nodes(
     }));
     let config = config.clone();
     let log_sender = log_sender.clone();
+    let ui_sender = ui_sender.clone();
     threads_handle.push(thread::spawn(move || {
-        download_blocks(&config, &log_sender, nodes, blocks, headers, rx, tx)
+        download_blocks(&config, &log_sender, &ui_sender, nodes, blocks, headers, rx, tx)
     }));
     join_threads(threads_handle)?;
     Ok(())
@@ -173,6 +174,7 @@ fn download_full_blockchain_from_single_node(
         download_blocks_single_node(
             config,
             log_sender,
+            ui_sender,
             blocks_to_download,
             &mut node,
             blocks.clone(),

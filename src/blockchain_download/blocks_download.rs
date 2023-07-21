@@ -1,3 +1,5 @@
+use gtk::glib;
+
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     config::Config,
@@ -41,6 +43,7 @@ use super::{
 pub fn download_blocks(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
@@ -70,6 +73,7 @@ pub fn download_blocks(
             join_handles.push(download_blocks_chunck(
                 config,
                 log_sender,
+                ui_sender,
                 blocks_to_download_chunk.clone(),
                 nodes.clone(),
                 tx.clone(),
@@ -93,6 +97,7 @@ pub fn download_blocks(
 fn download_blocks_chunck(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     block_headers: Vec<BlockHeader>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     tx: Sender<Vec<BlockHeader>>,
@@ -101,10 +106,12 @@ fn download_blocks_chunck(
     let config_cloned = config.clone();
     let log_sender_cloned = log_sender.clone();
     let node = get_node(nodes.clone())?;
+    let ui_sender = ui_sender.clone();
     Ok(thread::spawn(move || {
         download_blocks_single_thread(
             &config_cloned,
             &log_sender_cloned,
+            &ui_sender,
             block_headers,
             node,
             tx,
@@ -124,6 +131,7 @@ fn download_blocks_chunck(
 fn download_blocks_single_thread(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     block_headers: Vec<BlockHeader>,
     mut node: TcpStream,
     tx: Sender<Vec<BlockHeader>>,
@@ -168,7 +176,7 @@ fn download_blocks_single_thread(
             current_blocks.insert(block.hash(), block);
         }
     }
-    add_blocks_downloaded_to_local_blocks(log_sender, blocks, current_blocks)?;
+    add_blocks_downloaded_to_local_blocks(log_sender, ui_sender, blocks, current_blocks)?;
     return_node_to_vec(nodes, node)?;
     Ok(())
 }
@@ -249,6 +257,7 @@ fn receive_requested_blocks_from_node(
 pub fn download_blocks_single_node(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     block_headers: Vec<BlockHeader>,
     node: &mut TcpStream,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -282,7 +291,7 @@ pub fn download_blocks_single_node(
             current_blocks.insert(block.hash(), block);
         }
     }
-    add_blocks_downloaded_to_local_blocks(log_sender, blocks, current_blocks)?;
+    add_blocks_downloaded_to_local_blocks(log_sender, ui_sender, blocks, current_blocks)?;
     Ok(())
 }
 
@@ -325,6 +334,7 @@ pub fn amount_of_blocks(
 /// en caso de no poder acceder al hashmap de bloques local devuelve error
 pub fn add_blocks_downloaded_to_local_blocks(
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     downloaded_blocks: HashMap<[u8; 32], Block>,
 ) -> Result<(), NodeCustomErrors> {
