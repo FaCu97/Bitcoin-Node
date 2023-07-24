@@ -10,7 +10,7 @@ use bitcoin::logwriter::log_writer::{
 use bitcoin::network::get_active_nodes_from_dns_seed;
 use bitcoin::node::Node;
 use bitcoin::server::NodeServer;
-use bitcoin::terminal_ui;
+use bitcoin::terminal_ui::terminal_ui;
 use bitcoin::wallet::Wallet;
 use bitcoin::wallet_event::WalletEvent;
 use gtk::glib;
