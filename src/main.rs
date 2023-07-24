@@ -60,6 +60,9 @@ fn run_node(
     ui_sender: Option<glib::Sender<UIEvent>>,
     node_rx: Option<Receiver<WalletEvent>>,
 ) -> Result<(), NodeCustomErrors> {
+    if ui_sender.is_some() {
+        println!("Ui_sender exists!\n");
+    }
     let config = Config::from(args)?;
     let (log_sender, log_sender_handles) = set_up_loggers(&config)?;
     let active_nodes = get_active_nodes_from_dns_seed(&config, &log_sender)?;
@@ -120,5 +123,5 @@ fn handle_ui_request(ui_sender: &Option<glib::Sender<UIEvent>>, rx: Receiver<Wal
             }
         }
     }
- 
+    println!("TERMINA HANDLE UI REQUEST!!!! \n");
 }

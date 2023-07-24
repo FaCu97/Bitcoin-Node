@@ -48,6 +48,16 @@ impl Gtk {
 }
 
 pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<WalletEvent>) {
+    /* 
+    let (tx, rx) = glib::MainContext::channel(Priority::default());
+    ui_sender.send(tx).expect("could not send sender to client");
+    rx.attach(None, move |msg| {
+        println!("New event: {:?}", msg);
+        Continue(true)
+    });
+    */
+
+     
     let app = Application::builder()
         .application_id("org.gtk-rs.bitcoin")
         .build();
@@ -56,7 +66,9 @@ pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<W
         println!("UI thread");
         build_ui(app, &ui_sender, &sender_to_node);
     });
-    app.run();
+    let args: Vec<String> = vec![]; // necessary to not use main program args
+    app.run_with_args(&args);
+    
 }
 
 fn build_ui(
@@ -77,17 +89,18 @@ fn build_ui(
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
     let initial_window: ApplicationWindow = builder.object("initial-window").unwrap();
-    let main_window: ApplicationWindow = builder.object("main-window").unwrap();
+    //let main_window: ApplicationWindow = builder.object("main-window").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
-    let notebook = Rc::new(RefCell::new(Notebook::new(&initial_window, &main_window)));
-    let notebook_clone = notebook.clone();
+    //let notebook = Rc::new(RefCell::new(Notebook::new(&initial_window, &main_window)));
+    //let notebook_clone = notebook.clone();
     rx.attach(None, move |msg| {
         println!("new event: {:?}", msg);
-        notebook_clone.borrow_mut().update(msg);
+        //notebook_clone.borrow_mut().update(msg);
         Continue(true)
     });
-    notebook.borrow().initial_window.container.show_all();
+    //notebook.borrow().initial_window.container.show_all();
+    initial_window.show_all();
 }
 
 pub struct Notebook {
