@@ -19,7 +19,7 @@ pub fn terminal_ui(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Walle
                             break;
                         }
                         1 => {
-                            handle_add_account_request(wallet);
+                            handle_add_account_request(ui_sender, wallet);
                         }
                         2 => {
                             handle_balance_request(wallet);
@@ -108,7 +108,7 @@ where
 
 /// Le pide al usuario que ingrese por terminal los datos de la cuenta y la añade a la wallet. En caso de que los
 /// datos ingresados sean incorrectos, lo muestra por pantalla.
-fn handle_add_account_request(wallet: &mut Wallet) {
+fn handle_add_account_request(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wallet) {
     println!("Ingrese PRIVATE KEY en formato WIF: ");
     let mut private_key_input = String::new();
     match std::io::stdin().read_line(&mut private_key_input) {
@@ -121,7 +121,7 @@ fn handle_add_account_request(wallet: &mut Wallet) {
                     let address = address_input.trim();
                     println!("Agregando la cuenta -- {} -- a la wallet...\n", address);
                     if let Err(err) =
-                        wallet.add_account(wif_private_key.to_string(), address.to_string())
+                        wallet.add_account(ui_sender, wif_private_key.to_string(), address.to_string())
                     {
                         println!("ERROR: {err}\n");
                         println!("Ocurrio un error al intentar añadir una nueva cuenta, intente de nuevo! \n");

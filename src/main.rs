@@ -69,7 +69,7 @@ fn run_node(
     let mut node = Node::new(&log_sender, &ui_sender, pointer_to_nodes, headers, blocks, headers_height)?;
     let mut wallet = Wallet::new(node.clone())?;
     let server = NodeServer::new(&config, &log_sender, &ui_sender, &mut node)?;
-    handle_ui_requests(&ui_sender, &mut wallet, node_rx);
+    interact_with_user(&ui_sender, &mut wallet, node_rx);
     shut_down(node, server, log_sender, log_sender_handles)?;
     Ok(())
 }
@@ -87,34 +87,38 @@ fn shut_down(
     Ok(())
 }
 
-fn handle_ui_requests(
+fn interact_with_user(
     ui_sender: &Option<glib::Sender<UIEvent>>,
     wallet: &mut Wallet,
     node_rx: Option<Receiver<WalletEvent>>,
 ) {
     if let Some(rx) = node_rx {
-        for event in rx {
-            match event {
-                WalletEvent::AddAccountRequest(wif, address) => {
-                    if wallet.add_account(wif, address).is_err() {
-                        println!("Error al agregar la cuenta");
-                    }
-                }
-                WalletEvent::MakeTransactionRequest(account_index, address, amount, fee) => {
-                    if wallet.make_transaction(account_index, &address, amount, fee).is_err() {
-                        println!("Error al crear la transaccion");
-                    }
-                }
-                WalletEvent::PoiOfTransactionRequest(block_hash, transaction_hash) => {
-                    if wallet.tx_proof_of_inclusion(block_hash, transaction_hash).is_err() {
-                        println!("Error al crear la prueba de inclusion");
-                    }
-                }
-            }
-        }
+        handle_ui_request(ui_sender, rx, wallet)
     } else {
         terminal_ui(ui_sender, wallet)
     }
 }
 
 
+fn handle_ui_request(ui_sender: &Option<glib::Sender<UIEvent>>, rx: Receiver<WalletEvent>, wallet: &mut Wallet) {
+    for event in rx {
+        match event {
+            WalletEvent::AddAccountRequest(wif, address) => {
+                if wallet.add_account(ui_sender, wif, address).is_err() {
+                    println!("Error al agregar la cuenta");
+                }
+            }
+            WalletEvent::MakeTransactionRequest(account_index, address, amount, fee) => {
+                if wallet.make_transaction(account_index, &address, amount, fee).is_err() {
+                    println!("Error al crear la transaccion");
+                }
+            }
+            WalletEvent::PoiOfTransactionRequest(block_hash, transaction_hash) => {
+                if wallet.tx_proof_of_inclusion(block_hash, transaction_hash).is_err() {
+                    println!("Error al crear la prueba de inclusion");
+                }
+            }
+        }
+    }
+ 
+}

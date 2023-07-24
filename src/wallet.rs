@@ -4,11 +4,13 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use gtk::glib;
+
 use crate::{
     account::Account,
     blocks::utils_block::{make_merkle_proof, string_to_bytes},
     custom_errors::NodeCustomErrors,
-    node::Node,
+    node::Node, gtk::ui_events::{UIEvent, send_event_to_ui},
 };
 
 #[derive(Debug, Clone)]
@@ -55,6 +57,7 @@ impl Wallet {
     /// Devuelve error si las claves ingresadas son inválidas
     pub fn add_account(
         &mut self,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         wif_private_key: String,
         address: String,
     ) -> Result<(), NodeCustomErrors> {
@@ -65,7 +68,8 @@ impl Wallet {
         self.accounts
             .write()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            .push(account);
+            .push(account.clone());
+        send_event_to_ui(ui_sender, UIEvent::AddAccount(account));
         Ok(())
     }
     /// Funcion que se encarga de cargar los respectivos utxos asociados a la cuenta

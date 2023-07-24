@@ -9,7 +9,6 @@ use crate::custom_errors::NodeCustomErrors;
 use crate::transactions::transaction::Transaction;
 use crate::utxo_tuple::UtxoTuple;
 #[derive(Debug, Clone)]
-
 /// Representa una cuenta bitcoin
 /// Guarda la address comprimida y la private key (comprimida o no)
 /// También guarda las utxos de la cuenta, transacciones pendientes y confirmadas
