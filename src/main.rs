@@ -69,7 +69,7 @@ fn run_node(
     let mut node = Node::new(&log_sender, &ui_sender, pointer_to_nodes, headers, blocks, headers_height)?;
     let mut wallet = Wallet::new(node.clone())?;
     let server = NodeServer::new(&config, &log_sender, &ui_sender, &mut node)?;
-    handle_ui_requests(&mut wallet, &ui_sender, node_rx);
+    handle_ui_requests(&ui_sender, &mut wallet, node_rx);
     shut_down(node, server, log_sender, log_sender_handles)?;
     Ok(())
 }
@@ -88,8 +88,8 @@ fn shut_down(
 }
 
 fn handle_ui_requests(
-    wallet: &mut Wallet,
     ui_sender: &Option<glib::Sender<UIEvent>>,
+    wallet: &mut Wallet,
     node_rx: Option<Receiver<WalletEvent>>,
 ) {
     if let Some(rx) = node_rx {
@@ -113,7 +113,7 @@ fn handle_ui_requests(
             }
         }
     } else {
-        terminal_ui(wallet)
+        terminal_ui(ui_sender, wallet)
     }
 }
 

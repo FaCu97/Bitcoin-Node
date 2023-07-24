@@ -1,3 +1,5 @@
+use ::gtk::glib;
+use crate::gtk::ui_events::UIEvent;
 use wallet::Wallet;
 
 pub mod account;
@@ -23,11 +25,10 @@ pub mod wallet_event;
 
 /// Muestra las opciones para interactuar con el programa, espera algun comando
 /// y lo handlea o muestra un mensaje de error
-pub fn terminal_ui(wallet: &mut Wallet) {
+pub fn terminal_ui(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wallet) {
     show_options();
     loop {
         let mut input = String::new();
-
         match std::io::stdin().read_line(&mut input) {
             Ok(_) => {
                 println!("\n");
