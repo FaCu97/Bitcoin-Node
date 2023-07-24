@@ -1,11 +1,21 @@
-use std::{cell::RefCell, rc::Rc, sync::{mpsc::Sender, RwLock, Arc}, collections::HashMap};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    rc::Rc,
+    sync::{mpsc::Sender, Arc, RwLock},
+    thread::sleep,
+    time::Duration,
+};
 
-use crate::{wallet_event::WalletEvent, blocks::block::Block, transactions::transaction::Transaction, account::Account};
+use crate::{
+    account::Account, blocks::block::Block, transactions::transaction::Transaction,
+    wallet_event::WalletEvent,
+};
 use gtk::{
     gdk,
     glib::{self, Priority},
     prelude::*,
-    Application, ApplicationWindow, CssProvider, ProgressBar, StyleContext,
+    Application, ApplicationWindow, CssProvider, ProgressBar, StyleContext, Window,
 };
 
 use super::ui_events::UIEvent;
@@ -48,27 +58,23 @@ impl Gtk {
 }
 
 pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<WalletEvent>) {
-    /* 
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
     rx.attach(None, move |msg| {
         println!("New event: {:?}", msg);
         Continue(true)
     });
-    */
 
-     
     let app = Application::builder()
         .application_id("org.gtk-rs.bitcoin")
         .build();
-    
+
     app.connect_activate(move |app| {
         println!("UI thread");
         build_ui(app, &ui_sender, &sender_to_node);
     });
     let args: Vec<String> = vec![]; // necessary to not use main program args
     app.run_with_args(&args);
-    
 }
 
 fn build_ui(
@@ -76,6 +82,11 @@ fn build_ui(
     ui_sender: &Sender<glib::Sender<UIEvent>>,
     sender_to_node: &Sender<WalletEvent>,
 ) {
+    if gtk::init().is_err() {
+        println!("Failed to initialize GTK.");
+        return;
+    }
+
     let glade_src = include_str!("resources/interfaz.glade");
     let builder = gtk::Builder::from_string(glade_src);
     let css_provider: CssProvider = CssProvider::new();
@@ -88,19 +99,35 @@ fn build_ui(
         &css_provider,
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
-    let initial_window: ApplicationWindow = builder.object("initial-window").unwrap();
-    //let main_window: ApplicationWindow = builder.object("main-window").unwrap();
+    let initial_window: Window = builder.object("initial-window").unwrap();
+    //let initial_window: ApplicationWindow = gtk::ApplicationWindow::new(app);
+
+    let main_window: Window = builder.object("main-window").unwrap();
+    let start_button: gtk::Button = builder.object("start-button").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
     //let notebook = Rc::new(RefCell::new(Notebook::new(&initial_window, &main_window)));
-    //let notebook_clone = notebook.clone();
+    // let notebook_clone = notebook.clone();
+
     rx.attach(None, move |msg| {
-        println!("new event: {:?}", msg);
+        print(&msg);
         //notebook_clone.borrow_mut().update(msg);
         Continue(true)
     });
-    //notebook.borrow().initial_window.container.show_all();
     initial_window.show_all();
+    start_button.connect_clicked(move |_| {
+        main_window.show_all();
+        initial_window.close();
+    });
+
+    //notebook.borrow().initial_window.container.show_all();
+    //initial_window.show_all();
+    //println!("HOLAAAA");
+    gtk::main();
+}
+
+fn print(msg: &UIEvent) {
+    println!("new event: {:?}", msg);
 }
 
 pub struct Notebook {
@@ -113,7 +140,7 @@ pub struct Notebook {
 }
 
 impl Notebook {
-    pub fn new(initial_window: &ApplicationWindow, main_window: &ApplicationWindow) -> Self {
+    pub fn new(initial_window: &Window, main_window: &Window) -> Self {
         let notebook = Notebook {
             notebook: gtk::Notebook::new(),
             initial_window: InitialWindow::new(initial_window),
@@ -151,13 +178,12 @@ impl Notebook {
     }
 }
 
-
 pub struct InitialWindow {
-    pub container: gtk::ApplicationWindow,
+    pub container: Window,
 }
 
 impl InitialWindow {
-    pub fn new(application_window: &ApplicationWindow) -> Self {
+    pub fn new(application_window: &Window) -> Self {
         let container = application_window.clone();
         Self { container }
     }
@@ -172,7 +198,7 @@ impl InitialWindow {
             UIEvent::ActualizeHeadersDownloaded(headers_downloaded) => {
                 println!("Actualize headers downloaded: {}", headers_downloaded);
             }
-            _ => ()
+            _ => (),
         }
     }
 }
@@ -181,7 +207,7 @@ pub struct OverViewTab {
 }
 
 impl OverViewTab {
-    pub fn new(main_window: &ApplicationWindow) -> Self {
+    pub fn new(main_window: &Window) -> Self {
         let container = gtk::Box::new(gtk::Orientation::Vertical, 0);
         Self { container }
     }
@@ -190,7 +216,7 @@ impl OverViewTab {
             UIEvent::InitializeUITabs(_) => {
                 self.initialize();
             }
-            _ => ()
+            _ => (),
         }
     }
     fn initialize(&self) {
@@ -203,7 +229,7 @@ pub struct SendTab {
 }
 
 impl SendTab {
-    pub fn new(main_window: &ApplicationWindow) -> Self {
+    pub fn new(main_window: &Window) -> Self {
         let container = gtk::Box::new(gtk::Orientation::Vertical, 0);
         Self { container }
     }
@@ -212,7 +238,7 @@ impl SendTab {
             UIEvent::InitializeUITabs(_) => {
                 self.initialize();
             }
-            _ => ()
+            _ => (),
         }
     }
     fn initialize(&self) {
@@ -225,7 +251,7 @@ pub struct TransactionsTab {
 }
 
 impl TransactionsTab {
-    pub fn new(main_window: &ApplicationWindow) -> Self {
+    pub fn new(main_window: &Window) -> Self {
         let container = gtk::Box::new(gtk::Orientation::Vertical, 0);
         Self { container }
     }
@@ -240,17 +266,23 @@ impl TransactionsTab {
             UIEvent::ShowConfirmedTransaction(block, account, tx) => {
                 self.show_confirmed_transaction(block, account, tx);
             }
-            _ => ()
+            _ => (),
         }
     }
     fn initialize(&self) {
         println!("Initialize transactions tab");
     }
     fn show_confirmed_transaction(&self, block: &Block, account: &Account, tx: &Transaction) {
-        println!("Confirmed transaction: {:?} involves account: {}", tx, account.address);
+        println!(
+            "Confirmed transaction: {:?} involves account: {}",
+            tx, account.address
+        );
     }
     fn show_pending_transaction(&self, account: &Account, tx: &Transaction) {
-        println!("Pending transaction: {:?} involves account: {}", tx, account.address);
+        println!(
+            "Pending transaction: {:?} involves account: {}",
+            tx, account.address
+        );
     }
 }
 pub struct BlocksTab {
@@ -258,7 +290,7 @@ pub struct BlocksTab {
 }
 
 impl BlocksTab {
-    pub fn new(main_window: &ApplicationWindow) -> Self {
+    pub fn new(main_window: &Window) -> Self {
         let container = gtk::Box::new(gtk::Orientation::Vertical, 0);
         Self { container }
     }

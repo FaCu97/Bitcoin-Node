@@ -1,8 +1,11 @@
-use std::{collections::HashMap, sync::{RwLock, Arc}};
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
 use gtk::glib;
 
-use crate::{blocks::block::Block, transactions::transaction::Transaction, account::Account};
+use crate::{account::Account, blocks::block::Block, transactions::transaction::Transaction};
 
 type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
 #[derive(Clone, Debug)]
