@@ -59,13 +59,6 @@ impl Gtk {
 }
 
 pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<WalletEvent>) {
-    let (tx, rx) = glib::MainContext::channel(Priority::default());
-    ui_sender.send(tx).expect("could not send sender to client");
-    rx.attach(None, move |msg| {
-        println!("New event: {:?}", msg);
-        Continue(true)
-    });
-
     let app = Application::builder()
         .application_id("org.gtk-rs.bitcoin")
         .build();
@@ -112,8 +105,18 @@ fn build_ui(
     // let notebook_clone = notebook.clone();
 
     rx.attach(None, move |msg| {
-        print(&msg);
-        //notebook_clone.borrow_mut().update(msg);
+        //print(&msg);
+        match msg {
+            UIEvent::ActualizeBlocksDownloaded(blocks_downloaded) => {
+                println!("Actualize blocks downloaded: {}", blocks_downloaded);
+            }
+            UIEvent::ActualizeHeadersDownloaded(headers_downloaded) => {
+                message_header
+                    .set_label(format!("headers downloaded: {}", headers_downloaded).as_str());
+            }
+            _ => (),
+            //notebook_clone.borrow_mut().update(msg);
+        }
         Continue(true)
     });
     initial_window.show_all();
