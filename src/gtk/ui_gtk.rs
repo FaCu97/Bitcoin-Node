@@ -8,9 +8,10 @@ use std::{
 };
 
 use crate::{
-    account::Account, blocks::block::Block, transactions::transaction::Transaction,
-    wallet_event::WalletEvent,
+    account::Account, blockchain_download::headers_download, blocks::block::Block,
+    transactions::transaction::Transaction, wallet_event::WalletEvent,
 };
+use chrono::format;
 use gtk::{
     gdk,
     glib::{self, Priority},
@@ -104,6 +105,7 @@ fn build_ui(
 
     let main_window: Window = builder.object("main-window").unwrap();
     let start_button: gtk::Button = builder.object("start-button").unwrap();
+    let message_header: gtk::Label = builder.object("message-header").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
     //let notebook = Rc::new(RefCell::new(Notebook::new(&initial_window, &main_window)));
@@ -127,7 +129,7 @@ fn build_ui(
 }
 
 fn print(msg: &UIEvent) {
-    println!("new event: {:?}", msg);
+    println!("new event printed: {:?}", msg);
 }
 
 pub struct Notebook {
