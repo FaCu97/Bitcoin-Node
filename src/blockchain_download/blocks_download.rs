@@ -25,8 +25,11 @@ use super::{
     utils::{get_node, return_node_to_vec},
 };
 
-type BlockAndHeaders = (Arc<RwLock<HashMap<[u8; 32], Block>>>, Arc<RwLock<Vec<BlockHeader>>>);
-type BlocksTuple = (Vec<BlockHeader>,  Arc<RwLock<HashMap<[u8; 32], Block>>>);
+type BlockAndHeaders = (
+    Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    Arc<RwLock<Vec<BlockHeader>>>,
+);
+type BlocksTuple = (Vec<BlockHeader>, Arc<RwLock<HashMap<[u8; 32], Block>>>);
 
 /// # Descarga de bloques
 /// Realiza la descarga de bloques de forma concurrente.

@@ -1,8 +1,8 @@
 use bitcoin::blockchain_download::initial_block_download;
 use bitcoin::config::Config;
 use bitcoin::custom_errors::NodeCustomErrors;
-use bitcoin::gtk::ui_gtk::run_ui;
 use bitcoin::gtk::ui_events::{send_event_to_ui, UIEvent};
+use bitcoin::gtk::ui_gtk::run_ui;
 use bitcoin::handshake::handshake_with_nodes;
 use bitcoin::logwriter::log_writer::{
     set_up_loggers, shutdown_loggers, LogSender, LogSenderHandles,
