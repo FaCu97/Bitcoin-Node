@@ -25,6 +25,9 @@ use super::{
     utils::{get_node, return_node_to_vec},
 };
 
+type BlockAndHeaders = (Arc<RwLock<HashMap<[u8; 32], Block>>>, Arc<RwLock<Vec<BlockHeader>>>);
+type BlocksTuple = (Vec<BlockHeader>,  Arc<RwLock<HashMap<[u8; 32], Block>>>);
+
 /// # Descarga de bloques
 /// Realiza la descarga de bloques de forma concurrente.
 /// ### Recibe:
@@ -46,8 +49,7 @@ pub fn download_blocks(
     log_sender: &LogSender,
     ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    (blocks, headers): BlockAndHeaders,
     rx: Receiver<Vec<BlockHeader>>,
     tx: Sender<Vec<BlockHeader>>,
 ) -> Result<(), NodeCustomErrors> {
@@ -113,10 +115,9 @@ fn download_blocks_chunck(
             &config_cloned,
             &log_sender_cloned,
             &ui_sender,
-            block_headers,
+            (block_headers, blocks),
             node,
             tx,
-            blocks,
             nodes,
         )
     }))
@@ -133,10 +134,9 @@ fn download_blocks_single_thread(
     config: &Arc<Config>,
     log_sender: &LogSender,
     ui_sender: &Option<glib::Sender<UIEvent>>,
-    block_headers: Vec<BlockHeader>,
+    (block_headers, blocks): BlocksTuple,
     mut node: TcpStream,
     tx: Sender<Vec<BlockHeader>>,
-    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<(), NodeCustomErrors> {
     let mut current_blocks: HashMap<[u8; 32], Block> = HashMap::new();

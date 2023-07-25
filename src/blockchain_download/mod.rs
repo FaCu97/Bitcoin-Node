@@ -147,8 +147,7 @@ fn download_full_blockchain_from_multiple_nodes(
             &log_sender,
             &ui_sender,
             nodes,
-            blocks,
-            headers,
+            (blocks, headers),
             rx,
             tx,
         )
