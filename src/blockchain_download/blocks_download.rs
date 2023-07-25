@@ -1,7 +1,10 @@
+use gtk::glib;
+
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     config::Config,
     custom_errors::NodeCustomErrors,
+    gtk::ui_events::{send_event_to_ui, UIEvent},
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
         block_message::BlockMessage, get_data_message::GetDataMessage, inventory::Inventory,
@@ -22,6 +25,12 @@ use super::{
     utils::{get_node, return_node_to_vec},
 };
 
+type BlockAndHeaders = (
+    Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    Arc<RwLock<Vec<BlockHeader>>>,
+);
+type BlocksTuple = (Vec<BlockHeader>, Arc<RwLock<HashMap<[u8; 32], Block>>>);
+
 /// # Descarga de bloques
 /// Realiza la descarga de bloques de forma concurrente.
 /// ### Recibe:
@@ -41,9 +50,9 @@ use super::{
 pub fn download_blocks(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    (blocks, headers): BlockAndHeaders,
     rx: Receiver<Vec<BlockHeader>>,
     tx: Sender<Vec<BlockHeader>>,
 ) -> Result<(), NodeCustomErrors> {
@@ -70,6 +79,7 @@ pub fn download_blocks(
             join_handles.push(download_blocks_chunck(
                 config,
                 log_sender,
+                ui_sender,
                 blocks_to_download_chunk.clone(),
                 nodes.clone(),
                 tx.clone(),
@@ -78,7 +88,7 @@ pub fn download_blocks(
         }
         join_threads(join_handles)?;
         let (amount_of_headers, amount_of_blocks) =
-            get_amount_of_headers_and_blocks(headers.clone(), blocks.clone())?;
+            get_amount_of_headers_and_blocks(&headers, &blocks)?;
         let total_blocks_to_download = amount_of_headers - config.height_first_block_to_download;
         if amount_of_blocks == total_blocks_to_download {
             write_in_log(&log_sender.info_log_sender, format!("Se terminaron de descargar todos los bloques correctamente! BLOQUES DESCARGADOS: {}\n", amount_of_blocks).as_str());
@@ -93,6 +103,7 @@ pub fn download_blocks(
 fn download_blocks_chunck(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     block_headers: Vec<BlockHeader>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     tx: Sender<Vec<BlockHeader>>,
@@ -101,14 +112,15 @@ fn download_blocks_chunck(
     let config_cloned = config.clone();
     let log_sender_cloned = log_sender.clone();
     let node = get_node(nodes.clone())?;
+    let ui_sender = ui_sender.clone();
     Ok(thread::spawn(move || {
         download_blocks_single_thread(
             &config_cloned,
             &log_sender_cloned,
-            block_headers,
+            &ui_sender,
+            (block_headers, blocks),
             node,
             tx,
-            blocks,
             nodes,
         )
     }))
@@ -124,10 +136,10 @@ fn download_blocks_chunck(
 fn download_blocks_single_thread(
     config: &Arc<Config>,
     log_sender: &LogSender,
-    block_headers: Vec<BlockHeader>,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
+    (block_headers, blocks): BlocksTuple,
     mut node: TcpStream,
     tx: Sender<Vec<BlockHeader>>,
-    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<(), NodeCustomErrors> {
     let mut current_blocks: HashMap<[u8; 32], Block> = HashMap::new();
@@ -168,7 +180,7 @@ fn download_blocks_single_thread(
             current_blocks.insert(block.hash(), block);
         }
     }
-    add_blocks_downloaded_to_local_blocks(log_sender, blocks, current_blocks)?;
+    add_blocks_downloaded_to_local_blocks(log_sender, ui_sender, blocks, current_blocks)?;
     return_node_to_vec(nodes, node)?;
     Ok(())
 }
@@ -249,6 +261,7 @@ fn receive_requested_blocks_from_node(
 pub fn download_blocks_single_node(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     block_headers: Vec<BlockHeader>,
     node: &mut TcpStream,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -282,7 +295,7 @@ pub fn download_blocks_single_node(
             current_blocks.insert(block.hash(), block);
         }
     }
-    add_blocks_downloaded_to_local_blocks(log_sender, blocks, current_blocks)?;
+    add_blocks_downloaded_to_local_blocks(log_sender, ui_sender, blocks, current_blocks)?;
     Ok(())
 }
 
@@ -311,8 +324,8 @@ fn divide_blocks_to_download_in_equal_chunks(
 
 /// Recibe un hashmap de bloques y devuelve la cantidad de bloques que hay en el mismo
 /// Error en caso de no poder leerlo
-fn amount_of_block(
-    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+pub fn amount_of_blocks(
+    blocks: &Arc<RwLock<HashMap<[u8; 32], Block>>>,
 ) -> Result<usize, NodeCustomErrors> {
     let amount_of_blocks = blocks
         .read()
@@ -325,6 +338,7 @@ fn amount_of_block(
 /// en caso de no poder acceder al hashmap de bloques local devuelve error
 pub fn add_blocks_downloaded_to_local_blocks(
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     downloaded_blocks: HashMap<[u8; 32], Block>,
 ) -> Result<(), NodeCustomErrors> {
@@ -334,13 +348,14 @@ pub fn add_blocks_downloaded_to_local_blocks(
         .extend(downloaded_blocks);
     write_in_log(
         &log_sender.info_log_sender,
-        format!(
-            "BLOQUES DESCARGADOS: {:?}",
-            amount_of_block(blocks.clone())?
-        )
-        .as_str(),
+        format!("BLOQUES DESCARGADOS: {:?}", amount_of_blocks(&blocks)?).as_str(),
     );
-    println!("{:?} bloques descargados", amount_of_block(blocks)?);
+    let amount_of_blocks = amount_of_blocks(&blocks)?;
+    println!("{:?} bloques descargados", amount_of_blocks);
+    send_event_to_ui(
+        ui_sender,
+        UIEvent::ActualizeBlocksDownloaded(amount_of_blocks),
+    );
     Ok(())
 }
 

@@ -6,10 +6,11 @@ use std::{
 };
 
 use bitcoin_hashes::{sha256, sha256d, Hash};
+use gtk::glib;
 
 use crate::{
     account::Account, compact_size_uint::CompactSizeUint, custom_errors::NodeCustomErrors,
-    logwriter::log_writer::LogSender, utxo_tuple::UtxoTuple,
+    gtk::ui_events::UIEvent, logwriter::log_writer::LogSender, utxo_tuple::UtxoTuple,
 };
 
 use super::{
@@ -225,10 +226,11 @@ impl Transaction {
     pub fn check_if_tx_involves_user_account(
         &self,
         log_sender: &LogSender,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     ) -> Result<(), NodeCustomErrors> {
         for tx_out in self.tx_out.clone() {
-            tx_out.involves_user_account(log_sender, accounts.clone(), self.clone())?;
+            tx_out.involves_user_account(log_sender, ui_sender, accounts.clone(), self.clone())?;
         }
         Ok(())
     }

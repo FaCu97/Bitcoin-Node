@@ -1,107 +1,142 @@
 use bitcoin::blockchain_download::initial_block_download;
 use bitcoin::config::Config;
 use bitcoin::custom_errors::NodeCustomErrors;
-use bitcoin::gtk::interfaz_gtk::Gtk;
+use bitcoin::gtk::ui_events::{send_event_to_ui, UIEvent};
+use bitcoin::gtk::ui_gtk::run_ui;
 use bitcoin::handshake::handshake_with_nodes;
-use bitcoin::logwriter::log_writer::{set_up_loggers, shutdown_loggers, write_in_log, LogSender};
+use bitcoin::logwriter::log_writer::{
+    set_up_loggers, shutdown_loggers, LogSender, LogSenderHandles,
+};
 use bitcoin::network::get_active_nodes_from_dns_seed;
 use bitcoin::node::Node;
 use bitcoin::server::NodeServer;
-use bitcoin::terminal_ui;
+use bitcoin::terminal_ui::terminal_ui;
 use bitcoin::wallet::Wallet;
-use std::error::Error;
-use std::{env, fmt};
+use bitcoin::wallet_event::WalletEvent;
+use gtk::glib;
+use std::sync::mpsc::{channel, Receiver};
+use std::{env, thread};
 
-#[derive(Debug)]
-pub enum GenericError {
-    DownloadError(String),
-    HandShakeError(NodeCustomErrors),
-    ConfigError(Box<dyn Error>),
-    ConnectionToDnsError(NodeCustomErrors),
-    LoggingError(NodeCustomErrors),
-    NodeHandlerError(NodeCustomErrors),
-    NodeServerError(NodeCustomErrors),
-}
-
-impl fmt::Display for GenericError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            GenericError::DownloadError(msg) => write!(f, "DOWNLOAD ERROR: {}", msg),
-            GenericError::ConfigError(msg) => write!(f, "CONFIG ERROR: {}", msg),
-            GenericError::HandShakeError(msg) => write!(f, "HANDSHAKE ERROR: {}", msg),
-            GenericError::ConnectionToDnsError(msg) => {
-                write!(f, "CONNECTION TO DNS ERROR: {}", msg)
-            }
-            GenericError::LoggingError(msg) => write!(f, "LOGGING ERROR: {}", msg),
-            GenericError::NodeHandlerError(msg) => {
-                write!(f, "NODE MESSAGE LISTENER AND WRITER ERROR: {}", msg)
-            }
-            GenericError::NodeServerError(msg) => write!(f, "NODE SERVER ERROR: {}", msg),
-        }
-    }
-}
-
-impl Error for GenericError {}
-
-fn main() -> Result<(), GenericError> {
-    let mut args: Vec<String> = env::args().collect();
+fn main() -> Result<(), NodeCustomErrors> {
+    let args: Vec<String> = env::args().collect();
     if args.len() == 3 && args[2] == *"-i" {
-        Gtk::run();
-        // lo saco para que lea config correctamente
-        args.pop();
+        run_with_ui(args)?;
+    } else {
+        run_without_ui(&args)?;
     }
-    let config = Config::from(&args).map_err(GenericError::ConfigError)?;
-    let (
-        error_log_sender,
-        error_handler,
-        info_log_sender,
-        info_handler,
-        message_log_sender,
-        message_handler,
-    ) = set_up_loggers(
-        &config,
-        config.error_log_path.clone(),
-        config.info_log_path.clone(),
-        config.message_log_path.clone(),
-    )
-    .map_err(GenericError::LoggingError)?;
-    let logsender = LogSender::new(error_log_sender, info_log_sender, message_log_sender);
-    write_in_log(
-        &logsender.info_log_sender,
-        "Se leyo correctamente el archivo de configuracion\n",
-    );
-    let active_nodes = get_active_nodes_from_dns_seed(&config, &logsender)
-        .map_err(GenericError::ConnectionToDnsError)?;
-    let pointer_to_nodes = handshake_with_nodes(&config, &logsender, active_nodes)
-        .map_err(GenericError::HandShakeError)?;
-    let headers_and_blocks = initial_block_download(&config, &logsender, pointer_to_nodes.clone())
-        .map_err(|err| {
-            write_in_log(
-                &logsender.error_log_sender,
-                format!("Error al descargar los bloques: {}", err).as_str(),
-            );
-            GenericError::DownloadError(err.to_string())
-        })?;
-    let (headers, blocks, header_heights) = headers_and_blocks;
+    Ok(())
+}
+
+fn run_with_ui(mut args: Vec<String>) -> Result<(), NodeCustomErrors> {
+    args.pop();
+    // this channel is used to receive the UISender (glib::Sender<UIEvent>) from the ui that creates the channel
+    // an sends via this channel the UISender to the node
+    let (tx, rx) = channel();
+    // channel to comunicate the ui with the node
+    let (sender_from_ui_to_node, receiver_from_ui_to_node) = channel();
+    let app_thread = thread::spawn(move || -> Result<(), NodeCustomErrors> {
+        // sender to comunicate with the ui
+        let ui_tx = rx.recv().map_err(|err| {
+            println!("ERROR AL RECIBIR!");
+            NodeCustomErrors::ThreadChannelError(err.to_string())
+        })?; // receive the ui sender from the client
+        run_node(&args, Some(ui_tx), Some(receiver_from_ui_to_node)) // run the node with the ui sender
+    });
+    run_ui(tx, sender_from_ui_to_node);
+    app_thread
+        .join()
+        .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
+    Ok(())
+}
+
+fn run_without_ui(args: &[String]) -> Result<(), NodeCustomErrors> {
+    run_node(args, None, None)
+}
+
+fn run_node(
+    args: &[String],
+    ui_sender: Option<glib::Sender<UIEvent>>,
+    node_rx: Option<Receiver<WalletEvent>>,
+) -> Result<(), NodeCustomErrors> {
+    if ui_sender.is_some() {
+        println!("Ui_sender exists!\n");
+    }
+    let config = Config::from(args)?;
+    let (log_sender, log_sender_handles) = set_up_loggers(&config)?;
+    let active_nodes = get_active_nodes_from_dns_seed(&config, &log_sender)?;
+    let pointer_to_nodes = handshake_with_nodes(&config, &log_sender, active_nodes)?;
+    let (headers, blocks, headers_height) =
+        initial_block_download(&config, &log_sender, &ui_sender, pointer_to_nodes.clone())?;
+    send_event_to_ui(&ui_sender, UIEvent::InitializeUITabs(blocks.clone()));
     let mut node = Node::new(
-        &logsender,
+        &log_sender,
+        &ui_sender,
         pointer_to_nodes,
         headers,
         blocks,
-        header_heights,
-    )
-    .map_err(GenericError::NodeHandlerError)?;
-    let wallet = Wallet::new(node.clone()).map_err(GenericError::NodeHandlerError)?;
-    let server =
-        NodeServer::new(&config, &logsender, &mut node).map_err(GenericError::NodeServerError)?;
-    terminal_ui(wallet);
-    node.shutdown_node()
-        .map_err(GenericError::NodeHandlerError)?;
-    server
-        .shutdown_server()
-        .map_err(GenericError::NodeHandlerError)?;
-    shutdown_loggers(logsender, error_handler, info_handler, message_handler)
-        .map_err(GenericError::LoggingError)?;
-
+        headers_height,
+    )?;
+    let mut wallet = Wallet::new(node.clone())?;
+    let server = NodeServer::new(&config, &log_sender, &ui_sender, &mut node)?;
+    interact_with_user(&ui_sender, &mut wallet, node_rx);
+    shut_down(node, server, log_sender, log_sender_handles)?;
     Ok(())
+}
+
+/// Cierra el nodo, el server y los loggers
+fn shut_down(
+    node: Node,
+    server: NodeServer,
+    log_sender: LogSender,
+    log_sender_handles: LogSenderHandles,
+) -> Result<(), NodeCustomErrors> {
+    node.shutdown_node()?;
+    server.shutdown_server()?;
+    shutdown_loggers(log_sender, log_sender_handles)?;
+    Ok(())
+}
+
+fn interact_with_user(
+    ui_sender: &Option<glib::Sender<UIEvent>>,
+    wallet: &mut Wallet,
+    node_rx: Option<Receiver<WalletEvent>>,
+) {
+    if let Some(rx) = node_rx {
+        handle_ui_request(ui_sender, rx, wallet)
+    } else {
+        terminal_ui(ui_sender, wallet)
+    }
+}
+
+fn handle_ui_request(
+    ui_sender: &Option<glib::Sender<UIEvent>>,
+    rx: Receiver<WalletEvent>,
+    wallet: &mut Wallet,
+) {
+    for event in rx {
+        match event {
+            WalletEvent::AddAccountRequest(wif, address) => {
+                if wallet.add_account(ui_sender, wif, address).is_err() {
+                    println!("Error al agregar la cuenta");
+                }
+            }
+            WalletEvent::MakeTransactionRequest(account_index, address, amount, fee) => {
+                if wallet
+                    .make_transaction(account_index, &address, amount, fee)
+                    .is_err()
+                {
+                    println!("Error al crear la transaccion");
+                }
+            }
+            WalletEvent::PoiOfTransactionRequest(block_hash, transaction_hash) => {
+                if wallet
+                    .tx_proof_of_inclusion(block_hash, transaction_hash)
+                    .is_err()
+                {
+                    println!("Error al crear la prueba de inclusion");
+                }
+            }
+        }
+    }
+    println!("TERMINA HANDLE UI REQUEST!!!! \n");
 }

@@ -108,7 +108,7 @@ impl HeaderMessage {
             let payload = read_payload(&mut stream, &header)?;
             if header.command_name.contains("ping") {
                 write_in_log(
-                    &log_sender.messege_log_sender,
+                    &log_sender.message_log_sender,
                     format!(
                         "Recibo Correctamente: ping -- Nodo: {:?}",
                         stream.peer_addr()?
@@ -118,7 +118,7 @@ impl HeaderMessage {
                 write_pong_message(&mut stream, &payload)?;
             }
             write_in_log(
-                &log_sender.messege_log_sender,
+                &log_sender.message_log_sender,
                 format!(
                     "IGNORADO -- Recibo: {} -- Nodo: {:?}",
                     header.command_name,
@@ -133,7 +133,7 @@ impl HeaderMessage {
         }
         if !is_terminated(finish) {
             write_in_log(
-                &log_sender.messege_log_sender,
+                &log_sender.message_log_sender,
                 format!(
                     "Recibo Correctamente: {} -- Nodo: {:?}",
                     command_name,

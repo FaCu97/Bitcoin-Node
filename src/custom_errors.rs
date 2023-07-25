@@ -19,6 +19,7 @@ pub enum NodeCustomErrors {
     WritingInFileError(String),
     ClosingFileError(String),
     OpeningFileError(String),
+    ArgumentsError(String),
     BlockchainDownloadError(String),
     OtherError(String),
 }
@@ -71,6 +72,9 @@ impl fmt::Display for NodeCustomErrors {
             }
             NodeCustomErrors::OpeningFileError(msg) => {
                 write!(f, "Failed to open file. File Error: {}", msg)
+            }
+            NodeCustomErrors::ArgumentsError(msg) => {
+                write!(f, "Failed to parse arguments. Arguments Error: {}", msg)
             }
             NodeCustomErrors::BlockchainDownloadError(msg) => {
                 write!(f, "Error during the Blockchain download: {}", msg)

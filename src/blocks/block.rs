@@ -4,6 +4,8 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use gtk::glib;
+
 use super::{
     block_header::BlockHeader, merkle_tree::MerkleTree, utils_block::concatenate_and_hash,
 };
@@ -11,6 +13,7 @@ use crate::{
     account::Account,
     compact_size_uint::CompactSizeUint,
     custom_errors::NodeCustomErrors,
+    gtk::ui_events::{send_event_to_ui, UIEvent},
     logwriter::log_writer::{write_in_log, LogSender},
     transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
@@ -178,6 +181,7 @@ impl Block {
     pub fn contains_pending_tx(
         &self,
         log_sender: &LogSender,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     ) -> Result<(), NodeCustomErrors> {
         for tx in &self.txn {
@@ -198,6 +202,14 @@ impl Block {
                         self.hex_hash(),
                         tx.hex_hash(),
                         account.address
+                    );
+                    send_event_to_ui(
+                        ui_sender,
+                        UIEvent::ShowConfirmedTransaction(
+                            self.clone(),
+                            account.clone(),
+                            tx.clone(),
+                        ),
                     );
                     let pending_transaction_index = account
                         .pending_transactions

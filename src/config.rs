@@ -7,6 +7,8 @@ use std::io::Read;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use crate::custom_errors::NodeCustomErrors;
+
 /// Permite validar la cantidad de atributos en el archivo de configuración
 /// Si se agregan hay que incrementarlo
 const CANTIDAD_ATRIBUTOS: usize = 23;
@@ -47,22 +49,21 @@ impl Config {
     /// Devuelve un io::Error si:
     /// - No se pudo encontrar el archivo en la ruta indicada.
     /// - El archivo tiene un formato invalido.
-    pub fn from(args: &[String]) -> Result<Arc<Self>, Box<dyn Error>> {
+    pub fn from(args: &[String]) -> Result<Arc<Self>, NodeCustomErrors> {
         if args.len() > 2 {
-            return Err(Box::new(io::Error::new(
-                io::ErrorKind::InvalidInput,
+            return Err(NodeCustomErrors::ArgumentsError(
                 "Too many arguments".to_string(),
-            )));
+            ));
         }
 
         if args.len() < 2 {
-            return Err(Box::new(io::Error::new(
-                io::ErrorKind::InvalidInput,
+            return Err(NodeCustomErrors::ArgumentsError(
                 "Not enough arguments".to_string(),
-            )));
+            ));
         }
-        let file = File::open(&args[1])?;
-        Self::from_reader(file)
+        let file = File::open(&args[1])
+            .map_err(|err| NodeCustomErrors::OpeningFileError(err.to_string()))?;
+        Self::from_reader(file).map_err(|err| NodeCustomErrors::ReadingFileError(err.to_string()))
     }
 
     /// Lee del file recibido y devuelve el struct de configuración inicializado.

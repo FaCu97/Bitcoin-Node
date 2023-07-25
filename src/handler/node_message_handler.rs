@@ -1,5 +1,8 @@
+use gtk::glib;
+
 use crate::{
     custom_errors::NodeCustomErrors,
+    gtk::ui_events::UIEvent,
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{message_header::is_terminated, message_header::HeaderMessage},
     node_data_pointers::NodeDataPointers,
@@ -43,6 +46,7 @@ impl NodeMessageHandler {
     /// NodeMessageHandler con sus respectivos campos
     pub fn new(
         log_sender: &LogSender,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         node_pointers: NodeDataPointers,
     ) -> Result<Self, NodeCustomErrors> {
         write_in_log(
@@ -65,6 +69,7 @@ impl NodeMessageHandler {
             );
             nodes_handle.push(handle_messages_from_node(
                 log_sender,
+                ui_sender,
                 (tx, rx),
                 transactions_recieved.clone(),
                 node_pointers.clone(),
@@ -137,6 +142,7 @@ impl NodeMessageHandler {
     pub fn add_connection(
         &mut self,
         log_sender: &LogSender,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         node_pointers: NodeDataPointers,
         connection: TcpStream,
     ) -> NodeMessageHandlerResult {
@@ -151,6 +157,7 @@ impl NodeMessageHandler {
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .push(handle_messages_from_node(
                 log_sender,
+                ui_sender,
                 (tx, rx),
                 self.transactions_recieved.clone(),
                 node_pointers,
@@ -167,6 +174,7 @@ impl NodeMessageHandler {
 /// con lo que devuelve el loop. Ok(()) en caso de salir todo bien o NodeHandlerError en caso de algun error.
 pub fn handle_messages_from_node(
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     (tx, rx): (NodeSender, NodeReceiver),
     transactions_recieved: Arc<RwLock<Vec<[u8; 32]>>>,
     node_pointers: NodeDataPointers,
@@ -174,6 +182,7 @@ pub fn handle_messages_from_node(
     finish: Option<Arc<RwLock<bool>>>,
 ) -> JoinHandle<()> {
     let log_sender = log_sender.clone();
+    let ui_sender = ui_sender.clone();
     thread::spawn(move || {
         // si ocurre algun error se guarda en esta variable
         let mut error: Option<NodeCustomErrors> = None;
@@ -224,14 +233,19 @@ pub fn handle_messages_from_node(
                     )
                 }),
                 "block" => handle_message(&mut error, || {
-                    handle_block_message(&log_sender, &payload, node_pointers.clone())
+                    handle_block_message(&log_sender, &ui_sender, &payload, node_pointers.clone())
                 }),
                 "inv" => handle_message(&mut error, || {
                     handle_inv_message(tx.clone(), &payload, transactions_recieved.clone())
                 }),
                 "ping" => handle_message(&mut error, || handle_ping_message(tx.clone(), &payload)),
                 "tx" => handle_message(&mut error, || {
-                    handle_tx_message(&log_sender, &payload, node_pointers.accounts.clone())
+                    handle_tx_message(
+                        &log_sender,
+                        &ui_sender,
+                        &payload,
+                        node_pointers.accounts.clone(),
+                    )
                 }),
                 "getheaders" => handle_message(&mut error, || {
                     handle_getheaders_message(
@@ -243,7 +257,7 @@ pub fn handle_messages_from_node(
                 }),
                 _ => {
                     write_in_log(
-                        &log_sender.messege_log_sender,
+                        &log_sender.message_log_sender,
                         format!(
                             "IGNORADO -- Recibo: {} -- Nodo: {:?}",
                             header.command_name,
@@ -257,7 +271,7 @@ pub fn handle_messages_from_node(
             if command_name != "inv" {
                 // Se imprimen en el log_message todos los mensajes menos el inv
                 write_in_log(
-                    &log_sender.messege_log_sender,
+                    &log_sender.message_log_sender,
                     format!(
                         "Recibo correctamente: {} -- Nodo: {:?}",
                         command_name,

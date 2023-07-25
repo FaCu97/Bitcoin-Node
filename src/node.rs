@@ -1,7 +1,10 @@
+use gtk::glib;
+
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
     custom_errors::NodeCustomErrors,
+    gtk::ui_events::UIEvent,
     handler::node_message_handler::NodeMessageHandler,
     logwriter::log_writer::LogSender,
     messages::inventory::{inv_mershalling, Inventory},
@@ -36,6 +39,7 @@ impl Node {
     /// Inicializa el nodo. Recibe la blockchain ya descargada.
     pub fn new(
         log_sender: &LogSender,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
         headers: Arc<RwLock<Vec<BlockHeader>>>,
         block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -54,7 +58,7 @@ impl Node {
             pointer_to_utxo_set.clone(),
         );
 
-        let peers_handler = NodeMessageHandler::new(log_sender, node_pointers.clone())?;
+        let peers_handler = NodeMessageHandler::new(log_sender, ui_sender, node_pointers.clone())?;
         Ok(Node {
             connected_nodes,
             headers,
@@ -144,10 +148,15 @@ impl Node {
     pub fn add_connection(
         &mut self,
         log_sender: &LogSender,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         connection: TcpStream,
     ) -> Result<(), NodeCustomErrors> {
-        self.peers_handler
-            .add_connection(log_sender, self.node_pointers.clone(), connection)
+        self.peers_handler.add_connection(
+            log_sender,
+            ui_sender,
+            self.node_pointers.clone(),
+            connection,
+        )
     }
 }
 

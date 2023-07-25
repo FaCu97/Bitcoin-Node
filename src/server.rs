@@ -7,9 +7,12 @@ use std::{
     thread::{spawn, JoinHandle},
 };
 
+use gtk::glib;
+
 use crate::{
     config::Config,
     custom_errors::NodeCustomErrors,
+    gtk::ui_events::UIEvent,
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
         message_header::{read_verack_message, write_verack_message},
@@ -35,6 +38,7 @@ impl NodeServer {
     pub fn new(
         config: &Arc<Config>,
         log_sender: &LogSender,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         node: &mut Node,
     ) -> Result<NodeServer, NodeCustomErrors> {
         let (sender, rx) = mpsc::channel();
@@ -42,8 +46,17 @@ impl NodeServer {
         let mut node_clone = node.clone();
         let log_sender_clone = log_sender.clone();
         let config = config.clone();
-        let handle =
-            spawn(move || Self::listen(&config, &log_sender_clone, &mut node_clone, address, rx));
+        let ui_sender = ui_sender.clone();
+        let handle = spawn(move || {
+            Self::listen(
+                &config,
+                &log_sender_clone,
+                &ui_sender,
+                &mut node_clone,
+                address,
+                rx,
+            )
+        });
         Ok(NodeServer { sender, handle })
     }
 
@@ -53,6 +66,7 @@ impl NodeServer {
     fn listen(
         config: &Arc<Config>,
         log_sender: &LogSender,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         node: &mut Node,
         address: SocketAddr,
         rx: Receiver<String>,
@@ -90,7 +104,7 @@ impl NodeServer {
                         )
                         .as_str(),
                     );
-                    Self::handle_incoming_connection(config, log_sender, node, stream)?;
+                    Self::handle_incoming_connection(config, log_sender, ui_sender, node, stream)?;
                 }
                 Err(ref err) if err.kind() == std::io::ErrorKind::WouldBlock => {
                     // This doesen't mean an error ocurred, there just wasn't a connection at the moment
@@ -107,6 +121,7 @@ impl NodeServer {
     fn handle_incoming_connection(
         config: &Arc<Config>,
         log_sender: &LogSender,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         node: &mut Node,
         mut stream: TcpStream,
     ) -> Result<(), NodeCustomErrors> {
@@ -133,7 +148,7 @@ impl NodeServer {
             format!("Handshake con nodo {:?} realizado con exito!", socket_addr).as_str(),
         );
         // AGREGAR LA CONEXION AL NODO
-        node.add_connection(log_sender, stream)?;
+        node.add_connection(log_sender, ui_sender, stream)?;
         Ok(())
     }
 

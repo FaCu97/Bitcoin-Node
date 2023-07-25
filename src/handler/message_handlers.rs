@@ -1,4 +1,7 @@
+use gtk::glib;
+
 use crate::blockchain_download::headers_download::load_header_heights;
+use crate::gtk::ui_events::{send_event_to_ui, UIEvent};
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
@@ -230,6 +233,7 @@ fn handle_tx_inventory(
 /// y el bloque a la cadena de bloques. Se fija si alguna transaccion del bloque involucra a alguna de las cuentas del programa.
 pub fn handle_block_message(
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     payload: &[u8],
     node_pointers: NodeDataPointers,
 ) -> NodeMessageHandlerResult {
@@ -246,10 +250,11 @@ pub fn handle_block_message(
             )?;
             include_new_block(
                 log_sender,
+                ui_sender,
                 new_block.clone(),
                 node_pointers.block_chain.clone(),
             )?;
-            new_block.contains_pending_tx(log_sender, node_pointers.accounts.clone())?;
+            new_block.contains_pending_tx(log_sender, ui_sender, node_pointers.accounts.clone())?;
             new_block
                 .give_me_utxos(node_pointers.utxo_set.clone())
                 .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
@@ -321,12 +326,13 @@ pub fn handle_ping_message(tx: NodeSender, payload: &[u8]) -> NodeMessageHandler
 /// en caso de que se pueda leer bien el payload y recorrer las tx o error en caso contrario
 pub fn handle_tx_message(
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     payload: &[u8],
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
 ) -> NodeMessageHandlerResult {
     let tx = Transaction::unmarshalling(&payload.to_vec(), &mut 0)
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
-    tx.check_if_tx_involves_user_account(log_sender, accounts)?;
+    tx.check_if_tx_involves_user_account(log_sender, ui_sender, accounts)?;
     Ok(())
 }
 
@@ -349,18 +355,21 @@ fn ask_for_incoming_tx(tx: NodeSender, inventories: Vec<Inventory>) -> NodeMessa
 /// Devuelve Ok(()) en caso de poder agregarlo correctamente o error del tipo NodeHandlerError en caso de no poder.
 fn include_new_block(
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     block: Block,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
 ) -> NodeMessageHandlerResult {
+    blocks
+        .write()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .insert(block.hash(), block.clone());
     println!("\nRECIBO NUEVO BLOQUE: {} \n", block.hex_hash());
+    send_event_to_ui(ui_sender, UIEvent::AddBlock(block.clone()));
     write_in_log(
         &log_sender.info_log_sender,
         format!("NUEVO BLOQUE AGREGADO: -- {} --", block.hex_hash()).as_str(),
     );
-    blocks
-        .write()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .insert(block.hash(), block);
+
     Ok(())
 }
 

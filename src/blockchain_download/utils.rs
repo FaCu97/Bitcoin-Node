@@ -9,6 +9,8 @@ use std::{
     thread,
 };
 
+use super::{blocks_download::amount_of_blocks, headers_download::amount_of_headers};
+
 /// Devuelve el ultimo nodo de la lista de nodos conectados para descargar los headers de la blockchain
 /// En caso de no haber mas nodos disponibles devuelve un error
 pub fn get_node(nodes: Arc<RwLock<Vec<TcpStream>>>) -> Result<TcpStream, NodeCustomErrors> {
@@ -53,16 +55,10 @@ pub fn join_threads(
 
 /// Recibe un puntero a un vector de headers y un puntero a un hashmap de bloques y devuelve la cantidad de headers y bloques que hay en cada uno
 pub fn get_amount_of_headers_and_blocks(
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    headers: &Arc<RwLock<Vec<BlockHeader>>>,
+    blocks: &Arc<RwLock<HashMap<[u8; 32], Block>>>,
 ) -> Result<(usize, usize), NodeCustomErrors> {
-    let amount_of_headers = headers
-        .read()
-        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
-        .len();
-    let amount_of_blocks = blocks
-        .read()
-        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
-        .len();
+    let amount_of_headers = amount_of_headers(headers)?;
+    let amount_of_blocks = amount_of_blocks(blocks)?;
     Ok((amount_of_headers, amount_of_blocks))
 }

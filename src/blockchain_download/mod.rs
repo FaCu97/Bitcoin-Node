@@ -1,3 +1,5 @@
+use gtk::glib;
+
 use self::blocks_download::{download_blocks, download_blocks_single_node};
 use self::headers_download::{download_missing_headers, get_initial_headers};
 use self::utils::{get_amount_of_headers_and_blocks, get_node, join_threads, return_node_to_vec};
@@ -6,6 +8,7 @@ use super::blocks::block_header::BlockHeader;
 use super::config::Config;
 use super::logwriter::log_writer::{write_in_log, LogSender};
 use crate::custom_errors::NodeCustomErrors;
+use crate::gtk::ui_events::UIEvent;
 use std::collections::HashMap;
 use std::net::TcpStream;
 use std::sync::mpsc::channel;
@@ -41,6 +44,7 @@ type HeadersBlocksTuple = (
 pub fn initial_block_download(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<HeadersBlocksTuple, NodeCustomErrors> {
     write_in_log(
@@ -59,6 +63,7 @@ pub fn initial_block_download(
     get_initial_headers(
         config,
         log_sender,
+        ui_sender,
         pointer_to_headers.clone(),
         header_heights.clone(),
         nodes.clone(),
@@ -71,6 +76,7 @@ pub fn initial_block_download(
         download_full_blockchain_from_single_node(
             config,
             log_sender,
+            ui_sender,
             nodes,
             pointer_to_headers.clone(),
             pointer_to_blocks.clone(),
@@ -80,6 +86,7 @@ pub fn initial_block_download(
         download_full_blockchain_from_multiple_nodes(
             config,
             log_sender,
+            ui_sender,
             nodes,
             pointer_to_headers.clone(),
             pointer_to_blocks.clone(),
@@ -87,7 +94,7 @@ pub fn initial_block_download(
         )?;
     }
     let (amount_of_headers, amount_of_blocks) =
-        get_amount_of_headers_and_blocks(pointer_to_headers.clone(), pointer_to_blocks.clone())?;
+        get_amount_of_headers_and_blocks(&pointer_to_headers, &pointer_to_blocks)?;
     write_in_log(
         &log_sender.info_log_sender,
         format!("TOTAL DE HEADERS DESCARGADOS: {}", amount_of_headers).as_str(),
@@ -105,6 +112,7 @@ pub fn initial_block_download(
 fn download_full_blockchain_from_multiple_nodes(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -118,10 +126,12 @@ fn download_full_blockchain_from_multiple_nodes(
     let nodes_cloned = nodes.clone();
     let headers_cloned = headers.clone();
     let tx_cloned = tx.clone();
+    let ui_sender_clone = ui_sender.clone();
     threads_handle.push(thread::spawn(move || {
         download_missing_headers(
             &config_cloned,
             &log_sender_cloned,
+            &ui_sender_clone,
             nodes_cloned,
             headers_cloned,
             header_heights,
@@ -130,8 +140,17 @@ fn download_full_blockchain_from_multiple_nodes(
     }));
     let config = config.clone();
     let log_sender = log_sender.clone();
+    let ui_sender = ui_sender.clone();
     threads_handle.push(thread::spawn(move || {
-        download_blocks(&config, &log_sender, nodes, blocks, headers, rx, tx)
+        download_blocks(
+            &config,
+            &log_sender,
+            &ui_sender,
+            nodes,
+            (blocks, headers),
+            rx,
+            tx,
+        )
     }));
     join_threads(threads_handle)?;
     Ok(())
@@ -142,6 +161,7 @@ fn download_full_blockchain_from_multiple_nodes(
 fn download_full_blockchain_from_single_node(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -151,6 +171,7 @@ fn download_full_blockchain_from_single_node(
     download_missing_headers(
         config,
         log_sender,
+        ui_sender,
         nodes.clone(),
         headers,
         header_heights,
@@ -161,6 +182,7 @@ fn download_full_blockchain_from_single_node(
         download_blocks_single_node(
             config,
             log_sender,
+            ui_sender,
             blocks_to_download,
             &mut node,
             blocks.clone(),

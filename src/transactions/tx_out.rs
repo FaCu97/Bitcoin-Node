@@ -1,9 +1,12 @@
 use std::sync::{Arc, RwLock};
 
+use gtk::glib;
+
 use crate::{
     account::Account,
     compact_size_uint::CompactSizeUint,
     custom_errors::NodeCustomErrors,
+    gtk::ui_events::{send_event_to_ui, UIEvent},
     logwriter::log_writer::{write_in_log, LogSender},
 };
 
@@ -96,6 +99,7 @@ impl TxOut {
     pub fn involves_user_account(
         &self,
         log_sender: &LogSender,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
         tx: Transaction,
     ) -> Result<(), NodeCustomErrors> {
@@ -126,6 +130,10 @@ impl TxOut {
                         .as_str(),
                     );
                     println!("\nTRANSACCION: {} \nINVOLUCRA A LA CUENTA: {}\nAUN NO SE ENCUENTRA EN UN BLOQUE (PENDIENTE)", tx.hex_hash(), account.address);
+                    send_event_to_ui(
+                        ui_sender,
+                        UIEvent::ShowPendingTransaction(account.clone(), tx.clone()),
+                    );
                     account
                         .pending_transactions
                         .write()
