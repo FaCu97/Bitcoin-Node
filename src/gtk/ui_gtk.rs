@@ -15,7 +15,7 @@ use gtk::{
     gdk,
     glib::{self, Priority},
     prelude::*,
-    Application, ApplicationWindow, CssProvider, ProgressBar, StyleContext, Window,
+    Application, ApplicationWindow, CssProvider, ProgressBar, StyleContext, Window, Builder,
 };
 
 use super::ui_events::UIEvent;
@@ -58,17 +58,9 @@ impl Gtk {
 }
 
 pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<WalletEvent>) {
-    let (tx, rx) = glib::MainContext::channel(Priority::default());
-    ui_sender.send(tx).expect("could not send sender to client");
-    rx.attach(None, move |msg| {
-        println!("New event: {:?}", msg);
-        Continue(true)
-    });
-
     let app = Application::builder()
         .application_id("org.gtk-rs.bitcoin")
         .build();
-
     app.connect_activate(move |app| {
         println!("UI thread");
         build_ui(app, &ui_sender, &sender_to_node);
@@ -100,8 +92,6 @@ fn build_ui(
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
     let initial_window: Window = builder.object("initial-window").unwrap();
-    //let initial_window: ApplicationWindow = gtk::ApplicationWindow::new(app);
-
     let main_window: Window = builder.object("main-window").unwrap();
     let start_button: gtk::Button = builder.object("start-button").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
@@ -110,7 +100,7 @@ fn build_ui(
     // let notebook_clone = notebook.clone();
 
     rx.attach(None, move |msg| {
-        print(&msg);
+        println!("new event: {:?}", msg);
         //notebook_clone.borrow_mut().update(msg);
         Continue(true)
     });
@@ -126,9 +116,46 @@ fn build_ui(
     gtk::main();
 }
 
-fn print(msg: &UIEvent) {
-    println!("new event: {:?}", msg);
+
+/* 
+
+pub struct UIContainer {
+    pub initial_window: InitialWindow,
+    pub main_window: MainNotebook,
+    pub builder: Builder,
 }
+
+
+pub struct InitialWindow {
+    pub window: Window,
+}
+
+impl InitialWindow {
+    pub fn new(builder: Builder) -> Self {
+        let window = builder.object("initial-window").unwrap();
+        Self { window }
+    }
+    pub fn upadte(&self, event: &UIEvent) {
+        match event {
+            UIEvent::InitializeUITabs(_) => {
+                self.window.close();
+            }
+            UIEvent::ActualizeBlocksDownloaded(blocks_downloaded) => {
+                println!("Actualize blocks downloaded: {}", blocks_downloaded);
+            }
+            UIEvent::ActualizeHeadersDownloaded(headers_downloaded) => {
+                println!("Actualize headers downloaded: {}", headers_downloaded);
+            }
+            _ => (),
+        }
+    }
+}
+
+
+pub struct MainNotebook {
+    pub notebook: Notebook,
+}
+
 
 pub struct Notebook {
     pub notebook: gtk::Notebook,
@@ -161,7 +188,7 @@ impl Notebook {
     }
     pub fn update(&mut self, event: UIEvent) {
         match event {
-            UIEvent::InitializeUI => {
+            UIEvent::InitializeUITabs(_) => {
                 self.notebook.show_all();
             }
             _ => (),
@@ -178,30 +205,7 @@ impl Notebook {
     }
 }
 
-pub struct InitialWindow {
-    pub container: Window,
-}
 
-impl InitialWindow {
-    pub fn new(application_window: &Window) -> Self {
-        let container = application_window.clone();
-        Self { container }
-    }
-    pub fn upadte(&self, event: &UIEvent) {
-        match event {
-            UIEvent::InitializeUI => {
-                self.container.close();
-            }
-            UIEvent::ActualizeBlocksDownloaded(blocks_downloaded) => {
-                println!("Actualize blocks downloaded: {}", blocks_downloaded);
-            }
-            UIEvent::ActualizeHeadersDownloaded(headers_downloaded) => {
-                println!("Actualize headers downloaded: {}", headers_downloaded);
-            }
-            _ => (),
-        }
-    }
-}
 pub struct OverViewTab {
     pub container: gtk::Box,
 }
@@ -317,3 +321,4 @@ impl BlocksTab {
         println!("Add block: {:?}", block);
     }
 }
+*/
