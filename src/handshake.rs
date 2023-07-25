@@ -9,28 +9,47 @@ use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::result::Result;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
-
+use std::thread;
 use crate::config::Config;
 
-/// Realiza el handshake con todos los nodos de la lista recibida por parámetro.
-/// Devuelve un vector de sockets con los nodos con los que se pudo establecer la conexión.
-/// En caso de no poder conectarse a ninguno, devuelve un error.
+/// Realiza la conexión a los nodos con múltiples threads
+/// Recibe las direcciones IP de los nodos.
+/// Devuelve un vector de sockets o un error si no se pudo completar.
 pub fn handshake_with_nodes(
     config: &Arc<Config>,
     log_sender: &LogSender,
     active_nodes: Vec<Ipv4Addr>,
 ) -> Result<Arc<RwLock<Vec<TcpStream>>>, NodeCustomErrors> {
     write_in_log(&log_sender.info_log_sender, "INICIO DE HANDSHAKE");
-    println!("Realizando hadshake con nodos...{:?}\n", active_nodes);
+    println!("Realizando handshake con los nodos...");
+    let chunk_size = (active_nodes.len() as f64 / config.n_threads as f64).ceil() as usize;
+    let active_nodes_chunks = Arc::new(RwLock::new(
+        active_nodes
+            .chunks(chunk_size)
+            .map(|chunk| chunk.to_vec())
+            .collect::<Vec<_>>(),
+    ));
     let sockets = vec![];
-    let pointer_to_sockets = Arc::new(RwLock::new(sockets));
-    connect_to_nodes(
-        config,
-        log_sender,
-        pointer_to_sockets.clone(),
-        &active_nodes,
-    )?;
-    let amount_of_ips = pointer_to_sockets
+    let sockets_lock = Arc::new(RwLock::new(sockets));
+    let mut thread_handles = vec![];
+    for i in 0..config.n_threads {
+        let chunk = active_nodes_chunks
+            .write()
+            .map_err(|err| NodeCustomErrors::LockError(format!("{}", err)))?[i]
+            .clone();
+        let config = config.clone();
+        let log_sender_clone = log_sender.clone();
+        let sockets: Arc<RwLock<Vec<TcpStream>>> = Arc::clone(&sockets_lock);
+        thread_handles.push(thread::spawn(move || {
+            connect_to_nodes(&config, &log_sender_clone, sockets, &chunk)
+        }));
+    }
+    for handle in thread_handles {
+        handle
+            .join()
+            .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
+    }
+    let amount_of_ips = sockets_lock
         .read()
         .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
         .len();
@@ -42,7 +61,7 @@ pub fn handshake_with_nodes(
         &log_sender.info_log_sender,
         "Se completo correctamente el handshake\n",
     );
-    Ok(pointer_to_sockets)
+    Ok(sockets_lock)
 }
 
 /// Realiza la conexión con todos los nodos de la lista recibida por parámetro.
@@ -107,3 +126,20 @@ fn connect_to_node(
     write_sendheaders_message(&mut stream)?;
     Ok(stream)
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
