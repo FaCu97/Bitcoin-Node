@@ -8,9 +8,10 @@ use std::{
 };
 
 use crate::{
-    account::Account, blocks::block::Block, transactions::transaction::Transaction,
-    wallet_event::WalletEvent,
+    account::Account, blockchain_download::headers_download, blocks::block::Block,
+    transactions::transaction::Transaction, wallet_event::WalletEvent,
 };
+use chrono::format;
 use gtk::{
     gdk,
     glib::{self, Priority},
@@ -94,14 +95,25 @@ fn build_ui(
     let initial_window: Window = builder.object("initial-window").unwrap();
     let main_window: Window = builder.object("main-window").unwrap();
     let start_button: gtk::Button = builder.object("start-button").unwrap();
+    let message_header: gtk::Label = builder.object("message-header").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
     //let notebook = Rc::new(RefCell::new(Notebook::new(&initial_window, &main_window)));
     // let notebook_clone = notebook.clone();
 
     rx.attach(None, move |msg| {
-        println!("new event: {:?}", msg);
-        //notebook_clone.borrow_mut().update(msg);
+        //println!("{:?}", msg);
+        match msg {
+            UIEvent::ActualizeBlocksDownloaded(blocks_downloaded) => {
+                println!("Actualize blocks downloaded: {}", blocks_downloaded);
+            }
+            UIEvent::ActualizeHeadersDownloaded(headers_downloaded) => {
+                message_header
+                    .set_label(format!("headers downloaded: {}", headers_downloaded).as_str());
+            }
+            _ => (),
+            //notebook_clone.borrow_mut().update(msg);
+        }
         Continue(true)
     });
     initial_window.show_all();
@@ -120,7 +132,6 @@ fn build_ui(
 /* 
 
 pub struct UIContainer {
-    pub initial_window: InitialWindow,
     pub main_window: MainNotebook,
     pub builder: Builder,
 }
@@ -129,10 +140,8 @@ pub struct UIContainer {
 pub struct InitialWindow {
     pub window: Window,
 }
-
 impl InitialWindow {
     pub fn new(builder: Builder) -> Self {
-        let window = builder.object("initial-window").unwrap();
         Self { window }
     }
     pub fn upadte(&self, event: &UIEvent) {
