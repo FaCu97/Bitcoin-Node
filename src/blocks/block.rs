@@ -4,7 +4,6 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-
 use gtk::glib;
 
 use super::{
@@ -14,9 +13,10 @@ use crate::{
     account::Account,
     compact_size_uint::CompactSizeUint,
     custom_errors::NodeCustomErrors,
+    gtk::ui_events::{send_event_to_ui, UIEvent},
     logwriter::log_writer::{write_in_log, LogSender},
     transactions::transaction::Transaction,
-    utxo_tuple::UtxoTuple, gtk::ui_events::{UIEvent, send_event_to_ui},
+    utxo_tuple::UtxoTuple,
 };
 
 /// Representa un bloque del protocolo bitcoin.
@@ -203,7 +203,14 @@ impl Block {
                         tx.hex_hash(),
                         account.address
                     );
-                    send_event_to_ui(ui_sender, UIEvent::ShowConfirmedTransaction(self.clone(), account.clone(), tx.clone()));
+                    send_event_to_ui(
+                        ui_sender,
+                        UIEvent::ShowConfirmedTransaction(
+                            self.clone(),
+                            account.clone(),
+                            tx.clone(),
+                        ),
+                    );
                     let pending_transaction_index = account
                         .pending_transactions
                         .read()

@@ -4,10 +4,11 @@ use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     config::Config,
     custom_errors::NodeCustomErrors,
+    gtk::ui_events::{send_event_to_ui, UIEvent},
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
         block_message::BlockMessage, get_data_message::GetDataMessage, inventory::Inventory,
-    }, gtk::ui_events::{send_event_to_ui, UIEvent},
+    },
 };
 use std::{
     collections::HashMap,
@@ -344,15 +345,14 @@ pub fn add_blocks_downloaded_to_local_blocks(
         .extend(downloaded_blocks);
     write_in_log(
         &log_sender.info_log_sender,
-        format!(
-            "BLOQUES DESCARGADOS: {:?}",
-            amount_of_blocks(&blocks)?
-        )
-        .as_str(),
+        format!("BLOQUES DESCARGADOS: {:?}", amount_of_blocks(&blocks)?).as_str(),
     );
     let amount_of_blocks = amount_of_blocks(&blocks)?;
     println!("{:?} bloques descargados", amount_of_blocks);
-    send_event_to_ui(ui_sender, UIEvent::ActualizeBlocksDownloaded(amount_of_blocks));
+    send_event_to_ui(
+        ui_sender,
+        UIEvent::ActualizeBlocksDownloaded(amount_of_blocks),
+    );
     Ok(())
 }
 

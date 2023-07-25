@@ -4,11 +4,12 @@ use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
     custom_errors::NodeCustomErrors,
+    gtk::ui_events::UIEvent,
     handler::node_message_handler::NodeMessageHandler,
     logwriter::log_writer::LogSender,
     messages::inventory::{inv_mershalling, Inventory},
     node_data_pointers::NodeDataPointers,
-    utxo_tuple::UtxoTuple, gtk::ui_events::UIEvent,
+    utxo_tuple::UtxoTuple,
 };
 use std::{
     collections::HashMap,
@@ -150,8 +151,12 @@ impl Node {
         ui_sender: &Option<glib::Sender<UIEvent>>,
         connection: TcpStream,
     ) -> Result<(), NodeCustomErrors> {
-        self.peers_handler
-            .add_connection(log_sender, ui_sender, self.node_pointers.clone(), connection)
+        self.peers_handler.add_connection(
+            log_sender,
+            ui_sender,
+            self.node_pointers.clone(),
+            connection,
+        )
     }
 }
 

@@ -1,7 +1,7 @@
 use gtk::glib;
 
 use crate::blockchain_download::headers_download::load_header_heights;
-use crate::gtk::ui_events::{UIEvent, send_event_to_ui};
+use crate::gtk::ui_events::{send_event_to_ui, UIEvent};
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},

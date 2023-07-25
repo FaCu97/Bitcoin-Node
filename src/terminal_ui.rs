@@ -1,5 +1,5 @@
-use ::gtk::glib;
 use crate::{gtk::ui_events::UIEvent, wallet};
+use ::gtk::glib;
 use wallet::Wallet;
 
 /// Muestra las opciones para interactuar con el programa desde la terminal, espera algun comando
@@ -120,9 +120,11 @@ fn handle_add_account_request(ui_sender: &Option<glib::Sender<UIEvent>>, wallet:
                 Ok(_) => {
                     let address = address_input.trim();
                     println!("Agregando la cuenta -- {} -- a la wallet...\n", address);
-                    if let Err(err) =
-                        wallet.add_account(ui_sender, wif_private_key.to_string(), address.to_string())
-                    {
+                    if let Err(err) = wallet.add_account(
+                        ui_sender,
+                        wif_private_key.to_string(),
+                        address.to_string(),
+                    ) {
                         println!("ERROR: {err}\n");
                         println!("Ocurrio un error al intentar añadir una nueva cuenta, intente de nuevo! \n");
                     } else {

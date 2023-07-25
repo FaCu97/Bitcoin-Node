@@ -2,9 +2,10 @@ use gtk::glib;
 
 use crate::{
     custom_errors::NodeCustomErrors,
+    gtk::ui_events::UIEvent,
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{message_header::is_terminated, message_header::HeaderMessage},
-    node_data_pointers::NodeDataPointers, gtk::ui_events::UIEvent,
+    node_data_pointers::NodeDataPointers,
 };
 use std::{
     io::{self, Read, Write},
@@ -239,7 +240,12 @@ pub fn handle_messages_from_node(
                 }),
                 "ping" => handle_message(&mut error, || handle_ping_message(tx.clone(), &payload)),
                 "tx" => handle_message(&mut error, || {
-                    handle_tx_message(&log_sender, &ui_sender, &payload, node_pointers.accounts.clone())
+                    handle_tx_message(
+                        &log_sender,
+                        &ui_sender,
+                        &payload,
+                        node_pointers.accounts.clone(),
+                    )
                 }),
                 "getheaders" => handle_message(&mut error, || {
                     handle_getheaders_message(

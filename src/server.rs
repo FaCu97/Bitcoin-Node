@@ -12,12 +12,13 @@ use gtk::glib;
 use crate::{
     config::Config,
     custom_errors::NodeCustomErrors,
+    gtk::ui_events::UIEvent,
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
         message_header::{read_verack_message, write_verack_message},
         version_message::{get_version_message, VersionMessage},
     },
-    node::Node, gtk::ui_events::UIEvent,
+    node::Node,
 };
 
 const LOCALHOST: &str = "127.0.0.1";
@@ -46,8 +47,16 @@ impl NodeServer {
         let log_sender_clone = log_sender.clone();
         let config = config.clone();
         let ui_sender = ui_sender.clone();
-        let handle =
-            spawn(move || Self::listen(&config, &log_sender_clone, &ui_sender, &mut node_clone, address, rx));
+        let handle = spawn(move || {
+            Self::listen(
+                &config,
+                &log_sender_clone,
+                &ui_sender,
+                &mut node_clone,
+                address,
+                rx,
+            )
+        });
         Ok(NodeServer { sender, handle })
     }
 

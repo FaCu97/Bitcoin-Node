@@ -14,8 +14,9 @@ use crate::{
     blocks::block_header::BlockHeader,
     config::Config,
     custom_errors::NodeCustomErrors,
+    gtk::ui_events::{send_event_to_ui, UIEvent},
     logwriter::log_writer::{write_in_log, LogSender},
-    messages::{getheaders_message::GetHeadersMessage, headers_message::HeadersMessage}, gtk::ui_events::{UIEvent, send_event_to_ui},
+    messages::{getheaders_message::GetHeadersMessage, headers_message::HeadersMessage},
 };
 
 use super::{
@@ -48,9 +49,13 @@ pub fn get_initial_headers(
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<(), NodeCustomErrors> {
     if config.read_headers_from_disk && Path::new(&config.archivo_headers).exists() {
-        if let Err(err) =
-            read_headers_from_disk(config, log_sender, ui_sender, headers.clone(), header_heights.clone())
-        {
+        if let Err(err) = read_headers_from_disk(
+            config,
+            log_sender,
+            ui_sender,
+            headers.clone(),
+            header_heights.clone(),
+        ) {
             // si no se pudo descargar de disco, intento desde la red y guardo en disco
             write_in_log(
                 &log_sender.error_log_sender,
@@ -60,7 +65,14 @@ pub fn get_initial_headers(
             return Ok(());
         }
     }
-    download_and_persist_headers(config, log_sender, ui_sender, headers, header_heights, nodes)?;
+    download_and_persist_headers(
+        config,
+        log_sender,
+        ui_sender,
+        headers,
+        header_heights,
+        nodes,
+    )?;
     Ok(())
 }
 
@@ -363,11 +375,11 @@ fn download_missing_headers_from_node(
             }
         }
         let amount_of_headers = amount_of_headers(&headers)?;
-        println!(
-            "{:?} headers descargados",
-            amount_of_headers
+        println!("{:?} headers descargados", amount_of_headers);
+        send_event_to_ui(
+            ui_sender,
+            UIEvent::ActualizeHeadersDownloaded(amount_of_headers),
         );
-        send_event_to_ui(ui_sender, UIEvent::ActualizeHeadersDownloaded(amount_of_headers));
     }
     Ok(())
 }
@@ -551,7 +563,9 @@ fn get_first_block_timestamp(config: &Config) -> Result<u32, NodeCustomErrors> {
 }
 
 /// Devuelve la cantidad de headers que hay en el vector de headers
-pub fn amount_of_headers(headers: &Arc<RwLock<Vec<BlockHeader>>>) -> Result<usize, NodeCustomErrors> {
+pub fn amount_of_headers(
+    headers: &Arc<RwLock<Vec<BlockHeader>>>,
+) -> Result<usize, NodeCustomErrors> {
     let amount_of_headers = headers
         .read()
         .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?

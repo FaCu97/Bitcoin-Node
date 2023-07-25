@@ -6,7 +6,8 @@ use crate::{
     account::Account,
     compact_size_uint::CompactSizeUint,
     custom_errors::NodeCustomErrors,
-    logwriter::log_writer::{write_in_log, LogSender}, gtk::ui_events::{UIEvent, send_event_to_ui},
+    gtk::ui_events::{send_event_to_ui, UIEvent},
+    logwriter::log_writer::{write_in_log, LogSender},
 };
 
 use super::{script::pubkey::Pubkey, transaction::Transaction};
@@ -129,7 +130,10 @@ impl TxOut {
                         .as_str(),
                     );
                     println!("\nTRANSACCION: {} \nINVOLUCRA A LA CUENTA: {}\nAUN NO SE ENCUENTRA EN UN BLOQUE (PENDIENTE)", tx.hex_hash(), account.address);
-                    send_event_to_ui(ui_sender, UIEvent::ShowPendingTransaction(account.clone(), tx.clone()));
+                    send_event_to_ui(
+                        ui_sender,
+                        UIEvent::ShowPendingTransaction(account.clone(), tx.clone()),
+                    );
                     account
                         .pending_transactions
                         .write()

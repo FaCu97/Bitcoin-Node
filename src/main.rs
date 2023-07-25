@@ -2,7 +2,7 @@ use bitcoin::blockchain_download::initial_block_download;
 use bitcoin::config::Config;
 use bitcoin::custom_errors::NodeCustomErrors;
 use bitcoin::gtk::interfaz_gtk::run_ui;
-use bitcoin::gtk::ui_events::{UIEvent, send_event_to_ui};
+use bitcoin::gtk::ui_events::{send_event_to_ui, UIEvent};
 use bitcoin::handshake::handshake_with_nodes;
 use bitcoin::logwriter::log_writer::{
     set_up_loggers, shutdown_loggers, LogSender, LogSenderHandles,
@@ -36,12 +36,10 @@ fn run_with_ui(mut args: Vec<String>) -> Result<(), NodeCustomErrors> {
     let (sender_from_ui_to_node, receiver_from_ui_to_node) = channel();
     let app_thread = thread::spawn(move || -> Result<(), NodeCustomErrors> {
         // sender to comunicate with the ui
-        let ui_tx = rx
-            .recv()
-            .map_err(|err| {
-                println!("ERROR AL RECIBIR!");
-                NodeCustomErrors::ThreadChannelError(err.to_string())
-            })?; // receive the ui sender from the client
+        let ui_tx = rx.recv().map_err(|err| {
+            println!("ERROR AL RECIBIR!");
+            NodeCustomErrors::ThreadChannelError(err.to_string())
+        })?; // receive the ui sender from the client
         run_node(&args, Some(ui_tx), Some(receiver_from_ui_to_node)) // run the node with the ui sender
     });
     run_ui(tx, sender_from_ui_to_node);
@@ -67,9 +65,17 @@ fn run_node(
     let (log_sender, log_sender_handles) = set_up_loggers(&config)?;
     let active_nodes = get_active_nodes_from_dns_seed(&config, &log_sender)?;
     let pointer_to_nodes = handshake_with_nodes(&config, &log_sender, active_nodes)?;
-    let (headers, blocks, headers_height) = initial_block_download(&config, &log_sender, &ui_sender, pointer_to_nodes.clone())?;
+    let (headers, blocks, headers_height) =
+        initial_block_download(&config, &log_sender, &ui_sender, pointer_to_nodes.clone())?;
     send_event_to_ui(&ui_sender, UIEvent::InitializeUITabs(blocks.clone()));
-    let mut node = Node::new(&log_sender, &ui_sender, pointer_to_nodes, headers, blocks, headers_height)?;
+    let mut node = Node::new(
+        &log_sender,
+        &ui_sender,
+        pointer_to_nodes,
+        headers,
+        blocks,
+        headers_height,
+    )?;
     let mut wallet = Wallet::new(node.clone())?;
     let server = NodeServer::new(&config, &log_sender, &ui_sender, &mut node)?;
     interact_with_user(&ui_sender, &mut wallet, node_rx);
@@ -102,8 +108,11 @@ fn interact_with_user(
     }
 }
 
-
-fn handle_ui_request(ui_sender: &Option<glib::Sender<UIEvent>>, rx: Receiver<WalletEvent>, wallet: &mut Wallet) {
+fn handle_ui_request(
+    ui_sender: &Option<glib::Sender<UIEvent>>,
+    rx: Receiver<WalletEvent>,
+    wallet: &mut Wallet,
+) {
     for event in rx {
         match event {
             WalletEvent::AddAccountRequest(wif, address) => {
@@ -112,12 +121,18 @@ fn handle_ui_request(ui_sender: &Option<glib::Sender<UIEvent>>, rx: Receiver<Wal
                 }
             }
             WalletEvent::MakeTransactionRequest(account_index, address, amount, fee) => {
-                if wallet.make_transaction(account_index, &address, amount, fee).is_err() {
+                if wallet
+                    .make_transaction(account_index, &address, amount, fee)
+                    .is_err()
+                {
                     println!("Error al crear la transaccion");
                 }
             }
             WalletEvent::PoiOfTransactionRequest(block_hash, transaction_hash) => {
-                if wallet.tx_proof_of_inclusion(block_hash, transaction_hash).is_err() {
+                if wallet
+                    .tx_proof_of_inclusion(block_hash, transaction_hash)
+                    .is_err()
+                {
                     println!("Error al crear la prueba de inclusion");
                 }
             }

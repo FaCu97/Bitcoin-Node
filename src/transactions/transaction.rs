@@ -10,7 +10,7 @@ use gtk::glib;
 
 use crate::{
     account::Account, compact_size_uint::CompactSizeUint, custom_errors::NodeCustomErrors,
-    logwriter::log_writer::LogSender, utxo_tuple::UtxoTuple, gtk::ui_events::UIEvent,
+    gtk::ui_events::UIEvent, logwriter::log_writer::LogSender, utxo_tuple::UtxoTuple,
 };
 
 use super::{

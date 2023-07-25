@@ -10,7 +10,8 @@ use crate::{
     account::Account,
     blocks::utils_block::{make_merkle_proof, string_to_bytes},
     custom_errors::NodeCustomErrors,
-    node::Node, gtk::ui_events::{UIEvent, send_event_to_ui},
+    gtk::ui_events::{send_event_to_ui, UIEvent},
+    node::Node,
 };
 
 #[derive(Debug, Clone)]

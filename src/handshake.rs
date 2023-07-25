@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::custom_errors::NodeCustomErrors;
 use crate::logwriter::log_writer::{write_in_log, LogSender};
 use crate::messages::message_header::{
@@ -8,9 +9,8 @@ use std::error::Error;
 use std::net::{Ipv4Addr, SocketAddr, TcpStream};
 use std::result::Result;
 use std::sync::{Arc, RwLock};
-use std::time::Duration;
 use std::thread;
-use crate::config::Config;
+use std::time::Duration;
 
 /// Realiza la conexión a los nodos con múltiples threads
 /// Recibe las direcciones IP de los nodos.
@@ -126,20 +126,3 @@ fn connect_to_node(
     write_sendheaders_message(&mut stream)?;
     Ok(stream)
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

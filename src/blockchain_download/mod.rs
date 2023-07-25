@@ -142,7 +142,16 @@ fn download_full_blockchain_from_multiple_nodes(
     let log_sender = log_sender.clone();
     let ui_sender = ui_sender.clone();
     threads_handle.push(thread::spawn(move || {
-        download_blocks(&config, &log_sender, &ui_sender, nodes, blocks, headers, rx, tx)
+        download_blocks(
+            &config,
+            &log_sender,
+            &ui_sender,
+            nodes,
+            blocks,
+            headers,
+            rx,
+            tx,
+        )
     }));
     join_threads(threads_handle)?;
     Ok(())
