@@ -61,6 +61,7 @@ fn run_node(
     if ui_sender.is_some() {
         println!("Ui_sender exists!\n");
     }
+    wait_for_start_buttom(&node_rx);
     let config = Config::from(args)?;
     let (log_sender, log_sender_handles) = set_up_loggers(&config)?;
     let active_nodes = get_active_nodes_from_dns_seed(&config, &log_sender)?;
@@ -81,6 +82,18 @@ fn run_node(
     interact_with_user(&ui_sender, &mut wallet, node_rx);
     shut_down(node, server, log_sender, log_sender_handles)?;
     Ok(())
+}
+
+
+fn wait_for_start_buttom(rx: &Option<Receiver<WalletEvent>>) {
+    if let Some(rx) = rx {
+        for event in rx {
+            match event {
+                WalletEvent::Start => break,
+                _ => (),
+            }
+        }
+    }
 }
 
 /// Cierra el nodo, el server y los loggers
@@ -136,6 +149,7 @@ fn handle_ui_request(
                     println!("Error al crear la prueba de inclusion");
                 }
             }
+            _ => (),
         }
     }
     println!("TERMINA HANDLE UI REQUEST!!!! \n");

@@ -24,9 +24,5 @@ pub fn send_event_to_ui(ui_sender: &Option<glib::Sender<UIEvent>>, event: UIEven
         ui_sender
             .send(event.clone())
             .expect("Error al enviar el evento a la interfaz");
-        match event {
-            UIEvent::InitializeUITabs(_) => (),
-            _ => println!("Evento enviado a la interfaz: {:?}\n", event),
-        }
     }
 }

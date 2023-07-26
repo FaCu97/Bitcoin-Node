@@ -20,43 +20,6 @@ use gtk::{
 };
 
 use super::ui_events::UIEvent;
-pub struct Gtk;
-
-impl Gtk {
-    pub fn run() {
-        if gtk::init().is_err() {
-            println!("Failed to initialize GTK.");
-            return;
-        }
-
-        let glade_src = include_str!("resources/interfaz.glade");
-        let builder = gtk::Builder::from_string(glade_src);
-
-        let css_provider: CssProvider = CssProvider::new();
-        css_provider
-            .load_from_path("src/gtk/resources/styles.css")
-            .expect("Failed to load CSS file.");
-
-        let screen: gdk::Screen = gdk::Screen::default().expect("Failed to get default screen.");
-        StyleContext::add_provider_for_screen(
-            &screen,
-            &css_provider,
-            gtk::STYLE_PROVIDER_PRIORITY_USER,
-        );
-
-        let initial_window: ApplicationWindow = builder.object("initial-window").unwrap();
-        let main_window: ApplicationWindow = builder.object("main-window").unwrap();
-        let start_button: gtk::Button = builder.object("start-button").unwrap();
-        //let progress_bar: ProgressBar = builder.object("load-bar").unwrap();
-        initial_window.show_all();
-
-        start_button.connect_clicked(move |_| {
-            main_window.show_all();
-            initial_window.close();
-        });
-        gtk::main();
-    }
-}
 
 pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<WalletEvent>) {
     let app = Application::builder()
@@ -96,35 +59,36 @@ fn build_ui(
     let main_window: Window = builder.object("main-window").unwrap();
     let start_button: gtk::Button = builder.object("start-button").unwrap();
     let message_header: gtk::Label = builder.object("message-header").unwrap();
+    let progress_bar: ProgressBar = builder.object("block-bar").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
     //let notebook = Rc::new(RefCell::new(Notebook::new(&initial_window, &main_window)));
     // let notebook_clone = notebook.clone();
-
+    initial_window.show_all();
     rx.attach(None, move |msg| {
         //println!("{:?}", msg);
         match msg {
             UIEvent::ActualizeBlocksDownloaded(blocks_downloaded) => {
-                println!("Actualize blocks downloaded: {}", blocks_downloaded);
+                progress_bar.set_fraction(blocks_downloaded as f64 / 40000 as f64);
+                //println!("Actualize blocks downloaded: {}", blocks_downloaded);
             }
             UIEvent::ActualizeHeadersDownloaded(headers_downloaded) => {
                 message_header
                     .set_label(format!("headers downloaded: {}", headers_downloaded).as_str());
+            }
+            UIEvent::InitializeUITabs(_) => {
+                initial_window.close();
+                main_window.show_all();
             }
             _ => (),
             //notebook_clone.borrow_mut().update(msg);
         }
         Continue(true)
     });
-    initial_window.show_all();
+    let sender_to_start = sender_to_node.clone();
     start_button.connect_clicked(move |_| {
-        main_window.show_all();
-        initial_window.close();
+        sender_to_start.send(WalletEvent::Start).unwrap();
     });
-
-    //notebook.borrow().initial_window.container.show_all();
-    //initial_window.show_all();
-    //println!("HOLAAAA");
     gtk::main();
 }
 
