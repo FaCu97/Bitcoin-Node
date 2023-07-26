@@ -10,25 +10,23 @@ use crate::{account::Account, blocks::block::Block, transactions::transaction::T
 type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
 #[derive(Clone, Debug)]
 pub enum UIEvent {
-    InitializeUI,
+    StartHandshake,
+    StartDownloadingHeaders,
+    FinsihDownloadingHeaders(usize),
+    StartDownloadingBlocks,
     ShowConfirmedTransaction(Block, Account, Transaction),
     AddAccount(Account),
     ShowPendingTransaction(Account, Transaction),
     AddBlock(Block),
     InitializeUITabs(Blocks),
     ActualizeHeadersDownloaded(usize),
-    ActualizeBlocksDownloaded(usize),
+    ActualizeBlocksDownloaded(usize, usize),
 }
 
 pub fn send_event_to_ui(ui_sender: &Option<glib::Sender<UIEvent>>, event: UIEvent) {
     if let Some(ui_sender) = ui_sender {
         ui_sender
-            .send(event.clone())
+            .send(event)
             .expect("Error al enviar el evento a la interfaz");
-        /*    match event {
-            UIEvent::InitializeUITabs(_) => (),
-            _ => println!("Evento enviado a la interfaz: {:?}\n", event),
-        }
-        */
     }
 }

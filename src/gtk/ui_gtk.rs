@@ -1,67 +1,19 @@
-use std::{
-    cell::RefCell,
-    collections::HashMap,
-    rc::Rc,
-    sync::{mpsc::Sender, Arc, RwLock},
-    thread::sleep,
-    time::Duration,
-};
+use std::sync::mpsc::Sender;
 
-use crate::{
-    account::Account, blocks::block::Block, transactions::transaction::Transaction,
-    wallet_event::WalletEvent,
-};
+use crate::wallet_event::WalletEvent;
 use gtk::{
     gdk,
     glib::{self, Priority},
     prelude::*,
-    Application, ApplicationWindow, CssProvider, ProgressBar, StyleContext, TreeView, Window,
+    Application, CssProvider, ProgressBar, Spinner, StyleContext, Window,
 };
 
 use super::ui_events::UIEvent;
-pub struct Gtk;
-
-impl Gtk {
-    pub fn run() {
-        if gtk::init().is_err() {
-            println!("Failed to initialize GTK.");
-            return;
-        }
-
-        let glade_src = include_str!("resources/interfaz.glade");
-        let builder = gtk::Builder::from_string(glade_src);
-
-        let css_provider: CssProvider = CssProvider::new();
-        css_provider
-            .load_from_path("src/gtk/resources/styles.css")
-            .expect("Failed to load CSS file.");
-
-        let screen: gdk::Screen = gdk::Screen::default().expect("Failed to get default screen.");
-        StyleContext::add_provider_for_screen(
-            &screen,
-            &css_provider,
-            gtk::STYLE_PROVIDER_PRIORITY_USER,
-        );
-
-        let initial_window: ApplicationWindow = builder.object("initial-window").unwrap();
-        let main_window: ApplicationWindow = builder.object("main-window").unwrap();
-        let start_button: gtk::Button = builder.object("start-button").unwrap();
-        //let progress_bar: ProgressBar = builder.object("load-bar").unwrap();
-        initial_window.show_all();
-
-        start_button.connect_clicked(move |_| {
-            main_window.show_all();
-            initial_window.close();
-        });
-        gtk::main();
-    }
-}
 
 pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<WalletEvent>) {
     let app = Application::builder()
         .application_id("org.gtk-rs.bitcoin")
         .build();
-
     app.connect_activate(move |app| {
         println!("UI thread");
         build_ui(app, &ui_sender, &sender_to_node);
@@ -71,7 +23,7 @@ pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<W
 }
 
 fn build_ui(
-    app: &Application,
+    _app: &Application,
     ui_sender: &Sender<glib::Sender<UIEvent>>,
     sender_to_node: &Sender<WalletEvent>,
 ) {
@@ -93,17 +45,14 @@ fn build_ui(
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
     let initial_window: Window = builder.object("initial-window").unwrap();
-    //let initial_window: ApplicationWindow = gtk::ApplicationWindow::new(app);
-
     let main_window: Window = builder.object("main-window").unwrap();
     let start_button: gtk::Button = builder.object("start-button").unwrap();
+    let message_header: gtk::Label = builder.object("message-header").unwrap();
+    let progress_bar: ProgressBar = builder.object("block-bar").unwrap();
+    let spinner: Spinner = builder.object("header-spin").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
-
-    /*******  BLOCK TABLE  ********/
-
-    // creo que no hace falta el block_table
-    //let block_table: TreeView = builder.object("block_table").unwrap();
+    initial_window.show();
 
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
 
@@ -118,13 +67,25 @@ fn build_ui(
         ],
     );
 
-    /******************************/
-
-    //let notebook = Rc::new(RefCell::new(Notebook::new(&initial_window, &main_window)));
-    // let notebook_clone = notebook.clone();
-    initial_window.show_all();
     rx.attach(None, move |msg| {
         match msg {
+            UIEvent::ActualizeBlocksDownloaded(blocks_downloaded, blocks_to_download) => {
+                progress_bar.set_fraction(blocks_downloaded as f64 / blocks_to_download as f64);
+                progress_bar.set_text(Some(
+                    format!(
+                        "Blocks downloaded: {}/{}",
+                        blocks_downloaded, blocks_to_download
+                    )
+                    .as_str(),
+                ));
+            }
+            UIEvent::StartHandshake => {
+                message_header.set_label("Making handshake with nodes...");
+            }
+            UIEvent::ActualizeHeadersDownloaded(headers_downloaded) => {
+                message_header
+                    .set_label(format!("Headers downloaded: {}", headers_downloaded).as_str());
+            }
             UIEvent::InitializeUITabs(blocks) => {
                 println!("INICIALIZO TAB BLOQUESSSSS");
                 for block in blocks.read().unwrap().values() {
@@ -139,26 +100,72 @@ fn build_ui(
                         ],
                     );
                 }
+                initial_window.close();
+                main_window.show_all();
+            }
+            UIEvent::StartDownloadingHeaders => {
+                message_header.set_visible(true);
+                spinner.set_visible(true);
+            }
+            UIEvent::FinsihDownloadingHeaders(headers) => {
+                spinner.set_visible(false);
+                message_header
+                    .set_label(format!("TOTAL HEADERS DOWNLOADED : {}", headers).as_str());
+            }
+            UIEvent::StartDownloadingBlocks => {
+                progress_bar.set_visible(true);
+                progress_bar.set_text(Some("Blocks downloaded: 0"));
             }
             _ => (),
         }
-
-        //notebook_clone.borrow_mut().update(msg);
         Continue(true)
     });
-    initial_window.show_all();
+    let sender_to_start = sender_to_node.clone();
+    let copy = start_button.clone();
     start_button.connect_clicked(move |_| {
-        main_window.show_all();
-        initial_window.close();
+        sender_to_start.send(WalletEvent::Start).unwrap();
+        copy.set_visible(false);
     });
-
-    //notebook.borrow().initial_window.container.show_all();
-    //initial_window.show_all();
-    //println!("HOLAAAA");
     gtk::main();
 }
 
 /*
+
+pub struct UIContainer {
+    pub main_window: MainNotebook,
+    pub builder: Builder,
+}
+
+
+pub struct InitialWindow {
+    pub window: Window,
+}
+impl InitialWindow {
+    pub fn new(builder: Builder) -> Self {
+        Self { window }
+    }
+    pub fn upadte(&self, event: &UIEvent) {
+        match event {
+            UIEvent::InitializeUITabs(_) => {
+                self.window.close();
+            }
+            UIEvent::ActualizeBlocksDownloaded(blocks_downloaded) => {
+                println!("Actualize blocks downloaded: {}", blocks_downloaded);
+            }
+            UIEvent::ActualizeHeadersDownloaded(headers_downloaded) => {
+                println!("Actualize headers downloaded: {}", headers_downloaded);
+            }
+            _ => (),
+        }
+    }
+}
+
+
+pub struct MainNotebook {
+    pub notebook: Notebook,
+}
+
+
 pub struct Notebook {
     pub notebook: gtk::Notebook,
     pub initial_window: InitialWindow,
@@ -190,7 +197,7 @@ impl Notebook {
     }
     pub fn update(&mut self, event: UIEvent) {
         match event {
-            UIEvent::InitializeUI => {
+            UIEvent::InitializeUITabs(_) => {
                 self.notebook.show_all();
             }
             _ => (),
@@ -207,30 +214,7 @@ impl Notebook {
     }
 }
 
-pub struct InitialWindow {
-    pub container: Window,
-}
 
-impl InitialWindow {
-    pub fn new(application_window: &Window) -> Self {
-        let container = application_window.clone();
-        Self { container }
-    }
-    pub fn upadte(&self, event: &UIEvent) {
-        match event {
-            UIEvent::InitializeUI => {
-                self.container.close();
-            }
-            UIEvent::ActualizeBlocksDownloaded(blocks_downloaded) => {
-                println!("Actualize blocks downloaded: {}", blocks_downloaded);
-            }
-            UIEvent::ActualizeHeadersDownloaded(headers_downloaded) => {
-                println!("Actualize headers downloaded: {}", headers_downloaded);
-            }
-            _ => (),
-        }
-    }
-}
 pub struct OverViewTab {
     pub container: gtk::Box,
 }

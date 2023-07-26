@@ -8,7 +8,7 @@ use super::blocks::block_header::BlockHeader;
 use super::config::Config;
 use super::logwriter::log_writer::{write_in_log, LogSender};
 use crate::custom_errors::NodeCustomErrors;
-use crate::gtk::ui_events::UIEvent;
+use crate::gtk::ui_events::{send_event_to_ui, UIEvent};
 use std::collections::HashMap;
 use std::net::TcpStream;
 use std::sync::mpsc::channel;
@@ -173,16 +173,18 @@ fn download_full_blockchain_from_single_node(
         log_sender,
         ui_sender,
         nodes.clone(),
-        headers,
+        headers.clone(),
         header_heights,
         tx,
     )?;
     let mut node = get_node(nodes.clone())?;
+    send_event_to_ui(ui_sender, UIEvent::StartDownloadingBlocks);
     for blocks_to_download in rx {
         download_blocks_single_node(
             config,
             log_sender,
             ui_sender,
+            headers.clone(),
             blocks_to_download,
             &mut node,
             blocks.clone(),
