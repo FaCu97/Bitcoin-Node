@@ -58,13 +58,6 @@ impl Gtk {
 }
 
 pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<WalletEvent>) {
-    let (tx, rx) = glib::MainContext::channel(Priority::default());
-    ui_sender.send(tx).expect("could not send sender to client");
-    rx.attach(None, move |msg| {
-        println!("New event: {:?}", msg);
-        Continue(true)
-    });
-
     let app = Application::builder()
         .application_id("org.gtk-rs.bitcoin")
         .build();
@@ -129,9 +122,27 @@ fn build_ui(
 
     //let notebook = Rc::new(RefCell::new(Notebook::new(&initial_window, &main_window)));
     // let notebook_clone = notebook.clone();
-
+    initial_window.show_all();
     rx.attach(None, move |msg| {
-        print(&msg);
+        match msg {
+            UIEvent::InitializeUITabs(blocks) => {
+                println!("INICIALIZO TAB BLOQUESSSSS");
+                for block in blocks.read().unwrap().values() {
+                    let row = liststore_blocks.append();
+                    liststore_blocks.set(
+                        &row,
+                        &[
+                            (0, &2001.to_value()),
+                            (1, &block.hex_hash()),
+                            (2, &block.hex_merkle_root_hash()),
+                            (3, &50.to_value()),
+                        ],
+                    );
+                }
+            }
+            _ => (),
+        }
+
         //notebook_clone.borrow_mut().update(msg);
         Continue(true)
     });
@@ -147,9 +158,6 @@ fn build_ui(
     gtk::main();
 }
 
-fn print(msg: &UIEvent) {
-    println!("new event: {:?}", msg);
-}
 /*
 pub struct Notebook {
     pub notebook: gtk::Notebook,

@@ -101,19 +101,12 @@ impl BlockHeader {
     /// En el formato que se usan los exploradores web como
     /// https://blockstream.info/testnet/ para mostrar bloques
     pub fn hex_hash(&self) -> String {
-        let hash_as_bytes = self.hash();
-        let inverted_hash: [u8; 32] = {
-            let mut inverted = [0; 32];
-            for (i, byte) in hash_as_bytes.iter().enumerate() {
-                inverted[31 - i] = *byte;
-            }
-            inverted
-        };
-        let hex_hash = inverted_hash
-            .iter()
-            .map(|byte| format!("{:02x}", byte))
-            .collect();
-        hex_hash
+        bytes_to_hex_hash(self.hash())
+    }
+    /// Devuelve un string que representa el hash del merkle root en hexadecimal,
+    /// En el formato que se usan los exploradores web
+    pub fn hex_merkle_root_hash(&self) -> String {
+        bytes_to_hex_hash(self.merkle_root_hash)
     }
 
     /// Esta funcion realiza la proof of work
@@ -145,6 +138,22 @@ impl BlockHeader {
     pub fn is_same_merkle_root_hash(&self, received_hash: &[u8; 32]) -> bool {
         self.merkle_root_hash == *received_hash
     }
+}
+
+/// Convierte un vector de bytes a un string que representa el hash en hexadecimal,
+fn bytes_to_hex_hash(hash_as_bytes: [u8; 32]) -> String {
+    let inverted_hash: [u8; 32] = {
+        let mut inverted = [0; 32];
+        for (i, byte) in hash_as_bytes.iter().enumerate() {
+            inverted[31 - i] = *byte;
+        }
+        inverted
+    };
+    let hex_hash = inverted_hash
+        .iter()
+        .map(|byte| format!("{:02x}", byte))
+        .collect();
+    hex_hash
 }
 
 #[cfg(test)]

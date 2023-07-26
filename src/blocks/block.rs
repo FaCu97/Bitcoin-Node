@@ -175,6 +175,11 @@ impl Block {
         self.block_header.hex_hash()
     }
 
+    /// Devuelve un string que representa el hash del merkle root en hexadecimal,
+    pub fn hex_merkle_root_hash(&self) -> String {
+        self.block_header.hex_merkle_root_hash()
+    }
+
     /// Notifica si el bloque contiene una transacción que se encontraba pendiente.
     /// Revisa las transacciones del bloque y las compara con las transacciones pendientes
     /// De las cuentas
