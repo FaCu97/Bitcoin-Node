@@ -5,7 +5,8 @@ use gtk::{
     gdk,
     glib::{self, Priority},
     prelude::*,
-    Application, CssProvider, ProgressBar, Spinner, StyleContext, Window,
+    Application, CssProvider, ProgressBar, Spinner, StyleContext,
+    Window,
 };
 
 use super::ui_events::UIEvent;
@@ -53,7 +54,6 @@ fn build_ui(
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
     initial_window.show();
-
     rx.attach(None, move |msg| {
         match msg {
             UIEvent::ActualizeBlocksDownloaded(blocks_downloaded, blocks_to_download) => {
@@ -83,7 +83,8 @@ fn build_ui(
             }
             UIEvent::FinsihDownloadingHeaders(headers) => {
                 spinner.set_visible(false);
-                message_header.set_label(format!("TOTAL HEADERS DOWNLOADED: {}", headers).as_str());
+                message_header
+                    .set_label(format!("TOTAL HEADERS DOWNLOADED : {}", headers).as_str());
             }
             UIEvent::StartDownloadingBlocks => {
                 progress_bar.set_visible(true);
@@ -94,8 +95,10 @@ fn build_ui(
         Continue(true)
     });
     let sender_to_start = sender_to_node.clone();
+    let copy = start_button.clone();
     start_button.connect_clicked(move |_| {
         sender_to_start.send(WalletEvent::Start).unwrap();
+        copy.set_visible(false);
     });
     gtk::main();
 }
