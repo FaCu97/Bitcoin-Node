@@ -173,7 +173,7 @@ fn download_full_blockchain_from_single_node(
         log_sender,
         ui_sender,
         nodes.clone(),
-        headers,
+        headers.clone(),
         header_heights,
         tx,
     )?;
@@ -184,6 +184,7 @@ fn download_full_blockchain_from_single_node(
             config,
             log_sender,
             ui_sender,
+            headers.clone(),
             blocks_to_download,
             &mut node,
             blocks.clone(),

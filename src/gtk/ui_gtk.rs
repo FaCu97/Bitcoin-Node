@@ -61,35 +61,38 @@ fn build_ui(
     let message_header: gtk::Label = builder.object("message-header").unwrap();
     let progress_bar: ProgressBar = builder.object("block-bar").unwrap();
     let spinner: Spinner = builder.object("header-spin").unwrap();
-    spinner.set_visible(false);
-    progress_bar.set_visible(false);
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
-    //let notebook = Rc::new(RefCell::new(Notebook::new(&initial_window, &main_window)));
-    // let notebook_clone = notebook.clone();
-    initial_window.show_all();
+    initial_window.show();
+
     rx.attach(None, move |msg| {
         match msg {
-            UIEvent::ActualizeBlocksDownloaded(blocks_downloaded) => {
-                progress_bar.set_fraction(blocks_downloaded as f64 / 40000 as f64);
-                progress_bar.set_text(Some(format!("blocks downloaded: {}", blocks_downloaded).as_str()));
+            UIEvent::ActualizeBlocksDownloaded(blocks_downloaded, blocks_to_download) => {
+                progress_bar.set_fraction(blocks_downloaded as f64 / blocks_to_download as f64);
+                progress_bar.set_text(Some(format!("Blocks downloaded: {}/{}", blocks_downloaded, blocks_to_download).as_str()));
+            }
+            UIEvent::StartHandshake => {
+                message_header.set_label("Making handshake with nodes...");
             }
             UIEvent::ActualizeHeadersDownloaded(headers_downloaded) => {
                 message_header
-                    .set_label(format!("headers downloaded: {}", headers_downloaded).as_str());
+                    .set_label(format!("Headers downloaded: {}", headers_downloaded).as_str());
             }
             UIEvent::InitializeUITabs(_) => {
                 initial_window.close();
                 main_window.show_all();
             }
             UIEvent::StartDownloadingHeaders => {
+                message_header.set_visible(true);
                 spinner.set_visible(true);
             }
-            UIEvent::FinsihDownloadingHeaders => {
+            UIEvent::FinsihDownloadingHeaders(headers) => {
                 spinner.set_visible(false);
+                message_header.set_label(format!("TOTAL HEADERS DOWNLOADED: {}", headers).as_str());
             }
             UIEvent::StartDownloadingBlocks => {
                 progress_bar.set_visible(true);
+                progress_bar.set_text(Some("Blocks downloaded: 0"));
             }
             _ => (),
         }

@@ -27,7 +27,7 @@
 }
 
 .progress-bar{
-    color: white;
+    color: whitesmoke;
     font-size: large;
 }
 
@@ -68,9 +68,10 @@
 }
 
 .fonts{
-    font-size: 15px;
+    font-size: 20px;
+    color : whitesmoke;
 }
 
 .spin{  
-    color : rgb(4, 255, 0)
+    color : #2A7ACB;
 }

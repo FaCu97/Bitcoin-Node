@@ -63,7 +63,7 @@
             <property name="can-focus">False</property>
             <property name="halign">center</property>
             <property name="valign">center</property>
-            <property name="pixbuf">initial_background.jpg</property>
+            <property name="pixbuf">src/gtk/resources/initial_background.jpg</property>
           </object>
         </child>
         <child>
@@ -86,7 +86,7 @@
         <child>
           <object class="GtkProgressBar" id="block-bar">
             <property name="width-request">600</property>
-            <property name="visible">True</property>
+            <property name="visible">False</property>
             <property name="can-focus">False</property>
             <property name="show-text">True</property>
             <style>
@@ -102,7 +102,7 @@
           <object class="GtkSpinner" id="header-spin">
             <property name="width-request">50</property>
             <property name="height-request">50</property>
-            <property name="visible">True</property>
+            <property name="visible">False</property>
             <property name="can-focus">False</property>
             <property name="active">True</property>
             <style>
@@ -118,7 +118,7 @@
           <object class="GtkLabel" id="message-header">
             <property name="width-request">100</property>
             <property name="height-request">30</property>
-            <property name="visible">True</property>
+            <property name="visible">False</property>
             <property name="can-focus">False</property>
             <property name="label" translatable="yes">headers downloaded: 0</property>
             <style>

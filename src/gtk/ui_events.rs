@@ -10,8 +10,9 @@ use crate::{account::Account, blocks::block::Block, transactions::transaction::T
 type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
 #[derive(Clone, Debug)]
 pub enum UIEvent {
+    StartHandshake,
     StartDownloadingHeaders,
-    FinsihDownloadingHeaders,
+    FinsihDownloadingHeaders(usize),
     StartDownloadingBlocks,
     ShowConfirmedTransaction(Block, Account, Transaction),
     AddAccount(Account),
@@ -19,7 +20,7 @@ pub enum UIEvent {
     AddBlock(Block),
     InitializeUITabs(Blocks),
     ActualizeHeadersDownloaded(usize),
-    ActualizeBlocksDownloaded(usize),
+    ActualizeBlocksDownloaded(usize, usize),
 }
 
 pub fn send_event_to_ui(ui_sender: &Option<glib::Sender<UIEvent>>, event: UIEvent) {

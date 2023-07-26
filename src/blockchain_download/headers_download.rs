@@ -321,7 +321,7 @@ pub fn download_missing_headers(
             .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
     }
     */
-    send_event_to_ui(ui_sender, UIEvent::FinsihDownloadingHeaders);
+    send_event_to_ui(ui_sender, UIEvent::FinsihDownloadingHeaders(amount_of_headers(&headers)?));
     Ok(())
 }
 

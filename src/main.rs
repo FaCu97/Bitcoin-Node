@@ -62,6 +62,7 @@ fn run_node(
         println!("Ui_sender exists!\n");
     }
     wait_for_start_buttom(&node_rx);
+    send_event_to_ui(&ui_sender, UIEvent::StartHandshake);
     let config = Config::from(args)?;
     let (log_sender, log_sender_handles) = set_up_loggers(&config)?;
     let active_nodes = get_active_nodes_from_dns_seed(&config, &log_sender)?;
