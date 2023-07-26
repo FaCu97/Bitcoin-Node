@@ -10,6 +10,9 @@ use crate::{account::Account, blocks::block::Block, transactions::transaction::T
 type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
 #[derive(Clone, Debug)]
 pub enum UIEvent {
+    StartDownloadingHeaders,
+    FinsihDownloadingHeaders,
+    StartDownloadingBlocks,
     ShowConfirmedTransaction(Block, Account, Transaction),
     AddAccount(Account),
     ShowPendingTransaction(Account, Transaction),

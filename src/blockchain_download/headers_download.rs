@@ -93,6 +93,7 @@ fn read_headers_from_disk(
         )
         .as_str(),
     );
+    send_event_to_ui(ui_sender, UIEvent::StartDownloadingHeaders);
     let mut data: Vec<u8> = Vec::new();
     let mut file = File::open(&config.archivo_headers)
         .map_err(|err| NodeCustomErrors::OpeningFileError(err.to_string()))?;
@@ -168,6 +169,7 @@ fn download_and_persist_headers(
         )
         .as_str(),
     );
+    send_event_to_ui(ui_sender, UIEvent::StartDownloadingHeaders);
     let mut file = File::create(&config.archivo_headers)
         .map_err(|err| NodeCustomErrors::OpeningFileError(err.to_string()))?;
     // get last node from list, if possible
@@ -319,6 +321,7 @@ pub fn download_missing_headers(
             .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
     }
     */
+    send_event_to_ui(ui_sender, UIEvent::FinsihDownloadingHeaders);
     Ok(())
 }
 
@@ -367,6 +370,7 @@ fn download_missing_headers_from_node(
                     download_first_blocks_in_other_thread(
                         config,
                         log_sender,
+                        ui_sender,
                         headers_read.clone(),
                         tx.clone(),
                         &mut first_block_found,
@@ -375,10 +379,10 @@ fn download_missing_headers_from_node(
             }
         }
         let amount_of_headers = amount_of_headers(&headers)?;
-        println!("{:?} headers descargados", amount_of_headers);
+        println!("{:?} headers descargados", amount_of_headers - 1);
         send_event_to_ui(
             ui_sender,
-            UIEvent::ActualizeHeadersDownloaded(amount_of_headers),
+            UIEvent::ActualizeHeadersDownloaded(amount_of_headers - 1),
         );
     }
     Ok(())
@@ -457,6 +461,7 @@ fn first_block_to_download_is_in_headers(
 fn download_first_blocks_in_other_thread(
     config: &Arc<Config>,
     log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     headers_read: Vec<BlockHeader>,
     tx: Sender<Vec<BlockHeader>>,
     first_block_found: &mut bool,
@@ -468,6 +473,7 @@ fn download_first_blocks_in_other_thread(
         &log_sender.info_log_sender,
         "Encontre primer bloque a descargar! Empieza descarga de bloques\n",
     );
+    send_event_to_ui(ui_sender, UIEvent::StartDownloadingBlocks);
     download_blocks_in_other_thread(tx, first_block_headers_to_download)?;
     Ok(())
 }

@@ -16,7 +16,7 @@ use gtk::{
     gdk,
     glib::{self, Priority},
     prelude::*,
-    Application, ApplicationWindow, CssProvider, ProgressBar, StyleContext, Window, Builder,
+    Application, ApplicationWindow, CssProvider, ProgressBar, StyleContext, Window, Builder, Spinner,
 };
 
 use super::ui_events::UIEvent;
@@ -60,17 +60,19 @@ fn build_ui(
     let start_button: gtk::Button = builder.object("start-button").unwrap();
     let message_header: gtk::Label = builder.object("message-header").unwrap();
     let progress_bar: ProgressBar = builder.object("block-bar").unwrap();
+    let spinner: Spinner = builder.object("header-spin").unwrap();
+    spinner.set_visible(false);
+    progress_bar.set_visible(false);
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
     //let notebook = Rc::new(RefCell::new(Notebook::new(&initial_window, &main_window)));
     // let notebook_clone = notebook.clone();
     initial_window.show_all();
     rx.attach(None, move |msg| {
-        //println!("{:?}", msg);
         match msg {
             UIEvent::ActualizeBlocksDownloaded(blocks_downloaded) => {
                 progress_bar.set_fraction(blocks_downloaded as f64 / 40000 as f64);
-                //println!("Actualize blocks downloaded: {}", blocks_downloaded);
+                progress_bar.set_text(Some(format!("blocks downloaded: {}", blocks_downloaded).as_str()));
             }
             UIEvent::ActualizeHeadersDownloaded(headers_downloaded) => {
                 message_header
@@ -80,8 +82,16 @@ fn build_ui(
                 initial_window.close();
                 main_window.show_all();
             }
+            UIEvent::StartDownloadingHeaders => {
+                spinner.set_visible(true);
+            }
+            UIEvent::FinsihDownloadingHeaders => {
+                spinner.set_visible(false);
+            }
+            UIEvent::StartDownloadingBlocks => {
+                progress_bar.set_visible(true);
+            }
             _ => (),
-            //notebook_clone.borrow_mut().update(msg);
         }
         Continue(true)
     });
