@@ -52,21 +52,33 @@ fn build_ui(
     let spinner: Spinner = builder.object("header-spin").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
-    initial_window.show();
-
+    //initial_window.show();
+    main_window.show();
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
-
-    let row = liststore_blocks.append();
-    liststore_blocks.set(
-        &row,
-        &[
-            (0, &2001.to_value()),
-            (1, &"new id"),
-            (2, &"new merkle root"),
-            (3, &50.to_value()),
-        ],
-    );
-
+    /*
+        for i in 0..50 {
+            let row = liststore_blocks.append();
+            liststore_blocks.set(
+                &row,
+                &[
+                    (0, &i.to_value()),
+                    (1, &"new id"),
+                    (2, &"new merkle root"),
+                    (3, &50.to_value()),
+                ],
+            );
+        }
+        let row = liststore_blocks.append();
+        liststore_blocks.set(
+            &row,
+            &[
+                (0, &2001.to_value()),
+                (1, &"new id"),
+                (2, &"new merkle root"),
+                (3, &50.to_value()),
+            ],
+        );
+    */
     rx.attach(None, move |msg| {
         match msg {
             UIEvent::ActualizeBlocksDownloaded(blocks_downloaded, blocks_to_download) => {
@@ -88,7 +100,9 @@ fn build_ui(
             }
             UIEvent::InitializeUITabs(blocks) => {
                 println!("INICIALIZO TAB BLOQUESSSSS");
+                let mut i = 0;
                 for block in blocks.read().unwrap().values() {
+                    i += 1;
                     let row = liststore_blocks.append();
                     liststore_blocks.set(
                         &row,
@@ -99,6 +113,9 @@ fn build_ui(
                             (3, &block.txn_count.decoded_value().to_value()),
                         ],
                     );
+                    if i == 50 {
+                        break;
+                    }
                 }
                 initial_window.close();
                 main_window.show_all();
