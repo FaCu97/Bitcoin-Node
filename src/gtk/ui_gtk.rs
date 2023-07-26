@@ -15,7 +15,7 @@ use gtk::{
     gdk,
     glib::{self, Priority},
     prelude::*,
-    Application, ApplicationWindow, CssProvider, ProgressBar, StyleContext, Window,
+    Application, ApplicationWindow, CssProvider, ProgressBar, StyleContext, TreeView, Window,
 };
 
 use super::ui_events::UIEvent;
@@ -106,6 +106,27 @@ fn build_ui(
     let start_button: gtk::Button = builder.object("start-button").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
+
+    /*******  BLOCK TABLE  ********/
+
+    // creo que no hace falta el block_table
+    //let block_table: TreeView = builder.object("block_table").unwrap();
+
+    let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
+
+    let row = liststore_blocks.append();
+    liststore_blocks.set(
+        &row,
+        &[
+            (0, &2001.to_value()),
+            (1, &"new id"),
+            (2, &"new merkle root"),
+            (3, &50.to_value()),
+        ],
+    );
+
+    /******************************/
+
     //let notebook = Rc::new(RefCell::new(Notebook::new(&initial_window, &main_window)));
     // let notebook_clone = notebook.clone();
 
@@ -129,7 +150,7 @@ fn build_ui(
 fn print(msg: &UIEvent) {
     println!("new event: {:?}", msg);
 }
-
+/*
 pub struct Notebook {
     pub notebook: gtk::Notebook,
     pub initial_window: InitialWindow,
@@ -317,3 +338,4 @@ impl BlocksTab {
         println!("Add block: {:?}", block);
     }
 }
+*/
