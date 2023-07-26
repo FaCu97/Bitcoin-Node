@@ -1,6 +1,7 @@
 use gtk::glib;
 
 use crate::{
+    blockchain_download::headers_download::amount_of_headers,
     blocks::{block::Block, block_header::BlockHeader},
     config::Config,
     custom_errors::NodeCustomErrors,
@@ -29,7 +30,11 @@ type BlockAndHeaders = (
     Arc<RwLock<HashMap<[u8; 32], Block>>>,
     Arc<RwLock<Vec<BlockHeader>>>,
 );
-type BlocksTuple = (Vec<BlockHeader>, Arc<RwLock<HashMap<[u8; 32], Block>>>);
+type BlocksTuple = (
+    Vec<BlockHeader>,
+    Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    Arc<RwLock<Vec<BlockHeader>>>,
+);
 
 /// # Descarga de bloques
 /// Realiza la descarga de bloques de forma concurrente.
@@ -80,7 +85,7 @@ pub fn download_blocks(
                 config,
                 log_sender,
                 ui_sender,
-                blocks_to_download_chunk.clone(),
+                (blocks_to_download_chunk.clone(), headers.clone()),
                 nodes.clone(),
                 tx.clone(),
                 blocks.clone(),
@@ -104,7 +109,7 @@ fn download_blocks_chunck(
     config: &Arc<Config>,
     log_sender: &LogSender,
     ui_sender: &Option<glib::Sender<UIEvent>>,
-    block_headers: Vec<BlockHeader>,
+    (block_headers, headers): (Vec<BlockHeader>, Arc<RwLock<Vec<BlockHeader>>>),
     nodes: Arc<RwLock<Vec<TcpStream>>>,
     tx: Sender<Vec<BlockHeader>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -118,7 +123,7 @@ fn download_blocks_chunck(
             &config_cloned,
             &log_sender_cloned,
             &ui_sender,
-            (block_headers, blocks),
+            (block_headers, blocks, headers),
             node,
             tx,
             nodes,
@@ -137,7 +142,7 @@ fn download_blocks_single_thread(
     config: &Arc<Config>,
     log_sender: &LogSender,
     ui_sender: &Option<glib::Sender<UIEvent>>,
-    (block_headers, blocks): BlocksTuple,
+    (block_headers, blocks, headers): BlocksTuple,
     mut node: TcpStream,
     tx: Sender<Vec<BlockHeader>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
@@ -180,7 +185,14 @@ fn download_blocks_single_thread(
             current_blocks.insert(block.hash(), block);
         }
     }
-    add_blocks_downloaded_to_local_blocks(log_sender, ui_sender, blocks, current_blocks)?;
+    add_blocks_downloaded_to_local_blocks(
+        config,
+        log_sender,
+        ui_sender,
+        headers,
+        blocks,
+        current_blocks,
+    )?;
     return_node_to_vec(nodes, node)?;
     Ok(())
 }
@@ -262,6 +274,7 @@ pub fn download_blocks_single_node(
     config: &Arc<Config>,
     log_sender: &LogSender,
     ui_sender: &Option<glib::Sender<UIEvent>>,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
     block_headers: Vec<BlockHeader>,
     node: &mut TcpStream,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -295,7 +308,14 @@ pub fn download_blocks_single_node(
             current_blocks.insert(block.hash(), block);
         }
     }
-    add_blocks_downloaded_to_local_blocks(log_sender, ui_sender, blocks, current_blocks)?;
+    add_blocks_downloaded_to_local_blocks(
+        config,
+        log_sender,
+        ui_sender,
+        headers,
+        blocks,
+        current_blocks,
+    )?;
     Ok(())
 }
 
@@ -337,8 +357,10 @@ pub fn amount_of_blocks(
 /// Recibe un puntero a un hashmap de bloques y un hashmap de bloques descargados y los agrega al hashmap de bloques local
 /// en caso de no poder acceder al hashmap de bloques local devuelve error
 pub fn add_blocks_downloaded_to_local_blocks(
+    config: &Arc<Config>,
     log_sender: &LogSender,
     ui_sender: &Option<glib::Sender<UIEvent>>,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     downloaded_blocks: HashMap<[u8; 32], Block>,
 ) -> Result<(), NodeCustomErrors> {
@@ -352,9 +374,11 @@ pub fn add_blocks_downloaded_to_local_blocks(
     );
     let amount_of_blocks = amount_of_blocks(&blocks)?;
     println!("{:?} bloques descargados", amount_of_blocks);
+    let total_blocks_to_download =
+        amount_of_headers(&headers)? - config.height_first_block_to_download;
     send_event_to_ui(
         ui_sender,
-        UIEvent::ActualizeBlocksDownloaded(amount_of_blocks),
+        UIEvent::ActualizeBlocksDownloaded(amount_of_blocks, total_blocks_to_download),
     );
     Ok(())
 }

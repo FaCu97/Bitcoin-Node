@@ -27,7 +27,7 @@
 }
 
 .progress-bar{
-    color: white;
+    color: whitesmoke;
     font-size: large;
 }
 
@@ -35,6 +35,7 @@
     border-radius: 20px;
     border: 1px solid #454F5C;
     background-color: #252A3A;
+    color : whitesmoke;
 }
 
 .input-user:hover{
@@ -56,6 +57,7 @@
     font-size: 15px;
     font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
     border: 1px solid gray;
+    color :  whitesmoke;
 }
 .font-send{
     font-size: 10px;
@@ -63,4 +65,13 @@
 .headers{
     font-size: 20px;
     font-weight: bold;
+}
+
+.fonts{
+    font-size: 20px;
+    color : whitesmoke;
+}
+
+.spin{  
+    color : #2A7ACB;
 }
