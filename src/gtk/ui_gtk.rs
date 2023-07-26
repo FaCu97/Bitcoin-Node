@@ -16,7 +16,8 @@ use gtk::{
     gdk,
     glib::{self, Priority},
     prelude::*,
-    Application, ApplicationWindow, CssProvider, ProgressBar, StyleContext, Window, Builder, Spinner,
+    Application, ApplicationWindow, Builder, CssProvider, ProgressBar, Spinner, StyleContext,
+    Window,
 };
 
 use super::ui_events::UIEvent;
@@ -63,13 +64,20 @@ fn build_ui(
     let spinner: Spinner = builder.object("header-spin").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
+    let ref_msg_header = message_header.clone();
     initial_window.show();
 
     rx.attach(None, move |msg| {
         match msg {
             UIEvent::ActualizeBlocksDownloaded(blocks_downloaded, blocks_to_download) => {
                 progress_bar.set_fraction(blocks_downloaded as f64 / blocks_to_download as f64);
-                progress_bar.set_text(Some(format!("Blocks downloaded: {}/{}", blocks_downloaded, blocks_to_download).as_str()));
+                progress_bar.set_text(Some(
+                    format!(
+                        "Blocks downloaded: {}/{}",
+                        blocks_downloaded, blocks_to_download
+                    )
+                    .as_str(),
+                ));
             }
             UIEvent::StartHandshake => {
                 message_header.set_label("Making handshake with nodes...");
@@ -88,7 +96,8 @@ fn build_ui(
             }
             UIEvent::FinsihDownloadingHeaders(headers) => {
                 spinner.set_visible(false);
-                message_header.set_label(format!("TOTAL HEADERS DOWNLOADED: {}", headers).as_str());
+                message_header
+                    .set_label(format!("TOTAL HEADERS DOWNLOADED : {}", headers).as_str());
             }
             UIEvent::StartDownloadingBlocks => {
                 progress_bar.set_visible(true);
@@ -99,14 +108,15 @@ fn build_ui(
         Continue(true)
     });
     let sender_to_start = sender_to_node.clone();
+    let copy = start_button.clone();
     start_button.connect_clicked(move |_| {
         sender_to_start.send(WalletEvent::Start).unwrap();
+        copy.set_visible(false);
     });
     gtk::main();
 }
 
-
-/* 
+/*
 
 pub struct UIContainer {
     pub main_window: MainNotebook,
