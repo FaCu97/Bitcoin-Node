@@ -1,6 +1,7 @@
 use gtk::glib;
 
 use crate::{
+    blockchain_download::headers_download::amount_of_headers,
     blocks::{block::Block, block_header::BlockHeader},
     config::Config,
     custom_errors::NodeCustomErrors,
@@ -8,7 +9,7 @@ use crate::{
     logwriter::log_writer::{write_in_log, LogSender},
     messages::{
         block_message::BlockMessage, get_data_message::GetDataMessage, inventory::Inventory,
-    }, blockchain_download::headers_download::amount_of_headers,
+    },
 };
 use std::{
     collections::HashMap,
@@ -29,7 +30,11 @@ type BlockAndHeaders = (
     Arc<RwLock<HashMap<[u8; 32], Block>>>,
     Arc<RwLock<Vec<BlockHeader>>>,
 );
-type BlocksTuple = (Vec<BlockHeader>, Arc<RwLock<HashMap<[u8; 32], Block>>>);
+type BlocksTuple = (
+    Vec<BlockHeader>,
+    Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    Arc<RwLock<Vec<BlockHeader>>>,
+);
 
 /// # Descarga de bloques
 /// Realiza la descarga de bloques de forma concurrente.
@@ -118,8 +123,7 @@ fn download_blocks_chunck(
             &config_cloned,
             &log_sender_cloned,
             &ui_sender,
-            headers,
-            (block_headers, blocks),
+            (block_headers, blocks, headers),
             node,
             tx,
             nodes,
@@ -138,8 +142,7 @@ fn download_blocks_single_thread(
     config: &Arc<Config>,
     log_sender: &LogSender,
     ui_sender: &Option<glib::Sender<UIEvent>>,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    (block_headers, blocks): BlocksTuple,
+    (block_headers, blocks, headers): BlocksTuple,
     mut node: TcpStream,
     tx: Sender<Vec<BlockHeader>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
@@ -182,7 +185,14 @@ fn download_blocks_single_thread(
             current_blocks.insert(block.hash(), block);
         }
     }
-    add_blocks_downloaded_to_local_blocks(config, log_sender, ui_sender, headers, blocks, current_blocks)?;
+    add_blocks_downloaded_to_local_blocks(
+        config,
+        log_sender,
+        ui_sender,
+        headers,
+        blocks,
+        current_blocks,
+    )?;
     return_node_to_vec(nodes, node)?;
     Ok(())
 }
@@ -298,7 +308,14 @@ pub fn download_blocks_single_node(
             current_blocks.insert(block.hash(), block);
         }
     }
-    add_blocks_downloaded_to_local_blocks(config, log_sender, ui_sender, headers, blocks, current_blocks)?;
+    add_blocks_downloaded_to_local_blocks(
+        config,
+        log_sender,
+        ui_sender,
+        headers,
+        blocks,
+        current_blocks,
+    )?;
     Ok(())
 }
 
@@ -357,7 +374,8 @@ pub fn add_blocks_downloaded_to_local_blocks(
     );
     let amount_of_blocks = amount_of_blocks(&blocks)?;
     println!("{:?} bloques descargados", amount_of_blocks);
-    let total_blocks_to_download = amount_of_headers(&headers)? - config.height_first_block_to_download;
+    let total_blocks_to_download =
+        amount_of_headers(&headers)? - config.height_first_block_to_download;
     send_event_to_ui(
         ui_sender,
         UIEvent::ActualizeBlocksDownloaded(amount_of_blocks, total_blocks_to_download),

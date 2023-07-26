@@ -58,9 +58,6 @@ fn run_node(
     ui_sender: Option<glib::Sender<UIEvent>>,
     node_rx: Option<Receiver<WalletEvent>>,
 ) -> Result<(), NodeCustomErrors> {
-    if ui_sender.is_some() {
-        println!("Ui_sender exists!\n");
-    }
     wait_for_start_buttom(&node_rx);
     send_event_to_ui(&ui_sender, UIEvent::StartHandshake);
     let config = Config::from(args)?;
@@ -85,13 +82,11 @@ fn run_node(
     Ok(())
 }
 
-
 fn wait_for_start_buttom(rx: &Option<Receiver<WalletEvent>>) {
     if let Some(rx) = rx {
         for event in rx {
-            match event {
-                WalletEvent::Start => break,
-                _ => (),
+            if let WalletEvent::Start = event {
+                break;
             }
         }
     }

@@ -8,7 +8,7 @@ use super::blocks::block_header::BlockHeader;
 use super::config::Config;
 use super::logwriter::log_writer::{write_in_log, LogSender};
 use crate::custom_errors::NodeCustomErrors;
-use crate::gtk::ui_events::{UIEvent, send_event_to_ui};
+use crate::gtk::ui_events::{send_event_to_ui, UIEvent};
 use std::collections::HashMap;
 use std::net::TcpStream;
 use std::sync::mpsc::channel;

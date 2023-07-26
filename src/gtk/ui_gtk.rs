@@ -1,22 +1,11 @@
-use std::{
-    cell::RefCell,
-    collections::HashMap,
-    rc::Rc,
-    sync::{mpsc::Sender, Arc, RwLock},
-    thread::sleep,
-    time::Duration,
-};
+use std::sync::mpsc::Sender;
 
-use crate::{
-    account::Account, blockchain_download::headers_download, blocks::block::Block,
-    transactions::transaction::Transaction, wallet_event::WalletEvent,
-};
-use chrono::format;
+use crate::wallet_event::WalletEvent;
 use gtk::{
     gdk,
     glib::{self, Priority},
     prelude::*,
-    Application, ApplicationWindow, CssProvider, ProgressBar, StyleContext, Window, Builder, Spinner,
+    Application, CssProvider, ProgressBar, Spinner, StyleContext, Window,
 };
 
 use super::ui_events::UIEvent;
@@ -34,7 +23,7 @@ pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<W
 }
 
 fn build_ui(
-    app: &Application,
+    _app: &Application,
     ui_sender: &Sender<glib::Sender<UIEvent>>,
     sender_to_node: &Sender<WalletEvent>,
 ) {
@@ -69,7 +58,13 @@ fn build_ui(
         match msg {
             UIEvent::ActualizeBlocksDownloaded(blocks_downloaded, blocks_to_download) => {
                 progress_bar.set_fraction(blocks_downloaded as f64 / blocks_to_download as f64);
-                progress_bar.set_text(Some(format!("Blocks downloaded: {}/{}", blocks_downloaded, blocks_to_download).as_str()));
+                progress_bar.set_text(Some(
+                    format!(
+                        "Blocks downloaded: {}/{}",
+                        blocks_downloaded, blocks_to_download
+                    )
+                    .as_str(),
+                ));
             }
             UIEvent::StartHandshake => {
                 message_header.set_label("Making handshake with nodes...");
@@ -105,8 +100,7 @@ fn build_ui(
     gtk::main();
 }
 
-
-/* 
+/*
 
 pub struct UIContainer {
     pub main_window: MainNotebook,
