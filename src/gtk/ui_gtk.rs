@@ -109,7 +109,7 @@ fn build_ui(
                         &[
                             (0, &2001.to_value()),
                             (1, &block.hex_hash()),
-                            (2, &block.hex_merkle_root_hash()),
+                            (2, &block.utc_time()),
                             (3, &block.txn_count.decoded_value().to_value()),
                         ],
                     );
