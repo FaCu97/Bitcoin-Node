@@ -1,6 +1,9 @@
 use std::{
+    cell::RefCell,
     collections::HashMap,
+    rc::Rc,
     sync::{mpsc::Sender, Arc, RwLock},
+    time::Duration,
 };
 
 use crate::{
@@ -11,7 +14,7 @@ use gtk::{
     gdk,
     glib::{self, Priority},
     prelude::*,
-    Application, CssProvider, ProgressBar, Spinner, StyleContext, Window,
+    Application, Builder, CssProvider, ProgressBar, Spinner, StyleContext, Window,
 };
 
 use super::ui_events::UIEvent;
@@ -53,6 +56,11 @@ fn build_ui(
         &css_provider,
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
+    // buttons and entries
+    let buttons = get_buttons(&builder);
+    let ref_to_buttons = buttons.clone();
+    let entries = get_entries(&builder);
+    let ref_to_entries = entries.clone();
     // windows
     let initial_window: Window = builder.object("initial-window").unwrap();
     let main_window: Window = builder.object("main-window").unwrap();
@@ -61,6 +69,12 @@ fn build_ui(
     let address_entry: gtk::Entry = builder.object("address").unwrap();
     let private_key_entry: gtk::Entry = builder.object("private-key").unwrap();
     let status_login: gtk::Label = builder.object("status-login").unwrap();
+    let account_loading_spinner: Spinner = builder.object("account-spin").unwrap();
+    let loading_account_label: gtk::Label = builder.object("load-account").unwrap();
+    let ref_to_loading_account_label = Rc::new(RefCell::new(loading_account_label.clone()));
+
+    let ref_account_spin = account_loading_spinner.clone();
+    let ref_loading_account_label = loading_account_label.clone();
     // labels
     let message_header: gtk::Label = builder.object("message-header").unwrap();
     // initial window load elements
@@ -118,12 +132,11 @@ fn build_ui(
                     .set_label(format!("Headers downloaded: {}", headers_downloaded).as_str());
             }
             UIEvent::InitializeUITabs((headers, blocks)) => {
-                /* PASAR A  */
                 initialize_headers_tab(&liststore_headers, &headers);
                 initialize_blocks_tab(&liststore_blocks, &blocks);
 
                 initial_window.close();
-                main_window.show_all();
+                main_window.show();
             }
             UIEvent::StartDownloadingHeaders => {
                 message_header.set_visible(true);
@@ -139,13 +152,28 @@ fn build_ui(
                 progress_bar.set_text(Some("Blocks downloaded: 0"));
             }
             UIEvent::AccountAddedSuccesfully(account) => {
+                account_loading_spinner.set_visible(false);
+                loading_account_label.set_visible(false);
+                enable_buttons_and_entries(&buttons, &entries);
                 status_login.set_label(account.address.as_str());
+                status_login.set_visible(true);
+                show_dialog_message_pop_up(
+                    format!("Account {} added to wallet!", account.address).as_str(),
+                    "Account added succesfully",
+                );
             }
             UIEvent::AddAccountError(error) => {
-                status_login.set_label(error.as_str());
+                account_loading_spinner.set_visible(false);
+                loading_account_label.set_visible(false);
+                enable_buttons_and_entries(&buttons, &entries);
+                show_dialog_message_pop_up(error.as_str(), "Error trying to add account");
             }
             _ => (),
         }
+        Continue(true)
+    });
+    gtk::glib::timeout_add_local(Duration::from_secs(5), move || {
+        update_label(ref_to_loading_account_label.clone());
         Continue(true)
     });
     let sender_to_start = sender_to_node.clone();
@@ -156,13 +184,16 @@ fn build_ui(
     });
     let sender_to_login = sender_to_node.clone();
     login_button.connect_clicked(move |_| {
+        disable_buttons_and_entries(&ref_to_buttons, &ref_to_entries);
+        ref_account_spin.set_visible(true);
+        ref_loading_account_label.set_visible(true);
+
         let address = String::from(address_entry.text());
         let private_key = String::from(private_key_entry.text());
         sender_to_login
             .send(WalletEvent::AddAccountRequest(private_key, address))
             .unwrap();
     });
-
     gtk::main();
 }
 
@@ -206,6 +237,79 @@ fn initialize_headers_tab(liststore_headers: &gtk::ListStore, headers: &Headers)
             break;
         }
     }
+}
+fn get_buttons(builder: &Builder) -> Vec<gtk::Button> {
+    let buttons = vec![
+        builder.object("send-button").unwrap(),
+        builder.object("search-tx-button").unwrap(),
+        builder.object("search-blocks-button").unwrap(),
+        builder.object("login-button").unwrap(),
+    ];
+    buttons
+}
+
+fn get_entries(builder: &Builder) -> Vec<gtk::Entry> {
+    let entries = vec![
+        builder.object("pay to entry").unwrap(),
+        builder.object("amount-entry").unwrap(),
+        builder.object("fee").unwrap(),
+        builder.object("search-tx").unwrap(),
+        builder.object("search-block").unwrap(),
+        builder.object("address").unwrap(),
+        builder.object("private-key").unwrap(),
+    ];
+    entries
+}
+
+fn enable_buttons_and_entries(buttons: &Vec<gtk::Button>, entries: &Vec<gtk::Entry>) {
+    for button in buttons {
+        button.set_sensitive(true);
+    }
+    for entry in entries {
+        entry.set_sensitive(true);
+    }
+}
+
+fn disable_buttons_and_entries(buttons: &Vec<gtk::Button>, entries: &Vec<gtk::Entry>) {
+    for button in buttons {
+        button.set_sensitive(false);
+    }
+    for entry in entries {
+        entry.set_sensitive(false);
+    }
+}
+
+fn update_label(label: Rc<RefCell<gtk::Label>>) -> Continue {
+    let waiting_labels = [
+        "Hold tight! Setting up your Bitcoin account...",
+        "We're ensuring your account's security...",
+        "Be patient! Your Bitcoin account is being created...",
+    ];
+    let current_text = label.borrow().text().to_string();
+    for i in 0..waiting_labels.len() {
+        if current_text == waiting_labels[i] {
+            let next_text = waiting_labels[(i + 1) % waiting_labels.len()];
+            label.borrow().set_text(next_text);
+            break;
+        }
+    }
+    Continue(true)
+}
+
+fn show_dialog_message_pop_up(message: &str, title: &str) {
+    let dialog = gtk::MessageDialog::new(
+        None::<&Window>,
+        gtk::DialogFlags::MODAL,
+        gtk::MessageType::Info,
+        gtk::ButtonsType::Ok,
+        message,
+    );
+    dialog.set_title(title);
+    dialog.set_keep_above(true);
+    let content_area = dialog.content_area();
+    content_area.style_context().add_class("dialog");
+    dialog.run();
+    dialog.close();
 }
 
 /*
