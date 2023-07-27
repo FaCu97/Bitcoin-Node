@@ -200,7 +200,6 @@ fn initialize_headers_tab(liststore_headers: &gtk::ListStore, headers: &Headers)
                 (0, &(index as u32).to_value()),
                 (1, &header.hex_hash()),
                 (2, &header.utc_time()),
-                (3, &0.to_value()), // se podría sacar esta columna
             ],
         );
         if i == 50 {
