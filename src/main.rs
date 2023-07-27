@@ -58,7 +58,7 @@ fn run_node(
     ui_sender: Option<glib::Sender<UIEvent>>,
     node_rx: Option<Receiver<WalletEvent>>,
 ) -> Result<(), NodeCustomErrors> {
-    // wait_for_start_button(&node_rx);
+    //wait_for_start_button(&node_rx);
     send_event_to_ui(&ui_sender, UIEvent::StartHandshake);
     let config = Config::from(args)?;
     let (log_sender, log_sender_handles) = set_up_loggers(&config)?;
@@ -125,7 +125,9 @@ fn handle_ui_request(
     for event in rx {
         match event {
             WalletEvent::AddAccountRequest(wif, address) => {
-                if let Err(NodeCustomErrors::LockError(err)) = wallet.add_account(ui_sender, wif, address) {
+                if let Err(NodeCustomErrors::LockError(err)) =
+                    wallet.add_account(ui_sender, wif, address)
+                {
                     send_event_to_ui(ui_sender, UIEvent::AddAccountError(err));
                 }
             }
