@@ -63,14 +63,17 @@ impl Wallet {
         address: String,
     ) -> Result<(), NodeCustomErrors> {
         let mut account = Account::new(wif_private_key, address)
-            .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
+            .map_err(|err| {
+                send_event_to_ui(ui_sender, UIEvent::AddAccountError(err.to_string()));
+                NodeCustomErrors::UnmarshallingError(err.to_string())
+            })?;
         self.load_data(&mut account)
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
+            .map_err(|err| {NodeCustomErrors::LockError(err.to_string())})?;
         self.accounts
             .write()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .push(account.clone());
-        send_event_to_ui(ui_sender, UIEvent::AddAccount(account));
+        send_event_to_ui(ui_sender, UIEvent::AccountAddedSuccesfully(account));
         Ok(())
     }
     /// Funcion que se encarga de cargar los respectivos utxos asociados a la cuenta

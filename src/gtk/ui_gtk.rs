@@ -141,8 +141,11 @@ fn build_ui(
                 progress_bar.set_visible(true);
                 progress_bar.set_text(Some("Blocks downloaded: 0"));
             }
-            UIEvent::ActualizeAccountLogged(status) => {
-                status_login.set_label(status.as_str());
+            UIEvent::AccountAddedSuccesfully(account) => {
+                status_login.set_label(account.address.as_str());
+            }
+            UIEvent::AddAccountError(error) => {
+                status_login.set_label(error.as_str());
             }
             _ => (),
         }

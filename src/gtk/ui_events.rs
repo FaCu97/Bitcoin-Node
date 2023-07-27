@@ -15,13 +15,13 @@ pub enum UIEvent {
     FinsihDownloadingHeaders(usize),
     StartDownloadingBlocks,
     ShowConfirmedTransaction(Block, Account, Transaction),
-    AddAccount(Account),
+    AccountAddedSuccesfully(Account),
+    AddAccountError(String),
     ShowPendingTransaction(Account, Transaction),
     AddBlock(Block),
     InitializeUITabs(Blocks),
     ActualizeHeadersDownloaded(usize),
     ActualizeBlocksDownloaded(usize, usize),
-    ActualizeAccountLogged(String),
 }
 
 pub fn send_event_to_ui(ui_sender: &Option<glib::Sender<UIEvent>>, event: UIEvent) {
