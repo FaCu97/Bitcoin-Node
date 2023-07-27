@@ -257,9 +257,7 @@ impl Block {
 
     /// Devuelve un string que representa el timestamp del bloque en formato UTC
     pub fn utc_time(&self) -> String {
-        let dt = Utc.timestamp_opt(self.block_header.time as i64, 0).unwrap();
-        let formatted_date = dt.format("%Y-%m-%d %H:%M:%S").to_string();
-        formatted_date
+        self.block_header.utc_time()
     }
 }
 

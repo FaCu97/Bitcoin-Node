@@ -5,9 +5,14 @@ use std::{
 
 use gtk::glib;
 
-use crate::{account::Account, blocks::block::Block, transactions::transaction::Transaction};
+use crate::{
+    account::Account, blocks::block::Block, blocks::block_header::BlockHeader,
+    transactions::transaction::Transaction,
+};
 
 type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
+type Headers = Arc<RwLock<Vec<BlockHeader>>>;
+
 #[derive(Clone, Debug)]
 pub enum UIEvent {
     StartHandshake,
@@ -19,7 +24,7 @@ pub enum UIEvent {
     AddAccountError(String),
     ShowPendingTransaction(Account, Transaction),
     AddBlock(Block),
-    InitializeUITabs(Blocks),
+    InitializeUITabs((Headers, Blocks)),
     ActualizeHeadersDownloaded(usize),
     ActualizeBlocksDownloaded(usize, usize),
 }

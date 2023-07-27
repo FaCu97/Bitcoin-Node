@@ -45,6 +45,11 @@
     <property name="can-focus">False</property>
     <property name="stock">gtk-goto-bottom</property>
   </object>
+  <object class="GtkImage" id="image7">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="pixbuf">src/gtk/resources/find.png</property>
+  </object>
   <object class="GtkWindow" id="initial-window">
     <property name="width-request">800</property>
     <property name="height-request">500</property>
@@ -132,6 +137,26 @@
     </child>
   </object>
   <object class="GtkListStore" id="liststore-blocks">
+    <columns>
+      <!-- column-name height -->
+      <column type="gint"/>
+      <!-- column-name id -->
+      <column type="gchararray"/>
+      <!-- column-name Time -->
+      <column type="gchararray"/>
+      <!-- column-name tx-count -->
+      <column type="gint"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">2000</col>
+        <col id="1" translatable="yes">00000000000000093000dcc2e14c848b5a22ecbe0a3eef9e3290c7705c3d2b18</col>
+        <col id="2" translatable="yes">2023-05-05</col>
+        <col id="3">20</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="liststore-headers">
     <columns>
       <!-- column-name height -->
       <column type="gint"/>
@@ -815,7 +840,7 @@
                     </child>
                     <child>
                       <object class="GtkScrolledWindow">
-                        <property name="width-request">700</property>
+                        <property name="width-request">720</property>
                         <property name="height-request">350</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
@@ -855,9 +880,7 @@
                                     <property name="title" translatable="yes">id</property>
                                     <property name="expand">True</property>
                                     <child>
-                                      <object class="GtkCellRendererText">
-                                        <property name="width">500</property>
-                                      </object>
+                                      <object class="GtkCellRendererText"/>
                                       <attributes>
                                         <attribute name="text">1</attribute>
                                       </attributes>
@@ -894,8 +917,8 @@
                         </child>
                       </object>
                       <packing>
-                        <property name="x">50</property>
-                        <property name="y">92</property>
+                        <property name="x">40</property>
+                        <property name="y">90</property>
                       </packing>
                     </child>
                   </object>
@@ -909,6 +932,121 @@
                   <object class="GtkFixed" id="headers">
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkEntry" id="search-block-headers">
+                        <property name="width-request">550</property>
+                        <property name="height-request">34</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="placeholder-text" translatable="yes">enter a hash's block</property>
+                        <style>
+                          <class name="input-user"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">49</property>
+                        <property name="y">27</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="search-header-button">
+                        <property name="label" translatable="yes">Search</property>
+                        <property name="width-request">100</property>
+                        <property name="height-request">34</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">True</property>
+                        <property name="image">image7</property>
+                        <property name="always-show-image">True</property>
+                        <style>
+                          <class name="app-button"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">648</property>
+                        <property name="y">27</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkScrolledWindow">
+                        <property name="width-request">720</property>
+                        <property name="height-request">350</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="shadow-type">in</property>
+                        <child>
+                          <object class="GtkViewport">
+                            <property name="visible">True</property>
+                            <property name="can-focus">False</property>
+                            <child>
+                              <object class="GtkTreeView" id="header_table">
+                                <property name="visible">True</property>
+                                <property name="can-focus">True</property>
+                                <property name="model">liststore-headers</property>
+                                <property name="headers-clickable">False</property>
+                                <property name="search-column">0</property>
+                                <property name="show-expanders">False</property>
+                                <property name="enable-grid-lines">both</property>
+                                <property name="enable-tree-lines">True</property>
+                                <property name="tooltip-column">0</property>
+                                <child>
+                                  <object class="GtkTreeViewColumn" id="height1">
+                                    <property name="title" translatable="yes">height</property>
+                                    <property name="expand">True</property>
+                                    <child>
+                                      <object class="GtkCellRendererText"/>
+                                      <attributes>
+                                        <attribute name="text">0</attribute>
+                                      </attributes>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkTreeViewColumn" id="block-id1">
+                                    <property name="title" translatable="yes">id</property>
+                                    <property name="expand">True</property>
+                                    <child>
+                                      <object class="GtkCellRendererText"/>
+                                      <attributes>
+                                        <attribute name="text">1</attribute>
+                                      </attributes>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkTreeViewColumn" id="time1">
+                                    <property name="title" translatable="yes">Time (UTC)</property>
+                                    <property name="expand">True</property>
+                                    <child>
+                                      <object class="GtkCellRendererText"/>
+                                      <attributes>
+                                        <attribute name="text">2</attribute>
+                                      </attributes>
+                                    </child>
+                                  </object>
+                                </child>
+                                <child>
+                                  <object class="GtkTreeViewColumn" id="transaction1">
+                                    <property name="title" translatable="yes">tx-count</property>
+                                    <property name="expand">True</property>
+                                    <child>
+                                      <object class="GtkCellRendererText"/>
+                                      <attributes>
+                                        <attribute name="text">3</attribute>
+                                      </attributes>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
+                            </child>
+                          </object>
+                        </child>
+                      </object>
+                      <packing>
+                        <property name="x">40</property>
+                        <property name="y">90</property>
+                      </packing>
+                    </child>
                   </object>
                   <packing>
                     <property name="name">headers</property>
