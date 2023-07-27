@@ -586,7 +586,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkButton">
+                      <object class="GtkButton" id="send-button">
                         <property name="label" translatable="yes">Send</property>
                         <property name="width-request">80</property>
                         <property name="height-request">34</property>
@@ -746,7 +746,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkButton">
+                      <object class="GtkButton" id="search-tx-button">
                         <property name="label" translatable="yes">Search</property>
                         <property name="width-request">100</property>
                         <property name="height-request">34</property>
@@ -795,7 +795,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkButton">
+                      <object class="GtkButton" id="search-blocks-button">
                         <property name="label" translatable="yes">Search</property>
                         <property name="width-request">100</property>
                         <property name="height-request">34</property>
@@ -972,15 +972,47 @@
                       </packing>
                     </child>
                     <child>
+                      <object class="GtkSpinner" id="account-spin">
+                        <property name="width-request">50</property>
+                        <property name="height-request">50</property>
+                        <property name="can-focus">False</property>
+                        <property name="active">True</property>
+                        <property name="visible">False</property>
+                        <style>
+                          <class name="account-spin"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">63</property>
+                        <property name="y">300</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkLabel" id="load-account">
+                        <property name="width-request">250</property>
+                        <property name="height-request">50</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Hold tight! Setting up your Bitcoin account...</property>
+                        <property name="visible">False</property>
+                        <style>
+                          <class name="load-account"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">120</property>
+                        <property name="y">300</property>
+                      </packing>
+                    </child>
+                    <child>
                       <object class="GtkAccelLabel" id="adress-label">
                         <property name="width-request">100</property>
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">Address : </property>
+                        <property name="label" translatable="yes">Address: </property>
                       </object>
                       <packing>
-                        <property name="x">42</property>
+                        <property name="x">56</property>
                         <property name="y">41</property>
                       </packing>
                     </child>
@@ -1005,10 +1037,10 @@
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">Private-key  :</property>
+                        <property name="label" translatable="yes">Private-key:</property>
                       </object>
                       <packing>
-                        <property name="x">50</property>
+                        <property name="x">56</property>
                         <property name="y">104</property>
                       </packing>
                     </child>
@@ -1018,10 +1050,10 @@
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">User selected : </property>
+                        <property name="label" translatable="yes">User selected: </property>
                       </object>
                       <packing>
-                        <property name="x">177</property>
+                        <property name="x">370</property>
                         <property name="y">224</property>
                       </packing>
                     </child>
@@ -1044,12 +1076,12 @@
                       <object class="GtkAccelLabel" id="status-login">
                         <property name="width-request">100</property>
                         <property name="height-request">80</property>
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">None</property>
+                        <property name="label" translatable="yes"></property>
                       </object>
                       <packing>
-                        <property name="x">273</property>
+                        <property name="x">470</property>
                         <property name="y">201</property>
                       </packing>
                     </child>
@@ -1072,7 +1104,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkStackSwitcher">
+              <object class="GtkStackSwitcher" id="switcher">
                 <property name="width-request">473</property>
                 <property name="height-request">34</property>
                 <property name="visible">True</property>
