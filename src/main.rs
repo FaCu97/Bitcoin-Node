@@ -13,6 +13,7 @@ use bitcoin::server::NodeServer;
 use bitcoin::terminal_ui::terminal_ui;
 use bitcoin::wallet::Wallet;
 use bitcoin::wallet_event::WalletEvent;
+use gtk::gdk::keys::constants::U;
 use gtk::glib;
 use std::sync::mpsc::{channel, Receiver};
 use std::{env, thread};
@@ -126,7 +127,18 @@ fn handle_ui_request(
         match event {
             WalletEvent::AddAccountRequest(wif, address) => {
                 if wallet.add_account(ui_sender, wif, address).is_err() {
-                    println!("Error al agregar la cuenta");
+                    send_event_to_ui(
+                        ui_sender,
+                        UIEvent::ActualizeAccountLogged(String::from("Invalid Data")),
+                    );
+                    println!("Invalid Data");
+                } else {
+                    send_event_to_ui(
+                        ui_sender,
+                        UIEvent::ActualizeAccountLogged(String::from("User logged")),
+                    );
+
+                    println!("User logged");
                 }
             }
             WalletEvent::MakeTransactionRequest(account_index, address, amount, fee) => {

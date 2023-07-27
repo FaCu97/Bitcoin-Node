@@ -21,6 +21,7 @@ pub enum UIEvent {
     InitializeUITabs(Blocks),
     ActualizeHeadersDownloaded(usize),
     ActualizeBlocksDownloaded(usize, usize),
+    ActualizeAccountLogged(String),
 }
 
 pub fn send_event_to_ui(ui_sender: &Option<glib::Sender<UIEvent>>, event: UIEvent) {
