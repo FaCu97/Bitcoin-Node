@@ -106,7 +106,7 @@ pub fn validate_address_private_key(
     if !generate_address(private_key)?.eq(address) {
         return Err(Box::new(std::io::Error::new(
             io::ErrorKind::Other,
-            "La private key ingresada no se corresponde con la address",
+            "The private key does not correspond to the address",
         )));
     }
     Ok(())
@@ -118,7 +118,7 @@ pub fn decode_wif_private_key(wif_private_key: &str) -> Result<[u8; 32], Box<dyn
     if wif_private_key.len() < UNCOMPRESSED_WIF_LEN || wif_private_key.len() > COMPRESSED_WIF_LEN {
         return Err(Box::new(std::io::Error::new(
             io::ErrorKind::Other,
-            "No se pudo decodificar la WIF private key. La cantidad de caracteres de la private key es inválida.",
+            "The WIF private key is invalid. It has an invalid length.",
         )));
     }
     // Decodificar la clave privada en formato WIF
@@ -133,7 +133,7 @@ pub fn decode_wif_private_key(wif_private_key: &str) -> Result<[u8; 32], Box<dyn
     if vector.len() != 32 {
         return Err(Box::new(std::io::Error::new(
             io::ErrorKind::Other,
-            "No se pudo decodificar la WIF private key.",
+            "The WIF private key could not be decoded.",
         )));
     }
 

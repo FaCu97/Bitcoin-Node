@@ -1,11 +1,3 @@
-use std::{
-    collections::HashMap,
-    error::Error,
-    sync::{Arc, RwLock},
-};
-
-use gtk::glib;
-
 use super::{
     block_header::BlockHeader, merkle_tree::MerkleTree, utils_block::concatenate_and_hash,
 };
@@ -17,6 +9,13 @@ use crate::{
     logwriter::log_writer::{write_in_log, LogSender},
     transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
+};
+use chrono::{TimeZone, Utc};
+use gtk::glib;
+use std::{
+    collections::HashMap,
+    error::Error,
+    sync::{Arc, RwLock},
 };
 
 /// Representa un bloque del protocolo bitcoin.
@@ -175,6 +174,11 @@ impl Block {
         self.block_header.hex_hash()
     }
 
+    /// Devuelve un string que representa el hash del merkle root en hexadecimal,
+    pub fn hex_merkle_root_hash(&self) -> String {
+        self.block_header.hex_merkle_root_hash()
+    }
+
     /// Notifica si el bloque contiene una transacción que se encontraba pendiente.
     /// Revisa las transacciones del bloque y las compara con las transacciones pendientes
     /// De las cuentas
@@ -246,8 +250,16 @@ impl Block {
         Ok(())
     }
 
+    /// Devuelve el hash del bloque
     pub fn hash(&self) -> [u8; 32] {
         self.block_header.hash()
+    }
+
+    /// Devuelve un string que representa el timestamp del bloque en formato UTC
+    pub fn utc_time(&self) -> String {
+        let dt = Utc.timestamp_opt(self.block_header.time as i64, 0).unwrap();
+        let formatted_date = dt.format("%Y-%m-%d %H:%M:%S").to_string();
+        formatted_date
     }
 }
 
