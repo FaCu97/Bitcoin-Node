@@ -164,15 +164,12 @@
       <column type="gchararray"/>
       <!-- column-name Time -->
       <column type="gchararray"/>
-      <!-- column-name tx-count -->
-      <column type="gint"/>
     </columns>
     <data>
       <row>
         <col id="0">2000</col>
         <col id="1" translatable="yes">00000000000000093000dcc2e14c848b5a22ecbe0a3eef9e3290c7705c3d2b18</col>
-        <col id="2" translatable="yes">2023-05-05</col>
-        <col id="3">20</col>
+        <col id="2" translatable="yes">2023-05-05 12:02</col>
       </row>
     </data>
   </object>
@@ -989,9 +986,12 @@
                                 <property name="enable-grid-lines">both</property>
                                 <property name="enable-tree-lines">True</property>
                                 <property name="tooltip-column">0</property>
+                                <child internal-child="selection">
+                                  <object class="GtkTreeSelection"/>
+                                </child>
                                 <child>
-                                  <object class="GtkTreeViewColumn" id="height1">
-                                    <property name="title" translatable="yes">height</property>
+                                  <object class="GtkTreeViewColumn" id="header-height">
+                                    <property name="title" translatable="yes">Height</property>
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
@@ -1002,8 +1002,8 @@
                                   </object>
                                 </child>
                                 <child>
-                                  <object class="GtkTreeViewColumn" id="block-id1">
-                                    <property name="title" translatable="yes">id</property>
+                                  <object class="GtkTreeViewColumn" id="header-id">
+                                    <property name="title" translatable="yes">Id</property>
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
@@ -1014,25 +1014,13 @@
                                   </object>
                                 </child>
                                 <child>
-                                  <object class="GtkTreeViewColumn" id="time1">
+                                  <object class="GtkTreeViewColumn" id="header-time">
                                     <property name="title" translatable="yes">Time (UTC)</property>
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
                                       <attributes>
                                         <attribute name="text">2</attribute>
-                                      </attributes>
-                                    </child>
-                                  </object>
-                                </child>
-                                <child>
-                                  <object class="GtkTreeViewColumn" id="transaction1">
-                                    <property name="title" translatable="yes">tx-count</property>
-                                    <property name="expand">True</property>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">3</attribute>
                                       </attributes>
                                     </child>
                                   </object>
