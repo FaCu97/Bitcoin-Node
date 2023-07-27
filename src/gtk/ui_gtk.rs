@@ -50,6 +50,7 @@ fn build_ui(
     let message_header: gtk::Label = builder.object("message-header").unwrap();
     let progress_bar: ProgressBar = builder.object("block-bar").unwrap();
     let spinner: Spinner = builder.object("header-spin").unwrap();
+    let login_button: gtk::Button = builder.object("login").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
     //initial_window.show();
@@ -133,6 +134,12 @@ fn build_ui(
                 progress_bar.set_visible(true);
                 progress_bar.set_text(Some("Blocks downloaded: 0"));
             }
+            UIEvent::AddAccount(account) => {
+                println!("Add account: {:?}", account);
+            }
+            UIEvent::AddAccountError => {
+                println!("Error al agregar cuenta");
+            }
             _ => (),
         }
         Continue(true)
@@ -142,6 +149,14 @@ fn build_ui(
     start_button.connect_clicked(move |_| {
         sender_to_start.send(WalletEvent::Start).unwrap();
         copy.set_visible(false);
+    });
+    let sender_to_add_account = sender_to_node.clone();
+    login_button.connect_clicked(move |_| {
+        let address_entry: gtk::Entry = builder.object("address").unwrap();
+        let private_key_entry: gtk::Entry = builder.object("private key").unwrap();
+        let address = address_entry.text().to_string();
+        let private_key = private_key_entry.text().to_string();
+        sender_to_add_account.send(WalletEvent::AddAccountRequest(private_key, address)).unwrap();
     });
     gtk::main();
 }

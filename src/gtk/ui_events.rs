@@ -16,6 +16,7 @@ pub enum UIEvent {
     StartDownloadingBlocks,
     ShowConfirmedTransaction(Block, Account, Transaction),
     AddAccount(Account),
+    AddAccountError,
     ShowPendingTransaction(Account, Transaction),
     AddBlock(Block),
     InitializeUITabs(Blocks),

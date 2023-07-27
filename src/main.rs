@@ -126,7 +126,7 @@ fn handle_ui_request(
         match event {
             WalletEvent::AddAccountRequest(wif, address) => {
                 if wallet.add_account(ui_sender, wif, address).is_err() {
-                    println!("Error al agregar la cuenta");
+                    send_event_to_ui(ui_sender, UIEvent::AddAccountError);
                 }
             }
             WalletEvent::MakeTransactionRequest(account_index, address, amount, fee) => {
