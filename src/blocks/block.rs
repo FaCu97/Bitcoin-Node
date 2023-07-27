@@ -10,7 +10,6 @@ use crate::{
     transactions::transaction::Transaction,
     utxo_tuple::UtxoTuple,
 };
-use chrono::{TimeZone, Utc};
 use gtk::glib;
 use std::{
     collections::HashMap,
