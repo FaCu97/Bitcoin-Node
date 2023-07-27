@@ -1,4 +1,5 @@
 use bitcoin_hashes::{sha256d, Hash};
+use chrono::{TimeZone, Utc};
 
 /// Representa el Block Header del protocolo bitcoin
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -137,6 +138,13 @@ impl BlockHeader {
     /// Compara la raiz del merkle root
     pub fn is_same_merkle_root_hash(&self, received_hash: &[u8; 32]) -> bool {
         self.merkle_root_hash == *received_hash
+    }
+
+    /// Devuelve un string que representa el timestamp del bloque en formato UTC
+    pub fn utc_time(&self) -> String {
+        let dt = Utc.timestamp_opt(self.time as i64, 0).unwrap();
+        let formatted_date = dt.format("%Y-%m-%d %H:%M:%S").to_string();
+        formatted_date
     }
 }
 

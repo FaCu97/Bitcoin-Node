@@ -1,6 +1,15 @@
-use std::{cell::RefCell, rc::Rc, sync::mpsc::Sender, time::Duration};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    rc::Rc,
+    sync::{mpsc::Sender, Arc, RwLock},
+    time::Duration,
+};
 
-use crate::wallet_event::WalletEvent;
+use crate::{
+    blocks::{block::Block, block_header::BlockHeader},
+    wallet_event::WalletEvent,
+};
 use gtk::{
     gdk,
     glib::{self, Priority},
@@ -9,6 +18,9 @@ use gtk::{
 };
 
 use super::ui_events::UIEvent;
+
+type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
+type Headers = Arc<RwLock<Vec<BlockHeader>>>;
 
 pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<WalletEvent>) {
     let app = Application::builder()
@@ -74,6 +86,8 @@ fn build_ui(
     //initial_window.show();
     main_window.show();
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
+    let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
+
     /*
         for i in 0..50 {
             let row = liststore_blocks.append();
@@ -117,25 +131,10 @@ fn build_ui(
                 message_header
                     .set_label(format!("Headers downloaded: {}", headers_downloaded).as_str());
             }
-            UIEvent::InitializeUITabs(blocks) => {
-                println!("INICIALIZO TAB BLOQUESSSSS");
-                let mut i = 0;
-                for block in blocks.read().unwrap().values() {
-                    i += 1;
-                    let row = liststore_blocks.append();
-                    liststore_blocks.set(
-                        &row,
-                        &[
-                            (0, &2001.to_value()),
-                            (1, &block.hex_hash()),
-                            (2, &block.utc_time()),
-                            (3, &block.txn_count.decoded_value().to_value()),
-                        ],
-                    );
-                    if i == 50 {
-                        break;
-                    }
-                }
+            UIEvent::InitializeUITabs((headers, blocks)) => {
+                initialize_headers_tab(&liststore_headers, &headers);
+                initialize_blocks_tab(&liststore_blocks, &blocks);
+
                 initial_window.close();
                 main_window.show();
             }
@@ -198,6 +197,47 @@ fn build_ui(
     gtk::main();
 }
 
+/// Initializa la pestaña de bloques
+fn initialize_blocks_tab(liststore_blocks: &gtk::ListStore, blocks: &Blocks) {
+    println!("INICIALIZO TAB BLOQUESSSSS");
+    let mut i = 0;
+    for block in blocks.read().unwrap().values() {
+        i += 1;
+        let row = liststore_blocks.append();
+        liststore_blocks.set(
+            &row,
+            &[
+                (0, &i.to_value()), // a comletar
+                (1, &block.hex_hash()),
+                (2, &block.utc_time()),
+                (3, &block.txn_count.decoded_value().to_value()),
+            ],
+        );
+        if i == 50 {
+            break;
+        }
+    }
+}
+
+fn initialize_headers_tab(liststore_headers: &gtk::ListStore, headers: &Headers) {
+    println!("INICIALIZO TAB HEADERS");
+    let mut i = 0;
+    for (index, header) in headers.read().unwrap().iter().enumerate() {
+        i += 1;
+        let row = liststore_headers.append();
+        liststore_headers.set(
+            &row,
+            &[
+                (0, &(index as u32).to_value()),
+                (1, &header.hex_hash()),
+                (2, &header.utc_time()),
+            ],
+        );
+        if i == 50 {
+            break;
+        }
+    }
+}
 fn get_buttons(builder: &Builder) -> Vec<gtk::Button> {
     let buttons = vec![
         builder.object("send-button").unwrap(),
