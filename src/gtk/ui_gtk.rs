@@ -44,13 +44,20 @@ fn build_ui(
         &css_provider,
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
+    // windows
     let initial_window: Window = builder.object("initial-window").unwrap();
     let main_window: Window = builder.object("main-window").unwrap();
-    let start_button: gtk::Button = builder.object("start-button").unwrap();
+    // login elements
+    let login_button: gtk::Button = builder.object("login-button").unwrap();
+    let address_entry: gtk::Entry = builder.object("address").unwrap();
+    let private_key_entry: gtk::Entry = builder.object("private-key").unwrap();
+    let status_login: gtk::Label = builder.object("status-login").unwrap();
+    // labels
     let message_header: gtk::Label = builder.object("message-header").unwrap();
+    // initial window load elements
+    let start_button: gtk::Button = builder.object("start-button").unwrap();
     let progress_bar: ProgressBar = builder.object("block-bar").unwrap();
     let spinner: Spinner = builder.object("header-spin").unwrap();
-    let login_button: gtk::Button = builder.object("login").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
     //initial_window.show();
@@ -134,29 +141,29 @@ fn build_ui(
                 progress_bar.set_visible(true);
                 progress_bar.set_text(Some("Blocks downloaded: 0"));
             }
-            UIEvent::AddAccount(account) => {
-                println!("Add account: {:?}", account);
+            UIEvent::AccountAddedSuccesfully(account) => {
+                status_login.set_label(account.address.as_str());
             }
-            UIEvent::AddAccountError => {
-                println!("Error al agregar cuenta");
+            UIEvent::AddAccountError(error) => {
+                status_login.set_label(error.as_str());
             }
             _ => (),
         }
         Continue(true)
     });
     let sender_to_start = sender_to_node.clone();
-    let copy = start_button.clone();
+    let ref_start_btn = start_button.clone();
     start_button.connect_clicked(move |_| {
         sender_to_start.send(WalletEvent::Start).unwrap();
-        copy.set_visible(false);
+        ref_start_btn.set_visible(false);
     });
-    let sender_to_add_account = sender_to_node.clone();
+    let sender_to_login = sender_to_node.clone();
     login_button.connect_clicked(move |_| {
-        let address_entry: gtk::Entry = builder.object("address").unwrap();
-        let private_key_entry: gtk::Entry = builder.object("private key").unwrap();
-        let address = address_entry.text().to_string();
-        let private_key = private_key_entry.text().to_string();
-        sender_to_add_account.send(WalletEvent::AddAccountRequest(private_key, address)).unwrap();
+        let address = String::from(address_entry.text());
+        let private_key = String::from(private_key_entry.text());
+        sender_to_login
+            .send(WalletEvent::AddAccountRequest(private_key, address))
+            .unwrap();
     });
     gtk::main();
 }

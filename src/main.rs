@@ -125,8 +125,8 @@ fn handle_ui_request(
     for event in rx {
         match event {
             WalletEvent::AddAccountRequest(wif, address) => {
-                if wallet.add_account(ui_sender, wif, address).is_err() {
-                    send_event_to_ui(ui_sender, UIEvent::AddAccountError);
+                if let Err(NodeCustomErrors::LockError(err)) = wallet.add_account(ui_sender, wif, address) {
+                    send_event_to_ui(ui_sender, UIEvent::AddAccountError(err));
                 }
             }
             WalletEvent::MakeTransactionRequest(account_index, address, amount, fee) => {
