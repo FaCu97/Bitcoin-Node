@@ -60,6 +60,7 @@ pub fn initial_block_download(
     heights_hashmap.insert([0u8; 32], 0); // genesis hash
     let header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>> =
         Arc::new(RwLock::new(heights_hashmap));
+    
     get_initial_headers(
         config,
         log_sender,

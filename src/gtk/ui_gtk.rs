@@ -153,18 +153,21 @@ fn build_ui(
                 progress_bar.set_text(Some("Blocks downloaded: 0"));
             }
             UIEvent::AccountAddedSuccesfully(account) => {
-                println!("Cuenta agregada correctamente!");
                 account_loading_spinner.set_visible(false);
                 loading_account_label.set_visible(false);
                 enable_buttons_and_entries(&buttons, &entries);
                 status_login.set_label(account.address.as_str());
                 status_login.set_visible(true);
+                show_dialog_message_pop_up(
+                    format!("Account {} added to wallet!", account.address).as_str(),
+                    "Account added succesfully",
+                );
             }
             UIEvent::AddAccountError(error) => {
-                println!("{error} al agregar cuenta!");
                 account_loading_spinner.set_visible(false);
                 loading_account_label.set_visible(false);
                 enable_buttons_and_entries(&buttons, &entries);
+                show_dialog_message_pop_up(error.as_str(), "Error trying to add account");
             }
             _ => (),
         }
@@ -251,6 +254,22 @@ fn update_label(label: Rc<RefCell<gtk::Label>>) -> Continue {
         }
     }
     Continue(true)
+}
+
+fn show_dialog_message_pop_up(message: &str, title: &str) {
+    let dialog = gtk::MessageDialog::new(
+        None::<&Window>,
+        gtk::DialogFlags::MODAL,
+        gtk::MessageType::Info,
+        gtk::ButtonsType::Ok,
+        message,
+    );
+    dialog.set_title(title);
+    dialog.set_keep_above(true);
+    let content_area = dialog.content_area();
+    content_area.style_context().add_class("dialog");
+    dialog.run();
+    dialog.close();
 }
 
 /*
