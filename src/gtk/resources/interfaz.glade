@@ -806,7 +806,7 @@
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
-                        <property name="placeholder-text" translatable="yes">enter a hash's block</property>
+                        <property name="placeholder-text" translatable="yes">Enter a hash's block</property>
                         <style>
                           <class name="input-user"/>
                         </style>
@@ -862,7 +862,7 @@
                                 </child>
                                 <child>
                                   <object class="GtkTreeViewColumn" id="height">
-                                    <property name="title" translatable="yes">height</property>
+                                    <property name="title" translatable="yes">Height</property>
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
@@ -874,7 +874,7 @@
                                 </child>
                                 <child>
                                   <object class="GtkTreeViewColumn" id="block-id">
-                                    <property name="title" translatable="yes">id</property>
+                                    <property name="title" translatable="yes">Id</property>
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
@@ -898,7 +898,7 @@
                                 </child>
                                 <child>
                                   <object class="GtkTreeViewColumn" id="transaction">
-                                    <property name="title" translatable="yes">tx-count</property>
+                                    <property name="title" translatable="yes">Tx count</property>
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
