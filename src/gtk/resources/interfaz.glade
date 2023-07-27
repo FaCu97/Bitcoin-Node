@@ -937,7 +937,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkEntry" id="private-key ">
+                      <object class="GtkEntry" id="private-key">
                         <property name="width-request">500</property>
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
