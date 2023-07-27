@@ -62,13 +62,12 @@ impl Wallet {
         wif_private_key: String,
         address: String,
     ) -> Result<(), NodeCustomErrors> {
-        let mut account = Account::new(wif_private_key, address)
-            .map_err(|err| {
-                send_event_to_ui(ui_sender, UIEvent::AddAccountError(err.to_string()));
-                NodeCustomErrors::UnmarshallingError(err.to_string())
-            })?;
+        let mut account = Account::new(wif_private_key, address).map_err(|err| {
+            send_event_to_ui(ui_sender, UIEvent::AddAccountError(err.to_string()));
+            NodeCustomErrors::UnmarshallingError(err.to_string())
+        })?;
         self.load_data(&mut account)
-            .map_err(|err| {NodeCustomErrors::LockError(err.to_string())})?;
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
         self.accounts
             .write()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
