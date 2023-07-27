@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.38.2 -->
+<!-- Generated with glade 3.40.0 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
   <!-- interface-css-provider-path styles.css -->
@@ -137,7 +137,7 @@
       <column type="gint"/>
       <!-- column-name id -->
       <column type="gchararray"/>
-      <!-- column-name Time (UTC) -->
+      <!-- column-name Time -->
       <column type="gchararray"/>
       <!-- column-name tx-count -->
       <column type="gint"/>
@@ -146,42 +146,35 @@
       <row>
         <col id="0">2000</col>
         <col id="1" translatable="yes">00000000000000093000dcc2e14c848b5a22ecbe0a3eef9e3290c7705c3d2b18</col>
-        <col id="2" translatable="yes">2023-05-05</col>
+        <col id="2" translatable="yes">00000000000000093000dcc2e14c848b5a22ecbe0a3eef9e3290c7705c3d2b18</col>
         <col id="3">20</col>
       </row>
     </data>
   </object>
-  <object class="GtkListStore" id="liststore-transactions">
+  <object class="GtkListStore" id="liststore_useless1">
     <columns>
-      <!-- column-name status -->
+      <!-- column-name gchararray1 -->
       <column type="gchararray"/>
-      <!-- column-name date -->
-      <column type="gchararray"/>
-      <!-- column-name type -->
-      <column type="gchararray"/>
-      <!-- column-name amount -->
-      <column type="gint"/>
     </columns>
     <data>
       <row>
-        <col id="0" translatable="yes">Confirmed</col>
-        <col id="1" translatable="yes">2023-01-01</col>
-        <col id="2" translatable="yes">P2PKH</col>
-        <col id="3">500</col>
+        <col id="0" translatable="yes">BTC</col>
       </row>
       <row>
-        <col id="0" translatable="yes">Pending</col>
-        <col id="1" translatable="yes">2022</col>
-        <col id="2" translatable="yes">P2PKH</col>
-        <col id="3">1000</col>
+        <col id="0" translatable="yes">mBTC</col>
       </row>
       <row>
-        <col id="0" translatable="yes">Confirmed</col>
-        <col id="1" translatable="yes">2022-01-06</col>
-        <col id="2" translatable="yes">P2PKH</col>
-        <col id="3">2000</col>
+        <col id="0" translatable="yes">uBTC (bits)</col>
+      </row>
+      <row>
+        <col id="0" translatable="yes">Satoshi (sat)</col>
       </row>
     </data>
+  </object>
+  <object class="GtkImage" id="user-image">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="pixbuf">../../../../../../Downloads/user_login.png</property>
   </object>
   <object class="GtkWindow" id="main-window">
     <property name="width-request">800</property>
@@ -645,7 +638,7 @@
                               <object class="GtkTreeView" id="tx_table">
                                 <property name="visible">True</property>
                                 <property name="can-focus">True</property>
-                                <property name="model">liststore-transactions</property>
+                                <property name="model">liststore-blocks</property>
                                 <property name="headers-clickable">False</property>
                                 <property name="show-expanders">False</property>
                                 <property name="enable-grid-lines">both</property>
@@ -662,9 +655,11 @@
                                     <property name="title" translatable="yes">status</property>
                                     <property name="expand">True</property>
                                     <child>
-                                      <object class="GtkCellRendererText"/>
+                                      <object class="GtkCellRendererText">
+                                        <property name="text">asdasdsad</property>
+                                      </object>
                                       <attributes>
-                                        <attribute name="text">0</attribute>
+                                        <attribute name="wrap-width">1</attribute>
                                       </attributes>
                                     </child>
                                   </object>
@@ -675,9 +670,6 @@
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">1</attribute>
-                                      </attributes>
                                     </child>
                                   </object>
                                 </child>
@@ -687,9 +679,6 @@
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">2</attribute>
-                                      </attributes>
                                     </child>
                                   </object>
                                 </child>
@@ -708,9 +697,6 @@
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
-                                      <attributes>
-                                        <attribute name="text">3</attribute>
-                                      </attributes>
                                     </child>
                                   </object>
                                 </child>
@@ -841,6 +827,7 @@
                                       <object class="GtkCellRendererText"/>
                                       <attributes>
                                         <attribute name="text">0</attribute>
+                                        <attribute name="wrap-width">1</attribute>
                                       </attributes>
                                     </child>
                                   </object>
@@ -850,7 +837,9 @@
                                     <property name="title" translatable="yes">id</property>
                                     <property name="expand">True</property>
                                     <child>
-                                      <object class="GtkCellRendererText"/>
+                                      <object class="GtkCellRendererText">
+                                        <property name="width">500</property>
+                                      </object>
                                       <attributes>
                                         <attribute name="text">1</attribute>
                                       </attributes>
@@ -898,6 +887,164 @@
                     <property name="position">3</property>
                   </packing>
                 </child>
+                <child>
+                  <object class="GtkFixed" id="headers">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                  </object>
+                  <packing>
+                    <property name="name">headers</property>
+                    <property name="title" translatable="yes">Headers</property>
+                    <property name="position">4</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkFixed" id="account">
+                    <property name="visible">True</property>
+                    <property name="can-focus">False</property>
+                    <child>
+                      <object class="GtkEntry" id="adress">
+                        <property name="width-request">500</property>
+                        <property name="height-request">34</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="placeholder-text" translatable="yes">enter a WIF address</property>
+                        <style>
+                          <class name="input-user"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">175</property>
+                        <property name="y">41</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry" id="private key ">
+                        <property name="width-request">500</property>
+                        <property name="height-request">34</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="placeholder-text" translatable="yes">enter a private key </property>
+                        <style>
+                          <class name="input-user"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">175</property>
+                        <property name="y">104</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="login">
+                        <property name="label" translatable="yes">Login</property>
+                        <property name="width-request">100</property>
+                        <property name="height-request">55</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="receives-default">True</property>
+                        <property name="image">user-image</property>
+                        <property name="always-show-image">True</property>
+                        <style>
+                          <class name="app-button"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">63</property>
+                        <property name="y">214</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel" id="adress-label">
+                        <property name="width-request">100</property>
+                        <property name="height-request">34</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Address : </property>
+                      </object>
+                      <packing>
+                        <property name="x">42</property>
+                        <property name="y">41</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkSeparator">
+                        <property name="width-request">700</property>
+                        <property name="height-request">180</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <style>
+                          <class name="separator"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">50</property>
+                        <property name="y">9</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel" id="private-key-label">
+                        <property name="width-request">100</property>
+                        <property name="height-request">34</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Private-key  :</property>
+                      </object>
+                      <packing>
+                        <property name="x">50</property>
+                        <property name="y">104</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel" id="User-selected">
+                        <property name="width-request">100</property>
+                        <property name="height-request">34</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">User selected : </property>
+                      </object>
+                      <packing>
+                        <property name="x">177</property>
+                        <property name="y">224</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkSeparator">
+                        <property name="width-request">700</property>
+                        <property name="height-request">80</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <style>
+                          <class name="separator"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">50</property>
+                        <property name="y">202</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel">
+                        <property name="width-request">100</property>
+                        <property name="height-request">80</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">None</property>
+                      </object>
+                      <packing>
+                        <property name="x">273</property>
+                        <property name="y">201</property>
+                      </packing>
+                    </child>
+                    <style>
+                      <class name="frames"/>
+                    </style>
+                  </object>
+                  <packing>
+                    <property name="name">account</property>
+                    <property name="title" translatable="yes">Account</property>
+                    <property name="position">5</property>
+                  </packing>
+                </child>
                 <style>
                   <class name="frames"/>
                 </style>
@@ -908,41 +1055,15 @@
             </child>
             <child>
               <object class="GtkStackSwitcher">
-                <property name="width-request">584</property>
+                <property name="width-request">473</property>
                 <property name="height-request">34</property>
                 <property name="visible">True</property>
                 <property name="can-focus">False</property>
-                <property name="homogeneous">True</property>
                 <property name="stack">stack1</property>
                 <style>
                   <class name="switcher"/>
                 </style>
               </object>
-            </child>
-            <child>
-              <object class="GtkExpander" id="account-expander">
-                <property name="width-request">100</property>
-                <property name="height-request">80</property>
-                <property name="visible">True</property>
-                <property name="can-focus">True</property>
-                <child>
-                  <placeholder/>
-                </child>
-                <child type="label">
-                  <object class="GtkLabel">
-                    <property name="visible">True</property>
-                    <property name="can-focus">False</property>
-                    <property name="label" translatable="yes">Account</property>
-                    <style>
-                      <class name="app-button"/>
-                    </style>
-                  </object>
-                </child>
-              </object>
-              <packing>
-                <property name="x">652</property>
-                <property name="y">9</property>
-              </packing>
             </child>
           </object>
           <packing>
