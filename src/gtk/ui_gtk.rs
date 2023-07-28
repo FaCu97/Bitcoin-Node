@@ -64,6 +64,8 @@ fn build_ui(
     let ref_to_buttons = buttons.clone();
     let entries = get_entries(&builder);
     let ref_to_entries = entries.clone();
+    let dropdown: gtk::ComboBoxText = builder.object("dropdown-menu").unwrap();
+    let ref_to_dropdown = dropdown.clone();
     // windows
     let initial_window: Window = builder.object("initial-window").unwrap();
     let main_window: Window = builder.object("main-window").unwrap();
@@ -158,18 +160,21 @@ fn build_ui(
                 account_loading_spinner.set_visible(false);
                 loading_account_label.set_visible(false);
                 enable_buttons_and_entries(&buttons, &entries);
+                dropdown.set_sensitive(true);
                 status_login.set_label(account.address.as_str());
                 status_login.set_visible(true);
                 show_dialog_message_pop_up(
                     format!("Account {} added to wallet!", account.address).as_str(),
                     "Account added succesfully",
                 );
+                dropdown.append_text(account.address.as_str());
                 accounts.borrow_mut().push(account);
             }
             UIEvent::AddAccountError(error) => {
                 account_loading_spinner.set_visible(false);
                 loading_account_label.set_visible(false);
                 enable_buttons_and_entries(&buttons, &entries);
+                dropdown.set_sensitive(true);
                 show_dialog_message_pop_up(error.as_str(), "Error trying to add account");
             }
             _ => (),
@@ -189,6 +194,7 @@ fn build_ui(
     let sender_to_login = sender_to_node.clone();
     login_button.connect_clicked(move |_| {
         disable_buttons_and_entries(&ref_to_buttons, &ref_to_entries);
+        ref_to_dropdown.set_sensitive(false);
         ref_account_spin.set_visible(true);
         ref_loading_account_label.set_visible(true);
 
@@ -247,6 +253,7 @@ fn get_buttons(builder: &Builder) -> Vec<gtk::Button> {
         builder.object("send-button").unwrap(),
         builder.object("search-tx-button").unwrap(),
         builder.object("search-blocks-button").unwrap(),
+        builder.object("search-header-button").unwrap(),
         builder.object("login-button").unwrap(),
     ];
     buttons
@@ -259,6 +266,7 @@ fn get_entries(builder: &Builder) -> Vec<gtk::Entry> {
         builder.object("fee").unwrap(),
         builder.object("search-tx").unwrap(),
         builder.object("search-block").unwrap(),
+        builder.object("search-block-headers").unwrap(),
         builder.object("address").unwrap(),
         builder.object("private-key").unwrap(),
     ];
