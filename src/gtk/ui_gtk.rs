@@ -7,9 +7,9 @@ use std::{
 };
 
 use crate::{
+    account::Account,
     blocks::{block::Block, block_header::BlockHeader},
     wallet_event::WalletEvent,
-    account::Account,
 };
 use gtk::{
     gdk,
@@ -220,6 +220,7 @@ fn build_ui(
         sender_to_finish.send(WalletEvent::Finish).unwrap();
         gtk::main_quit();
         Inhibit(false)
+    });
     let sender_to_change_account = sender_to_node.clone();
     ref2_to_dropdown.connect_changed(move |combobox| {
         // Obtener el texto de la opción seleccionada
