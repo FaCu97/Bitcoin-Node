@@ -39,11 +39,19 @@ impl Wallet {
     /// Devuelve error en caso de que algo falle.
     pub fn make_transaction(
         &self,
-        account_index: usize,
         address_receiver: &str,
         amount: i64,
         fee: i64,
     ) -> Result<(), Box<dyn Error>> {
+        let account_index = match self.current_account_index {
+            Some(index) => index,
+            None => {
+                return Err(Box::new(std::io::Error::new(
+                    io::ErrorKind::Other,
+                    "Error trying to make transaction. No account selected",
+                )));
+            }
+        };
         validate_transaction_data(self.accounts.clone(), account_index, amount, fee)?;
         let transaction_hash: [u8; 32] = self
             .accounts

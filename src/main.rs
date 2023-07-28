@@ -139,9 +139,9 @@ fn handle_ui_request(
                     send_event_to_ui(ui_sender, UIEvent::ChangeAccountError(err.to_string()));
                 }
             }
-            WalletEvent::MakeTransactionRequest(account_index, address, amount, fee) => {
+            WalletEvent::MakeTransactionRequest(address, amount, fee) => {
                 if wallet
-                    .make_transaction(account_index, &address, amount, fee)
+                    .make_transaction( &address, amount, fee)
                     .is_err()
                 {
                     println!("Error al crear la transaccion");
