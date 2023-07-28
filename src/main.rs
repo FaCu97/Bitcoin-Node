@@ -139,7 +139,14 @@ fn handle_ui_request(
             }
             WalletEvent::MakeTransaction(address, amount, fee) => {
                 if let Err(err) = wallet.make_transaction(&address, amount, fee) {
-                    send_event_to_ui(ui_sender, UIEvent::MakeTransactionError(err.to_string()));
+                    send_event_to_ui(ui_sender, UIEvent::MakeTransactionStatus(err.to_string()));
+                } else {
+                    send_event_to_ui(
+                        ui_sender,
+                        UIEvent::MakeTransactionStatus(
+                            "the transaction made succesfuly".to_string(),
+                        ),
+                    );
                 }
             }
             WalletEvent::PoiOfTransactionRequest(block_hash, transaction_hash) => {

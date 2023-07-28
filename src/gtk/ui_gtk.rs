@@ -86,6 +86,9 @@ fn build_ui(
     let fee_entry: gtk::Entry = builder.object("fee").unwrap();
     let amount_entry: gtk::Entry = builder.object("amount-entry").unwrap();
 
+    // overview tab elements
+    let available_label: gtk::Label = builder.object("available label").unwrap();
+
     // labels
     let message_header: gtk::Label = builder.object("message-header").unwrap();
     // initial window load elements
@@ -188,10 +191,11 @@ fn build_ui(
             }
             UIEvent::AccountChanged(account) => {
                 println!("Account changed to: {}", account.address);
+                available_label.set_label(format!("{}", account.balance()).as_str());
                 // TODO: Actualizar Overview --> Balance y recent transactions y pestana transactions
             }
-            UIEvent::MakeTransactionError(error) => {
-                show_dialog_message_pop_up(error.as_str(), "Error trying to make transaction");
+            UIEvent::MakeTransactionStatus(status) => {
+                show_dialog_message_pop_up(status.as_str(), "transaction's status");
             }
             _ => (),
         }

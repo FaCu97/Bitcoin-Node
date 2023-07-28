@@ -29,7 +29,7 @@ pub enum UIEvent {
     InitializeUITabs((Headers, Blocks)),
     ActualizeHeadersDownloaded(usize),
     ActualizeBlocksDownloaded(usize, usize),
-    MakeTransactionError(String),
+    MakeTransactionStatus(String),
     LoadingUtxoSet,
 }
 

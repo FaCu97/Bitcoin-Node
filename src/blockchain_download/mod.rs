@@ -60,7 +60,7 @@ pub fn initial_block_download(
     heights_hashmap.insert([0u8; 32], 0); // genesis hash
     let header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>> =
         Arc::new(RwLock::new(heights_hashmap));
-    
+
     get_initial_headers(
         config,
         log_sender,
@@ -73,7 +73,7 @@ pub fn initial_block_download(
         .read()
         .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
         .len();
-    /* 
+
     if config.ibd_single_node || amount_of_nodes < 2 {
         download_full_blockchain_from_single_node(
             config,
@@ -95,7 +95,7 @@ pub fn initial_block_download(
             header_heights.clone(),
         )?;
     }
-    */
+
     let (amount_of_headers, amount_of_blocks) =
         get_amount_of_headers_and_blocks(&pointer_to_headers, &pointer_to_blocks)?;
     write_in_log(
