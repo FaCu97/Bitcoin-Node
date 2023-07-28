@@ -29,6 +29,7 @@ pub enum UIEvent {
     InitializeUITabs((Headers, Blocks)),
     ActualizeHeadersDownloaded(usize),
     ActualizeBlocksDownloaded(usize, usize),
+    LoadingUtxoSet,
 }
 
 pub fn send_event_to_ui(ui_sender: &Option<glib::Sender<UIEvent>>, event: UIEvent) {

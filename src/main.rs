@@ -58,7 +58,7 @@ fn run_node(
     ui_sender: Option<glib::Sender<UIEvent>>,
     node_rx: Option<Receiver<WalletEvent>>,
 ) -> Result<(), NodeCustomErrors> {
-    //wait_for_start_button(&node_rx);
+    wait_for_start_button(&node_rx);
     send_event_to_ui(&ui_sender, UIEvent::StartHandshake);
     let config = Config::from(args)?;
     let (log_sender, log_sender_handles) = set_up_loggers(&config)?;
@@ -66,18 +66,16 @@ fn run_node(
     let pointer_to_nodes = handshake_with_nodes(&config, &log_sender, active_nodes)?;
     let (headers, blocks, headers_height) =
         initial_block_download(&config, &log_sender, &ui_sender, pointer_to_nodes.clone())?;
-    send_event_to_ui(
-        &ui_sender,
-        UIEvent::InitializeUITabs((headers.clone(), blocks.clone())),
-    );
+    send_event_to_ui(&ui_sender, UIEvent::LoadingUtxoSet);
     let mut node = Node::new(
         &log_sender,
         &ui_sender,
         pointer_to_nodes,
-        headers,
-        blocks,
+        headers.clone(),
+        blocks.clone(),
         headers_height,
     )?;
+    send_event_to_ui(&ui_sender, UIEvent::InitializeUITabs((headers, blocks)));
     let mut wallet = Wallet::new(node.clone())?;
     let server = NodeServer::new(&config, &log_sender, &ui_sender, &mut node)?;
     interact_with_user(&ui_sender, &mut wallet, node_rx);
