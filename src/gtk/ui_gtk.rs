@@ -66,6 +66,7 @@ fn build_ui(
     let ref_to_entries = entries.clone();
     let dropdown: gtk::ComboBoxText = builder.object("dropdown-menu").unwrap();
     let ref_to_dropdown = dropdown.clone();
+    let ref2_to_dropdown = dropdown.clone();
     // windows
     let initial_window: Window = builder.object("initial-window").unwrap();
     let main_window: Window = builder.object("main-window").unwrap();
@@ -74,6 +75,7 @@ fn build_ui(
     let address_entry: gtk::Entry = builder.object("address").unwrap();
     let private_key_entry: gtk::Entry = builder.object("private-key").unwrap();
     let status_login: gtk::Label = builder.object("status-login").unwrap();
+    let ref_to_status_login = status_login.clone();
     let account_loading_spinner: Spinner = builder.object("account-spin").unwrap();
     let loading_account_label: gtk::Label = builder.object("load-account").unwrap();
     let ref_to_loading_account_label = Rc::new(RefCell::new(loading_account_label.clone()));
@@ -161,8 +163,6 @@ fn build_ui(
                 loading_account_label.set_visible(false);
                 enable_buttons_and_entries(&buttons, &entries);
                 dropdown.set_sensitive(true);
-                status_login.set_label(account.address.as_str());
-                status_login.set_visible(true);
                 show_dialog_message_pop_up(
                     format!("Account {} added to wallet!", account.address).as_str(),
                     "Account added succesfully",
@@ -203,6 +203,15 @@ fn build_ui(
         sender_to_login
             .send(WalletEvent::AddAccountRequest(private_key, address))
             .unwrap();
+    });
+    ref2_to_dropdown.connect_changed(move |combobox| {
+        // Obtener el texto de la opción seleccionada
+        if let Some(selected_text) = combobox.active_text() {
+            if selected_text != ref_to_status_login.text() {
+                ref_to_status_login.set_label(selected_text.as_str());
+                ref_to_status_login.set_visible(true);
+            }
+        }
     });
     gtk::main();
 }
