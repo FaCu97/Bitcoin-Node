@@ -157,6 +157,11 @@ fn handle_ui_request(
                     println!("Error al crear la prueba de inclusion");
                 }
             }
+            WalletEvent::GetAccountRequest => {
+                if let Some(account) = wallet.get_current_account() {
+                    send_event_to_ui(ui_sender, UIEvent::AccountChanged(account));
+                }
+            }
             _ => (),
         }
     }
