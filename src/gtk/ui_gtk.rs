@@ -85,9 +85,17 @@ fn build_ui(
     let pay_to_entry: gtk::Entry = builder.object("pay to entry").unwrap();
     let fee_entry: gtk::Entry = builder.object("fee").unwrap();
     let amount_entry: gtk::Entry = builder.object("amount-entry").unwrap();
+    let send_balance: gtk::Label = builder.object("send-balance").unwrap();
+    
 
     // overview tab elements
     let available_label: gtk::Label = builder.object("available label").unwrap();
+    let ref_to_available_label = available_label.clone();
+    // cuando cambia uno, cambia el otro
+    ref_to_available_label.connect_notify_local(Some("label"), move |label, _| {
+        let new_text = label.text().to_string();
+        send_balance.set_label(new_text.as_str());
+    });
 
     // labels
     let message_header: gtk::Label = builder.object("message-header").unwrap();
@@ -220,6 +228,8 @@ fn build_ui(
 
         let address = String::from(address_entry.text());
         let private_key = String::from(private_key_entry.text());
+        address_entry.set_text("");
+        private_key_entry.set_text("");
         sender_to_login
             .send(WalletEvent::AddAccountRequest(private_key, address))
             .unwrap();
@@ -229,6 +239,9 @@ fn build_ui(
         let address_to_send = String::from(pay_to_entry.text());
         let amount = String::from(amount_entry.text());
         let fee: String = String::from(fee_entry.text());
+        pay_to_entry.set_text("");
+        amount_entry.set_text("");
+        fee_entry.set_text("");
         if let Some((valid_amount, valid_fee)) = validate_amount_and_fee(amount, fee) {
             sender_to_make_a_tx
                 .send(WalletEvent::MakeTransaction(

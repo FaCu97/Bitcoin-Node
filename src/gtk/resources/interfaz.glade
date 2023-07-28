@@ -370,7 +370,7 @@
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">BTC</property>
+                        <property name="label" translatable="yes">SAT</property>
                         <attributes>
                           <attribute name="font-desc" value="Sans 12"/>
                         </attributes>
@@ -384,7 +384,7 @@
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">BTC</property>
+                        <property name="label" translatable="yes">SAT</property>
                         <attributes>
                           <attribute name="font-desc" value="Sans 12"/>
                         </attributes>
@@ -398,7 +398,7 @@
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">BTC</property>
+                        <property name="label" translatable="yes">SAT</property>
                         <attributes>
                           <attribute name="font-desc" value="Sans 12"/>
                         </attributes>
@@ -412,7 +412,7 @@
                       <object class="GtkLabel">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">BTC</property>
+                        <property name="label" translatable="yes">SAT</property>
                         <attributes>
                           <attribute name="font-desc" value="Sans 12"/>
                         </attributes>
@@ -541,7 +541,7 @@
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
-                        <property name="placeholder-text" translatable="yes">0.00000000</property>
+                        <property name="placeholder-text" translatable="yes">0.00000000 Satoshis</property>
                         <style>
                           <class name="input-user"/>
                         </style>
@@ -569,7 +569,7 @@
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
-                        <property name="placeholder-text" translatable="yes">0.0000000</property>
+                        <property name="placeholder-text" translatable="yes">0.0000000 Satoshis</property>
                         <style>
                           <class name="input-user"/>
                         </style>
@@ -590,6 +590,54 @@
                       <packing>
                         <property name="x">262</property>
                         <property name="y">54</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel">
+                        <property name="width-request">100</property>
+                        <property name="height-request">80</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">Balance: </property>
+                        <style>
+                          <class name="send-balance"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">520</property>
+                        <property name="y">413</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel" id="send-balance">
+                        <property name="width-request">100</property>
+                        <property name="height-request">80</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">0.00000000</property>
+                        <style>
+                          <class name="send-balance"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">630</property>
+                        <property name="y">413</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel">
+                        <property name="width-request">100</property>
+                        <property name="height-request">80</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">SAT</property>
+                        <style>
+                          <class name="send-balance"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">700</property>
+                        <property name="y">413</property>
                       </packing>
                     </child>
                     <child>
