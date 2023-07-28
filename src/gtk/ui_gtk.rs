@@ -90,8 +90,9 @@ fn build_ui(
     let spinner: Spinner = builder.object("header-spin").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
-    initial_window.show();
-    //main_window.show();
+    //initial_window.show();
+    main_window.show();
+    let ref_main_window = main_window.clone();
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
 
@@ -214,6 +215,11 @@ fn build_ui(
             .send(WalletEvent::AddAccountRequest(private_key, address))
             .unwrap();
     });
+    let sender_to_finish = sender_to_node.clone();
+    ref_main_window.connect_delete_event(move |_, _| {
+        sender_to_finish.send(WalletEvent::Finish).unwrap();
+        gtk::main_quit();
+        Inhibit(false)
     let sender_to_change_account = sender_to_node.clone();
     ref2_to_dropdown.connect_changed(move |combobox| {
         // Obtener el texto de la opción seleccionada
