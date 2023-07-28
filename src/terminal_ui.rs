@@ -25,7 +25,7 @@ pub fn terminal_ui(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Walle
                             handle_balance_request(wallet);
                         }
                         3 => {
-                            handle_transaccion_request(wallet);
+                            handle_transaccion_request(ui_sender, wallet);
                         }
                         4 => {
                             handle_poi_request(wallet);
@@ -60,7 +60,7 @@ fn show_options() {
 
 /// Le pide al usuario que ingrese por terminal los datos necesarios para hacer una transaccion
 /// e intenta hacer una transaccion. En caso de error imprime por la terminal el error
-fn handle_transaccion_request(wallet: &mut Wallet) {
+fn handle_transaccion_request(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wallet) {
     if wallet.show_indexes_of_accounts().is_err() {
         return;
     }
@@ -69,6 +69,9 @@ fn handle_transaccion_request(wallet: &mut Wallet) {
         println!("Error al leer la entrada: {}", err);
         0
     });
+    wallet
+        .change_account(ui_sender, account_index)
+        .unwrap_or_else(|err| println!("Error al cambiar de cuenta: {}", err));
     let address_receiver: String = read_input("Dirección del receptor: ").unwrap_or_else(|err| {
         println!("Error al leer la entrada: {}", err);
         String::new()
@@ -82,7 +85,7 @@ fn handle_transaccion_request(wallet: &mut Wallet) {
         0
     });
     println!("Realizando y broadcasteando transaccion...");
-    if let Err(error) = wallet.make_transaction(account_index, &address_receiver, amount, fee) {
+    if let Err(error) = wallet.make_transaction(&address_receiver, amount, fee) {
         println!("Error al realizar la transacción: {}", error);
     } else {
         println!("TRANSACCION REALIZADA CORRECTAMENTE!");

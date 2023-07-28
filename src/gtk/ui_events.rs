@@ -22,6 +22,8 @@ pub enum UIEvent {
     ShowConfirmedTransaction(Block, Account, Transaction),
     AccountAddedSuccesfully(Account),
     AddAccountError(String),
+    AccountChanged(Account),
+    ChangeAccountError(String),
     ShowPendingTransaction(Account, Transaction),
     AddBlock(Block),
     InitializeUITabs((Headers, Blocks)),
