@@ -66,7 +66,10 @@ fn run_node(
     let pointer_to_nodes = handshake_with_nodes(&config, &log_sender, active_nodes)?;
     let (headers, blocks, headers_height) =
         initial_block_download(&config, &log_sender, &ui_sender, pointer_to_nodes.clone())?;
-    send_event_to_ui(&ui_sender, UIEvent::InitializeUITabs(blocks.clone()));
+    send_event_to_ui(
+        &ui_sender,
+        UIEvent::InitializeUITabs((headers.clone(), blocks.clone())),
+    );
     let mut node = Node::new(
         &log_sender,
         &ui_sender,
