@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc, sync::mpsc::Sender, time::Duration};
 
-use crate::wallet_event::WalletEvent;
+use crate::{wallet_event::WalletEvent, account::Account};
 use gtk::{
     gdk,
     glib::{self, Priority},
@@ -44,6 +44,8 @@ fn build_ui(
         &css_provider,
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
+    // accounts
+    let accounts: Rc<RefCell<Vec<Account>>> = Rc::new(RefCell::new(Vec::new()));
     // buttons and entries
     let buttons = get_buttons(&builder);
     let ref_to_buttons = buttons.clone();
@@ -162,6 +164,7 @@ fn build_ui(
                     format!("Account {} added to wallet!", account.address).as_str(),
                     "Account added succesfully",
                 );
+                accounts.borrow_mut().push(account);
             }
             UIEvent::AddAccountError(error) => {
                 account_loading_spinner.set_visible(false);
