@@ -83,8 +83,8 @@ fn build_ui(
     let spinner: Spinner = builder.object("header-spin").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
-    //initial_window.show();
-    main_window.show();
+    initial_window.show();
+    //main_window.show();
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
 
@@ -131,12 +131,15 @@ fn build_ui(
                 message_header
                     .set_label(format!("Headers downloaded: {}", headers_downloaded).as_str());
             }
+            UIEvent::LoadingUtxoSet => {
+                spinner.set_visible(true);
+                message_header.set_label("Loading utxo set...");
+            }
             UIEvent::InitializeUITabs((headers, blocks)) => {
-                initialize_headers_tab(&liststore_headers, &headers);
-                initialize_blocks_tab(&liststore_blocks, &blocks);
-
                 initial_window.close();
                 main_window.show();
+                initialize_headers_tab(&liststore_headers, &headers);
+                initialize_blocks_tab(&liststore_blocks, &blocks);
             }
             UIEvent::StartDownloadingHeaders => {
                 message_header.set_visible(true);
