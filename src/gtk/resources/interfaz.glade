@@ -1188,7 +1188,6 @@
                         <property name="tooltip_text" translatable="yes">Select an Account</property>
                         <property name="entry-text-column">0</property>
                         <items>
-                            <item translatable="yes">    Select an account    </item> <!-- Placeholder item -->
                         </items>
                       </object>
                       <packing>

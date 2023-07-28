@@ -204,12 +204,18 @@ fn build_ui(
             .send(WalletEvent::AddAccountRequest(private_key, address))
             .unwrap();
     });
+    let sender_to_change_account = sender_to_node.clone();
     ref2_to_dropdown.connect_changed(move |combobox| {
         // Obtener el texto de la opción seleccionada
         if let Some(selected_text) = combobox.active_text() {
             if selected_text != ref_to_status_login.text() {
                 ref_to_status_login.set_label(selected_text.as_str());
                 ref_to_status_login.set_visible(true);
+                if let Some(new_index) = combobox.active() {
+                    sender_to_change_account
+                        .send(WalletEvent::ChangeAccount(new_index as usize))
+                        .unwrap();
+                }
             }
         }
     });

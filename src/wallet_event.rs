@@ -11,4 +11,5 @@ pub enum WalletEvent {
     AddAccountRequest(WifPrivateKey, Address),
     MakeTransactionRequest(AccountIndex, Address, Amount, Fee),
     PoiOfTransactionRequest(BlockHash, TransactionHash),
+    ChangeAccount(AccountIndex),
 }

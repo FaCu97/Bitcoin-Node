@@ -18,7 +18,7 @@ use crate::{
 
 pub struct Wallet {
     pub node: Node,
-    pub current_account_index: usize,
+    pub current_account_index: Option<usize>,
     pub accounts: Arc<RwLock<Vec<Account>>>,
 }
 
@@ -27,7 +27,7 @@ impl Wallet {
     pub fn new(node: Node) -> Result<Self, NodeCustomErrors> {
         let mut wallet = Wallet {
             node,
-            current_account_index: 0,
+            current_account_index: None,
             accounts: Arc::new(RwLock::new(Vec::new())),
         };
         wallet.node.set_accounts(wallet.accounts.clone())?;
@@ -105,6 +105,28 @@ impl Wallet {
                 account.balance() as f64 / 1e8
             );
         }
+        Ok(())
+    }
+
+    pub fn change_account(&mut self, ui_sender: &Option<glib::Sender<UIEvent>>, index_of_new_account: usize) -> Result<(), Box<dyn Error>> {
+        if index_of_new_account >= self
+            .accounts
+            .read()
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+            .len()
+        {
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                "Error trying to change account. Index out of bounds",
+            )));
+        }
+        self.current_account_index = Some(index_of_new_account);
+        let new_account = self
+            .accounts
+            .read()
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index_of_new_account].clone();
+        println!("Account changed to: {}. New index is {}", new_account.address, index_of_new_account);
+        send_event_to_ui(ui_sender, UIEvent::AccountChanged(new_account));
         Ok(())
     }
 
