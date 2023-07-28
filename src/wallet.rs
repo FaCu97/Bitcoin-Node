@@ -193,6 +193,20 @@ impl Wallet {
         };
         Ok(make_merkle_proof(&hashes, &tx_hash))
     }
+
+    /// Devuelve la cuenta actual de la wallet
+    pub fn get_current_account(&self) -> Option<Account> {
+        if let Some(index) = self.current_account_index {
+            return Some(
+                self.accounts
+                    .read()
+                    .map_err(|err| NodeCustomErrors::LockError(err.to_string()))
+                    .unwrap()[index]
+                    .clone(),
+            );
+        }
+        None
+    }
 }
 
 fn validate_transaction_data(amount: i64, fee: i64) -> Result<(), Box<dyn Error>> {

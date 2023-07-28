@@ -101,6 +101,7 @@ fn build_ui(
     //main_window.show();
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
+    let sender_to_get_account = sender_to_node.clone();
 
     /*
         for i in 0..50 {
@@ -191,11 +192,27 @@ fn build_ui(
             }
             UIEvent::AccountChanged(account) => {
                 println!("Account changed to: {}", account.address);
-                available_label.set_label(format!("{}", account.balance()).as_str());
+                update_overview(&account, &available_label);
                 // TODO: Actualizar Overview --> Balance y recent transactions y pestana transactions
             }
             UIEvent::MakeTransactionStatus(status) => {
                 show_dialog_message_pop_up(status.as_str(), "transaction's status");
+            }
+
+            UIEvent::AddBlock(block) => {
+                let row = liststore_blocks.append();
+                liststore_blocks.set(
+                    &row,
+                    &[
+                        (0, &0.to_value()),
+                        (1, &block.hex_hash()),
+                        (2, &block.utc_time()),
+                        (3, &block.txn_count.decoded_value().to_value()),
+                    ],
+                );
+                sender_to_get_account
+                    .send(WalletEvent::GetAccountRequest)
+                    .unwrap();
             }
             _ => (),
         }
@@ -255,6 +272,11 @@ fn build_ui(
         }
     });
     gtk::main();
+}
+
+/// Actualiza el balance de la cuenta en la pestaña de overview
+fn update_overview(account: &Account, available_label: &gtk::Label) {
+    available_label.set_label(format!("{}", account.balance()).as_str());
 }
 
 /// Initializa la pestaña de bloques

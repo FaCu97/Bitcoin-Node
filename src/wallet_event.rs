@@ -12,4 +12,5 @@ pub enum WalletEvent {
     MakeTransaction(Address, Amount, Fee),
     PoiOfTransactionRequest(BlockHash, TransactionHash),
     ChangeAccount(AccountIndex),
+    GetAccountRequest,
 }
