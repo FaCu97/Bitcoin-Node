@@ -34,8 +34,8 @@ impl Wallet {
         Ok(wallet)
     }
 
-    /// Realiza una transacción y hace el broadcast.
-    /// Recibe la cuenta que envía, la address receptora, monto y fee.
+    /// Realiza una transacción con la cuenta actual de la wallet y hace el broadcast.
+    /// Recibe la address receptora, monto y fee.
     /// Devuelve error en caso de que algo falle.
     pub fn make_transaction(
         &self,
@@ -116,6 +116,7 @@ impl Wallet {
         Ok(())
     }
 
+    /// Cambia el indice de la cuenta actual de la wallet. Si se le pasa un indice fuera de rango devuelve error.
     pub fn change_account(&mut self, ui_sender: &Option<glib::Sender<UIEvent>>, index_of_new_account: usize) -> Result<(), Box<dyn Error>> {
         if index_of_new_account >= self
             .accounts
@@ -133,7 +134,6 @@ impl Wallet {
             .accounts
             .read()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index_of_new_account].clone();
-        println!("Account changed to: {}. New index is {}", new_account.address, index_of_new_account);
         send_event_to_ui(ui_sender, UIEvent::AccountChanged(new_account));
         Ok(())
     }
