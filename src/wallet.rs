@@ -18,7 +18,7 @@ use crate::{
 
 pub struct Wallet {
     pub node: Node,
-    pub current_account_index: usize,
+    pub current_account_index: Option<usize>,
     pub accounts: Arc<RwLock<Vec<Account>>>,
 }
 
@@ -27,23 +27,31 @@ impl Wallet {
     pub fn new(node: Node) -> Result<Self, NodeCustomErrors> {
         let mut wallet = Wallet {
             node,
-            current_account_index: 0,
+            current_account_index: None,
             accounts: Arc::new(RwLock::new(Vec::new())),
         };
         wallet.node.set_accounts(wallet.accounts.clone())?;
         Ok(wallet)
     }
 
-    /// Realiza una transacción y hace el broadcast.
-    /// Recibe la cuenta que envía, la address receptora, monto y fee.
+    /// Realiza una transacción con la cuenta actual de la wallet y hace el broadcast.
+    /// Recibe la address receptora, monto y fee.
     /// Devuelve error en caso de que algo falle.
     pub fn make_transaction(
         &self,
-        account_index: usize,
         address_receiver: &str,
         amount: i64,
         fee: i64,
     ) -> Result<(), Box<dyn Error>> {
+        let account_index = match self.current_account_index {
+            Some(index) => index,
+            None => {
+                return Err(Box::new(std::io::Error::new(
+                    io::ErrorKind::Other,
+                    "Error trying to make transaction. No account selected",
+                )));
+            }
+        };
         validate_transaction_data(self.accounts.clone(), account_index, amount, fee)?;
         let transaction_hash: [u8; 32] = self
             .accounts
@@ -105,6 +113,28 @@ impl Wallet {
                 account.balance() as f64 / 1e8
             );
         }
+        Ok(())
+    }
+
+    /// Cambia el indice de la cuenta actual de la wallet. Si se le pasa un indice fuera de rango devuelve error.
+    pub fn change_account(&mut self, ui_sender: &Option<glib::Sender<UIEvent>>, index_of_new_account: usize) -> Result<(), Box<dyn Error>> {
+        if index_of_new_account >= self
+            .accounts
+            .read()
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+            .len()
+        {
+            return Err(Box::new(std::io::Error::new(
+                io::ErrorKind::Other,
+                "Error trying to change account. Index out of bounds",
+            )));
+        }
+        self.current_account_index = Some(index_of_new_account);
+        let new_account = self
+            .accounts
+            .read()
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index_of_new_account].clone();
+        send_event_to_ui(ui_sender, UIEvent::AccountChanged(new_account));
         Ok(())
     }
 

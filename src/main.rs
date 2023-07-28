@@ -132,9 +132,14 @@ fn handle_ui_request(
                     send_event_to_ui(ui_sender, UIEvent::AddAccountError(err));
                 }
             }
-            WalletEvent::MakeTransactionRequest(account_index, address, amount, fee) => {
+            WalletEvent::ChangeAccount(account_index) => {
+                if let Err(err) = wallet.change_account(ui_sender, account_index) {
+                    send_event_to_ui(ui_sender, UIEvent::ChangeAccountError(err.to_string()));
+                }
+            }
+            WalletEvent::MakeTransactionRequest(address, amount, fee) => {
                 if wallet
-                    .make_transaction(account_index, &address, amount, fee)
+                    .make_transaction( &address, amount, fee)
                     .is_err()
                 {
                     println!("Error al crear la transaccion");

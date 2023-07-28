@@ -9,6 +9,7 @@ use std::{
 use crate::{
     blocks::{block::Block, block_header::BlockHeader},
     wallet_event::WalletEvent,
+    account::Account,
 };
 use gtk::{
     gdk,
@@ -56,11 +57,16 @@ fn build_ui(
         &css_provider,
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
+    // accounts
+    let accounts: Rc<RefCell<Vec<Account>>> = Rc::new(RefCell::new(Vec::new()));
     // buttons and entries
     let buttons = get_buttons(&builder);
     let ref_to_buttons = buttons.clone();
     let entries = get_entries(&builder);
     let ref_to_entries = entries.clone();
+    let dropdown: gtk::ComboBoxText = builder.object("dropdown-menu").unwrap();
+    let ref_to_dropdown = dropdown.clone();
+    let ref2_to_dropdown = dropdown.clone();
     // windows
     let initial_window: Window = builder.object("initial-window").unwrap();
     let main_window: Window = builder.object("main-window").unwrap();
@@ -69,6 +75,7 @@ fn build_ui(
     let address_entry: gtk::Entry = builder.object("address").unwrap();
     let private_key_entry: gtk::Entry = builder.object("private-key").unwrap();
     let status_login: gtk::Label = builder.object("status-login").unwrap();
+    let ref_to_status_login = status_login.clone();
     let account_loading_spinner: Spinner = builder.object("account-spin").unwrap();
     let loading_account_label: gtk::Label = builder.object("load-account").unwrap();
     let ref_to_loading_account_label = Rc::new(RefCell::new(loading_account_label.clone()));
@@ -159,18 +166,27 @@ fn build_ui(
                 account_loading_spinner.set_visible(false);
                 loading_account_label.set_visible(false);
                 enable_buttons_and_entries(&buttons, &entries);
-                status_login.set_label(account.address.as_str());
-                status_login.set_visible(true);
+                dropdown.set_sensitive(true);
                 show_dialog_message_pop_up(
                     format!("Account {} added to wallet!", account.address).as_str(),
                     "Account added succesfully",
                 );
+                dropdown.append_text(account.address.as_str());
+                accounts.borrow_mut().push(account);
             }
             UIEvent::AddAccountError(error) => {
                 account_loading_spinner.set_visible(false);
                 loading_account_label.set_visible(false);
                 enable_buttons_and_entries(&buttons, &entries);
+                dropdown.set_sensitive(true);
                 show_dialog_message_pop_up(error.as_str(), "Error trying to add account");
+            }
+            UIEvent::ChangeAccountError(error) => {
+                show_dialog_message_pop_up(error.as_str(), "Error trying to change account");
+            }
+            UIEvent::AccountChanged(account) => {
+                println!("Account changed to: {}", account.address);
+                // TODO: Actualizar Overview --> Balance y recent transactions y pestana transactions
             }
             _ => (),
         }
@@ -189,6 +205,7 @@ fn build_ui(
     let sender_to_login = sender_to_node.clone();
     login_button.connect_clicked(move |_| {
         disable_buttons_and_entries(&ref_to_buttons, &ref_to_entries);
+        ref_to_dropdown.set_sensitive(false);
         ref_account_spin.set_visible(true);
         ref_loading_account_label.set_visible(true);
 
@@ -203,6 +220,20 @@ fn build_ui(
         sender_to_finish.send(WalletEvent::Finish).unwrap();
         gtk::main_quit();
         Inhibit(false)
+    let sender_to_change_account = sender_to_node.clone();
+    ref2_to_dropdown.connect_changed(move |combobox| {
+        // Obtener el texto de la opción seleccionada
+        if let Some(selected_text) = combobox.active_text() {
+            if selected_text != ref_to_status_login.text() {
+                ref_to_status_login.set_label(selected_text.as_str());
+                ref_to_status_login.set_visible(true);
+                if let Some(new_index) = combobox.active() {
+                    sender_to_change_account
+                        .send(WalletEvent::ChangeAccount(new_index as usize))
+                        .unwrap();
+                }
+            }
+        }
     });
     gtk::main();
 }
@@ -253,6 +284,7 @@ fn get_buttons(builder: &Builder) -> Vec<gtk::Button> {
         builder.object("send-button").unwrap(),
         builder.object("search-tx-button").unwrap(),
         builder.object("search-blocks-button").unwrap(),
+        builder.object("search-header-button").unwrap(),
         builder.object("login-button").unwrap(),
     ];
     buttons
@@ -265,6 +297,7 @@ fn get_entries(builder: &Builder) -> Vec<gtk::Entry> {
         builder.object("fee").unwrap(),
         builder.object("search-tx").unwrap(),
         builder.object("search-block").unwrap(),
+        builder.object("search-block-headers").unwrap(),
         builder.object("address").unwrap(),
         builder.object("private-key").unwrap(),
     ];
