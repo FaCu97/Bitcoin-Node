@@ -1188,7 +1188,7 @@
                         <property name="tooltip_text" translatable="yes">Select an Account</property>
                         <property name="entry-text-column">0</property>
                         <items>
-                          <item translatable="yes">Select an account</item> <!-- Elemento vacío para el placeholder -->
+                            <item translatable="yes">    Select an account    </item> <!-- Placeholder item -->
                         </items>
                       </object>
                       <packing>
@@ -1202,7 +1202,7 @@
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">Change account: </property>
+                        <property name="label" translatable="yes">Select account: </property>
                         <style>
                           <class name="change-account-label"/>
                         </style>
