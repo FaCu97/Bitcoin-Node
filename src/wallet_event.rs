@@ -9,7 +9,7 @@ type TransactionHash = String;
 pub enum WalletEvent {
     Start,
     AddAccountRequest(WifPrivateKey, Address),
-    MakeTransactionRequest(Address, Amount, Fee),
+    MakeTransaction(Address, Amount, Fee),
     PoiOfTransactionRequest(BlockHash, TransactionHash),
     ChangeAccount(AccountIndex),
 }

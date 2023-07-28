@@ -52,7 +52,7 @@ impl Wallet {
                 )));
             }
         };
-        validate_transaction_data(self.accounts.clone(), account_index, amount, fee)?;
+        validate_transaction_data(amount, fee)?;
         let transaction_hash: [u8; 32] = self
             .accounts
             .write()
@@ -117,12 +117,17 @@ impl Wallet {
     }
 
     /// Cambia el indice de la cuenta actual de la wallet. Si se le pasa un indice fuera de rango devuelve error.
-    pub fn change_account(&mut self, ui_sender: &Option<glib::Sender<UIEvent>>, index_of_new_account: usize) -> Result<(), Box<dyn Error>> {
-        if index_of_new_account >= self
-            .accounts
-            .read()
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-            .len()
+    pub fn change_account(
+        &mut self,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
+        index_of_new_account: usize,
+    ) -> Result<(), Box<dyn Error>> {
+        if index_of_new_account
+            >= self
+                .accounts
+                .read()
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+                .len()
         {
             return Err(Box::new(std::io::Error::new(
                 io::ErrorKind::Other,
@@ -133,7 +138,8 @@ impl Wallet {
         let new_account = self
             .accounts
             .read()
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index_of_new_account].clone();
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[index_of_new_account]
+            .clone();
         send_event_to_ui(ui_sender, UIEvent::AccountChanged(new_account));
         Ok(())
     }
@@ -189,23 +195,7 @@ impl Wallet {
     }
 }
 
-fn validate_transaction_data(
-    accounts: Arc<RwLock<Vec<Account>>>,
-    account_index: usize,
-    amount: i64,
-    fee: i64,
-) -> Result<(), Box<dyn Error>> {
-    let accounts_len = accounts
-        .read()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .len();
-    if accounts_len < account_index {
-        return Err(Box::new(std::io::Error::new(
-            io::ErrorKind::Other,
-            "El indice ingresado es incorrecto.",
-        )));
-    }
-
+fn validate_transaction_data(amount: i64, fee: i64) -> Result<(), Box<dyn Error>> {
     if (amount + fee) <= 0 {
         return Err(Box::new(std::io::Error::new(
             io::ErrorKind::Other,

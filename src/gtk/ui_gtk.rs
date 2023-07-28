@@ -7,9 +7,9 @@ use std::{
 };
 
 use crate::{
+    account::Account,
     blocks::{block::Block, block_header::BlockHeader},
     wallet_event::WalletEvent,
-    account::Account,
 };
 use gtk::{
     gdk,
@@ -57,16 +57,11 @@ fn build_ui(
         &css_provider,
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
-    // accounts
-    let accounts: Rc<RefCell<Vec<Account>>> = Rc::new(RefCell::new(Vec::new()));
     // buttons and entries
     let buttons = get_buttons(&builder);
     let ref_to_buttons = buttons.clone();
     let entries = get_entries(&builder);
     let ref_to_entries = entries.clone();
-    let dropdown: gtk::ComboBoxText = builder.object("dropdown-menu").unwrap();
-    let ref_to_dropdown = dropdown.clone();
-    let ref2_to_dropdown = dropdown.clone();
     // windows
     let initial_window: Window = builder.object("initial-window").unwrap();
     let main_window: Window = builder.object("main-window").unwrap();
@@ -79,9 +74,18 @@ fn build_ui(
     let account_loading_spinner: Spinner = builder.object("account-spin").unwrap();
     let loading_account_label: gtk::Label = builder.object("load-account").unwrap();
     let ref_to_loading_account_label = Rc::new(RefCell::new(loading_account_label.clone()));
-
     let ref_account_spin = account_loading_spinner.clone();
     let ref_loading_account_label = loading_account_label.clone();
+    let dropdown: gtk::ComboBoxText = builder.object("dropdown-menu").unwrap();
+    let ref_to_dropdown = dropdown.clone();
+    let ref2_to_dropdown = dropdown.clone();
+
+    // send tab elements
+    let send_button: gtk::Button = builder.object("send-button").unwrap();
+    let pay_to_entry: gtk::Entry = builder.object("pay to entry").unwrap();
+    let fee_entry: gtk::Entry = builder.object("fee").unwrap();
+    let amount_entry: gtk::Entry = builder.object("amount-entry").unwrap();
+
     // labels
     let message_header: gtk::Label = builder.object("message-header").unwrap();
     // initial window load elements
@@ -171,7 +175,6 @@ fn build_ui(
                     "Account added succesfully",
                 );
                 dropdown.append_text(account.address.as_str());
-                accounts.borrow_mut().push(account);
             }
             UIEvent::AddAccountError(error) => {
                 account_loading_spinner.set_visible(false);
@@ -186,6 +189,9 @@ fn build_ui(
             UIEvent::AccountChanged(account) => {
                 println!("Account changed to: {}", account.address);
                 // TODO: Actualizar Overview --> Balance y recent transactions y pestana transactions
+            }
+            UIEvent::MakeTransactionError(error) => {
+                show_dialog_message_pop_up(error.as_str(), "Error trying to make transaction");
             }
             _ => (),
         }
@@ -213,6 +219,21 @@ fn build_ui(
         sender_to_login
             .send(WalletEvent::AddAccountRequest(private_key, address))
             .unwrap();
+    });
+    let sender_to_make_a_tx = sender_to_node.clone();
+    send_button.connect_clicked(move |_| {
+        let address_to_send = String::from(pay_to_entry.text());
+        let amount = String::from(amount_entry.text());
+        let fee: String = String::from(fee_entry.text());
+        if let Some((valid_amount, valid_fee)) = validate_amount_and_fee(amount, fee) {
+            sender_to_make_a_tx
+                .send(WalletEvent::MakeTransaction(
+                    address_to_send,
+                    valid_amount,
+                    valid_fee,
+                ))
+                .unwrap();
+        }
     });
     let sender_to_change_account = sender_to_node.clone();
     ref2_to_dropdown.connect_changed(move |combobox| {
@@ -349,6 +370,30 @@ fn show_dialog_message_pop_up(message: &str, title: &str) {
     dialog.close();
 }
 
+fn validate_amount_and_fee(amount: String, fee: String) -> Option<(i64, i64)> {
+    let valid_amount = match amount.parse::<i64>() {
+        Ok(amount) => amount,
+        Err(_) => {
+            show_dialog_message_pop_up(
+                "Error, please enter a valid amount of Satoshis",
+                "Failed to make transaction",
+            );
+            return None;
+        }
+    };
+    let valid_fee = match fee.parse::<i64>() {
+        Ok(fee) => fee,
+        Err(_) => {
+            show_dialog_message_pop_up(
+                "Error, please enter a valid fee of Satoshis",
+                "Failed to make transaction",
+            );
+            return None;
+        }
+    };
+
+    Some((valid_amount, valid_fee))
+}
 /*
 
 pub struct UIContainer {

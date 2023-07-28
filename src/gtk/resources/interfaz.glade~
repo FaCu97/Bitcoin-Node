@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.40.0 -->
+<!-- Generated with glade 3.38.2 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
   <!-- interface-css-provider-path styles.css -->
@@ -208,7 +208,7 @@
   <object class="GtkImage" id="user-image">
     <property name="visible">True</property>
     <property name="can-focus">False</property>
-    <property name="pixbuf">src/gtk/resources/user_login.png</property>
+    <property name="pixbuf">../../../../../../Downloads/user_login.png</property>
   </object>
   <object class="GtkWindow" id="main-window">
     <property name="width-request">800</property>
@@ -1184,9 +1184,11 @@
                     <child>
                       <object class="GtkComboBoxText" id="dropdown-menu">
                         <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="tooltip-text" translatable="yes">Select an Account</property>
                         <property name="hexpand">True</property>
+                        <property name="tooltip_text" translatable="yes">Select an Account</property>
+                        <property name="entry-text-column">0</property>
+                        <items>
+                        </items>
                       </object>
                       <packing>
                         <property name="x">320</property>
