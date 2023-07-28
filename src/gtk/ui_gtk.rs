@@ -18,6 +18,10 @@ use gtk::{
     Application, Builder, CssProvider, ProgressBar, Spinner, StyleContext, Window,
 };
 
+use super::functions::{
+    self, get_buttons, get_entries, login_button_clicked, render_progress_bar, send_button_clicked,
+    start_button_clicked,
+};
 use super::ui_events::UIEvent;
 
 type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
@@ -59,25 +63,18 @@ fn build_ui(
     );
     // buttons and entries
     let buttons = get_buttons(&builder);
-    let ref_to_buttons = buttons.clone();
     let entries = get_entries(&builder);
-    let ref_to_entries = entries.clone();
     // windows
     let initial_window: Window = builder.object("initial-window").unwrap();
     let main_window: Window = builder.object("main-window").unwrap();
     // login elements
-    let login_button: gtk::Button = builder.object("login-button").unwrap();
-    let address_entry: gtk::Entry = builder.object("address").unwrap();
-    let private_key_entry: gtk::Entry = builder.object("private-key").unwrap();
+
     let status_login: gtk::Label = builder.object("status-login").unwrap();
     let ref_to_status_login = status_login.clone();
     let account_loading_spinner: Spinner = builder.object("account-spin").unwrap();
     let loading_account_label: gtk::Label = builder.object("load-account").unwrap();
     let ref_to_loading_account_label = Rc::new(RefCell::new(loading_account_label.clone()));
-    let ref_account_spin = account_loading_spinner.clone();
-    let ref_loading_account_label = loading_account_label.clone();
     let dropdown: gtk::ComboBoxText = builder.object("dropdown-menu").unwrap();
-    let ref_to_dropdown = dropdown.clone();
     let ref2_to_dropdown = dropdown.clone();
 
     // send tab elements
@@ -86,7 +83,6 @@ fn build_ui(
     let fee_entry: gtk::Entry = builder.object("fee").unwrap();
     let amount_entry: gtk::Entry = builder.object("amount-entry").unwrap();
     let send_balance: gtk::Label = builder.object("send-balance").unwrap();
-    
 
     // overview tab elements
     let available_label: gtk::Label = builder.object("available label").unwrap();
@@ -100,7 +96,6 @@ fn build_ui(
     // labels
     let message_header: gtk::Label = builder.object("message-header").unwrap();
     // initial window load elements
-    let start_button: gtk::Button = builder.object("start-button").unwrap();
     let progress_bar: ProgressBar = builder.object("block-bar").unwrap();
     let spinner: Spinner = builder.object("header-spin").unwrap();
     let (tx, rx) = glib::MainContext::channel(Priority::default());
@@ -135,17 +130,11 @@ fn build_ui(
             ],
         );
     */
+    let ref_to_builder = builder.clone();
     rx.attach(None, move |msg| {
         match msg {
             UIEvent::ActualizeBlocksDownloaded(blocks_downloaded, blocks_to_download) => {
-                progress_bar.set_fraction(blocks_downloaded as f64 / blocks_to_download as f64);
-                progress_bar.set_text(Some(
-                    format!(
-                        "Blocks downloaded: {}/{}",
-                        blocks_downloaded, blocks_to_download
-                    )
-                    .as_str(),
-                ));
+                render_progress_bar(&ref_to_builder, blocks_downloaded, blocks_to_download);
             }
             UIEvent::StartHandshake => {
                 message_header.set_label("Making handshake with nodes...");
@@ -230,27 +219,10 @@ fn build_ui(
         update_label(ref_to_loading_account_label.clone());
         Continue(true)
     });
-    let sender_to_start = sender_to_node.clone();
-    let ref_start_btn = start_button.clone();
-    start_button.connect_clicked(move |_| {
-        sender_to_start.send(WalletEvent::Start).unwrap();
-        ref_start_btn.set_visible(false);
-    });
-    let sender_to_login = sender_to_node.clone();
-    login_button.connect_clicked(move |_| {
-        disable_buttons_and_entries(&ref_to_buttons, &ref_to_entries);
-        ref_to_dropdown.set_sensitive(false);
-        ref_account_spin.set_visible(true);
-        ref_loading_account_label.set_visible(true);
-
-        let address = String::from(address_entry.text());
-        let private_key = String::from(private_key_entry.text());
-        address_entry.set_text("");
-        private_key_entry.set_text("");
-        sender_to_login
-            .send(WalletEvent::AddAccountRequest(private_key, address))
-            .unwrap();
-    });
+    start_button_clicked(&builder.clone(), sender_to_node.clone());
+    login_button_clicked(&builder.clone(), sender_to_node.clone());
+    send_button_clicked(&builder.clone(), sender_to_node.clone());
+    /*
     let sender_to_make_a_tx = sender_to_node.clone();
     send_button.connect_clicked(move |_| {
         let address_to_send = String::from(pay_to_entry.text());
@@ -269,6 +241,7 @@ fn build_ui(
                 .unwrap();
         }
     });
+    */
     let sender_to_change_account = sender_to_node.clone();
     ref2_to_dropdown.connect_changed(move |combobox| {
         // Obtener el texto de la opción seleccionada
@@ -333,30 +306,6 @@ fn initialize_headers_tab(liststore_headers: &gtk::ListStore, headers: &Headers)
         }
     }
 }
-fn get_buttons(builder: &Builder) -> Vec<gtk::Button> {
-    let buttons = vec![
-        builder.object("send-button").unwrap(),
-        builder.object("search-tx-button").unwrap(),
-        builder.object("search-blocks-button").unwrap(),
-        builder.object("search-header-button").unwrap(),
-        builder.object("login-button").unwrap(),
-    ];
-    buttons
-}
-
-fn get_entries(builder: &Builder) -> Vec<gtk::Entry> {
-    let entries = vec![
-        builder.object("pay to entry").unwrap(),
-        builder.object("amount-entry").unwrap(),
-        builder.object("fee").unwrap(),
-        builder.object("search-tx").unwrap(),
-        builder.object("search-block").unwrap(),
-        builder.object("search-block-headers").unwrap(),
-        builder.object("address").unwrap(),
-        builder.object("private-key").unwrap(),
-    ];
-    entries
-}
 
 fn enable_buttons_and_entries(buttons: &Vec<gtk::Button>, entries: &Vec<gtk::Entry>) {
     for button in buttons {
@@ -367,7 +316,7 @@ fn enable_buttons_and_entries(buttons: &Vec<gtk::Button>, entries: &Vec<gtk::Ent
     }
 }
 
-fn disable_buttons_and_entries(buttons: &Vec<gtk::Button>, entries: &Vec<gtk::Entry>) {
+pub fn disable_buttons_and_entries(buttons: &Vec<gtk::Button>, entries: &Vec<gtk::Entry>) {
     for button in buttons {
         button.set_sensitive(false);
     }
@@ -393,7 +342,7 @@ fn update_label(label: Rc<RefCell<gtk::Label>>) -> Continue {
     Continue(true)
 }
 
-fn show_dialog_message_pop_up(message: &str, title: &str) {
+pub fn show_dialog_message_pop_up(message: &str, title: &str) {
     let dialog = gtk::MessageDialog::new(
         None::<&Window>,
         gtk::DialogFlags::MODAL,
@@ -409,30 +358,6 @@ fn show_dialog_message_pop_up(message: &str, title: &str) {
     dialog.close();
 }
 
-fn validate_amount_and_fee(amount: String, fee: String) -> Option<(i64, i64)> {
-    let valid_amount = match amount.parse::<i64>() {
-        Ok(amount) => amount,
-        Err(_) => {
-            show_dialog_message_pop_up(
-                "Error, please enter a valid amount of Satoshis",
-                "Failed to make transaction",
-            );
-            return None;
-        }
-    };
-    let valid_fee = match fee.parse::<i64>() {
-        Ok(fee) => fee,
-        Err(_) => {
-            show_dialog_message_pop_up(
-                "Error, please enter a valid fee of Satoshis",
-                "Failed to make transaction",
-            );
-            return None;
-        }
-    };
-
-    Some((valid_amount, valid_fee))
-}
 /*
 
 pub struct UIContainer {
