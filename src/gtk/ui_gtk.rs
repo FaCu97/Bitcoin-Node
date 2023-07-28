@@ -177,6 +177,13 @@ fn build_ui(
                 dropdown.set_sensitive(true);
                 show_dialog_message_pop_up(error.as_str(), "Error trying to add account");
             }
+            UIEvent::ChangeAccountError(error) => {
+                show_dialog_message_pop_up(error.as_str(), "Error trying to change account");
+            }
+            UIEvent::AccountChanged(account) => {
+                println!("Account changed to: {}", account.address);
+                // TODO: Actualizar Overview --> Balance y recent transactions y pestana transactions
+            }
             _ => (),
         }
         Continue(true)

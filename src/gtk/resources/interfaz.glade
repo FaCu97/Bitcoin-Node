@@ -1108,7 +1108,7 @@
                         </style>
                       </object>
                       <packing>
-                        <property name="x">63</property>
+                        <property name="x">190</property>
                         <property name="y">400</property>
                       </packing>
                     </child>
@@ -1123,7 +1123,7 @@
                         </style>
                       </object>
                       <packing>
-                        <property name="x">120</property>
+                        <property name="x">247</property>
                         <property name="y">400</property>
                       </packing>
                     </child>
