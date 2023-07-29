@@ -1,6 +1,7 @@
 use std::{error::Error, io};
 
 use bitcoin_hashes::{sha256d, Hash};
+use chrono::{TimeZone, Utc};
 
 /// Concatenar los hashes recibidos y luego los hashea
 pub fn concatenate_and_hash(first_hash: [u8; 32], second_hash: [u8; 32]) -> [u8; 32] {

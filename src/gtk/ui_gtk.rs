@@ -95,6 +95,7 @@ fn build_ui(
     let ref_main_window = main_window.clone();
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
+    let liststore_transactions: gtk::ListStore = builder.object("liststore-transactions").unwrap();
 
     /*
         for i in 0..50 {
@@ -187,6 +188,18 @@ fn build_ui(
             UIEvent::AccountChanged(account) => {
                 println!("Account changed to: {}", account.address);
                 // TODO: Actualizar Overview --> Balance y recent transactions y pestana transactions
+            }
+            UIEvent::NewPendingTx(transaction) => {
+                let row = liststore_transactions.append();
+                liststore_transactions.set(
+                    &row,
+                    &[
+                        (0, &"Pending".to_value()),
+                        (1, &transaction.hex_hash().to_value()),
+                        (2, &"P2PKH".to_value()),
+                        (3, &transaction.amount().to_value()),
+                    ],
+                );
             }
             _ => (),
         }

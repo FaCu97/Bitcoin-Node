@@ -85,7 +85,7 @@ fn handle_transaccion_request(ui_sender: &Option<glib::Sender<UIEvent>>, wallet:
         0
     });
     println!("Realizando y broadcasteando transaccion...");
-    if let Err(error) = wallet.make_transaction(&address_receiver, amount, fee) {
+    if let Err(error) = wallet.make_transaction(ui_sender, &address_receiver, amount, fee) {
         println!("Error al realizar la transacción: {}", error);
     } else {
         println!("TRANSACCION REALIZADA CORRECTAMENTE!");

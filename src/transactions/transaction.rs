@@ -356,6 +356,15 @@ impl Transaction {
         }
         Ok(())
     }
+
+    /// Devuelve el monto de la transacción.
+    pub fn amount(&self) -> i64 {
+        let mut amount = 0;
+        for txout in &self.tx_out {
+            amount += txout.value();
+        }
+        amount
+    }
 }
 
 #[cfg(test)]

@@ -105,7 +105,7 @@ impl Account {
         address_receiver: &str,
         amount: i64,
         fee: i64,
-    ) -> Result<[u8; 32], Box<dyn Error>> {
+    ) -> Result<Transaction, Box<dyn Error>> {
         address_decoder::validate_address(address_receiver)?;
         if !self.has_balance(amount + fee) {
             return Err(Box::new(std::io::Error::new(
@@ -133,7 +133,7 @@ impl Account {
         unsigned_transaction.validate(&utxos_to_spend)?;
 
         self.add_transaction(unsigned_transaction.clone())?;
-        Ok(unsigned_transaction.hash())
+        Ok(unsigned_transaction)
     }
 
     /// Recibe el utxo_set, lo recorre y setea el utxo_set de la cuenta.

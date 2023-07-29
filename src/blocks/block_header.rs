@@ -142,10 +142,13 @@ impl BlockHeader {
 
     /// Devuelve un string que representa el timestamp del bloque en formato UTC
     pub fn utc_time(&self) -> String {
-        let dt = Utc.timestamp_opt(self.time as i64, 0).unwrap();
-        let formatted_date = dt.format("%Y-%m-%d %H:%M:%S").to_string();
-        formatted_date
+        utc_time_to_string(self.time as i64)
     }
+}
+/// Recibe el tiempo en formato UTC y lo devuelve en formato String
+fn utc_time_to_string(time: i64) -> String {
+    let dt = Utc.timestamp_opt(time, 0).unwrap();
+    dt.format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
 /// Convierte un vector de bytes a un string que representa el hash en hexadecimal,

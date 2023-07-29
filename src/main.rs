@@ -139,7 +139,7 @@ fn handle_ui_request(
             }
             WalletEvent::MakeTransactionRequest(address, amount, fee) => {
                 if wallet
-                    .make_transaction( &address, amount, fee)
+                    .make_transaction(ui_sender, &address, amount, fee)
                     .is_err()
                 {
                     println!("Error al crear la transaccion");
