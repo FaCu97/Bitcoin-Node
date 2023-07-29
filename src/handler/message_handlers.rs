@@ -262,9 +262,12 @@ pub fn handle_block_message(
             )?;
             new_block.contains_pending_tx(log_sender, ui_sender, node_pointers.accounts.clone())?;
             new_block
-                .give_me_utxos(node_pointers.utxo_set.clone())
+                .give_me_utxos(node_pointers.blockchain.utxo_set.clone())
                 .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
-            update_accounts_utxo_set(node_pointers.accounts.clone(), node_pointers.utxo_set)?;
+            update_accounts_utxo_set(
+                node_pointers.accounts.clone(),
+                node_pointers.blockchain.utxo_set,
+            )?;
         }
     } else {
         write_in_log(
