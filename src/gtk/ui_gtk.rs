@@ -143,10 +143,6 @@ fn build_ui(
                 message_header
                     .set_label(format!("Headers downloaded: {}", headers_downloaded).as_str());
             }
-            UIEvent::LoadingUtxoSet => {
-                spinner.set_visible(true);
-                message_header.set_label("Loading utxo set...");
-            }
             UIEvent::InitializeUITabs((headers, blocks)) => {
                 initial_window.close();
                 main_window.show();

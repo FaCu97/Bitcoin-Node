@@ -65,7 +65,6 @@ fn run_node(
     let node_ips = get_active_nodes_from_dns_seed(&config, &log_sender)?;
     let nodes = handshake_with_nodes(&config, &log_sender, node_ips)?;
     let blockchain = initial_block_download(&config, &log_sender, &ui_sender, nodes.clone())?;
-    send_event_to_ui(&ui_sender, UIEvent::LoadingUtxoSet);
     let mut node = Node::new(&log_sender, &ui_sender, nodes, blockchain.clone())?;
     send_event_to_ui(
         &ui_sender,
