@@ -7,6 +7,7 @@ use super::blocks::block::Block;
 use super::blocks::block_header::BlockHeader;
 use super::config::Config;
 use super::logwriter::log_writer::{write_in_log, LogSender};
+use crate::blockchain::Blockchain;
 use crate::custom_errors::NodeCustomErrors;
 use crate::gtk::ui_events::{send_event_to_ui, UIEvent};
 use std::collections::HashMap;
@@ -32,12 +33,6 @@ const GENESIS_BLOCK_HEADER: BlockHeader = BlockHeader {
     nonce: 414098458,
 };
 
-type HeadersBlocksTuple = (
-    Arc<RwLock<Vec<BlockHeader>>>,
-    Arc<RwLock<HashMap<[u8; 32], Block>>>,
-    Arc<RwLock<HashMap<[u8; 32], usize>>>,
-);
-
 /// Recieves a list of TcpStreams that are the connection with nodes already established and downloads
 /// all the headers from the blockchain and the blocks from a config date. Returns the headers and blocks in
 /// two separete lists in case of exit or an error in case of faliure
@@ -46,7 +41,7 @@ pub fn initial_block_download(
     log_sender: &LogSender,
     ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-) -> Result<HeadersBlocksTuple, NodeCustomErrors> {
+) -> Result<Blockchain, NodeCustomErrors> {
     write_in_log(
         &log_sender.info_log_sender,
         "EMPIEZA DESCARGA INICIAL DE BLOQUES",
@@ -73,7 +68,7 @@ pub fn initial_block_download(
         .read()
         .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
         .len();
-     
+
     if config.ibd_single_node || amount_of_nodes < 2 {
         download_full_blockchain_from_single_node(
             config,
@@ -95,7 +90,7 @@ pub fn initial_block_download(
             header_heights.clone(),
         )?;
     }
-    
+
     let (amount_of_headers, amount_of_blocks) =
         get_amount_of_headers_and_blocks(&pointer_to_headers, &pointer_to_blocks)?;
     write_in_log(
@@ -106,7 +101,11 @@ pub fn initial_block_download(
         &log_sender.info_log_sender,
         format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", amount_of_blocks).as_str(),
     );
-    Ok((pointer_to_headers, pointer_to_blocks, header_heights))
+    Ok(Blockchain::new(
+        pointer_to_headers,
+        pointer_to_blocks,
+        header_heights,
+    ))
 }
 
 /// Se encarga de descargar todos los headers y bloques de la blockchain en multiples thread, en un thread descarga los headers

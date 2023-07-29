@@ -2,7 +2,8 @@ use gtk::glib;
 
 use crate::{
     account::Account,
-    blocks::{block::Block, block_header::BlockHeader},
+    blockchain::Blockchain,
+    blocks::block::Block,
     custom_errors::NodeCustomErrors,
     gtk::ui_events::UIEvent,
     handler::node_message_handler::NodeMessageHandler,
@@ -26,9 +27,7 @@ type MerkleProofOfInclusionResult = Result<Option<Vec<([u8; 32], bool)>>, NodeCu
 #[derive(Debug, Clone)]
 pub struct Node {
     pub connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
-    pub headers: Arc<RwLock<Vec<BlockHeader>>>,
-    pub block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-    pub header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
+    pub blockchain: Blockchain,
     pub utxo_set: UtxoSetPointer,
     pub accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     pub peers_handler: NodeMessageHandler,
@@ -41,19 +40,15 @@ impl Node {
         log_sender: &LogSender,
         ui_sender: &Option<glib::Sender<UIEvent>>,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
-        headers: Arc<RwLock<Vec<BlockHeader>>>,
-        block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-        header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
+        blockchain: Blockchain,
     ) -> Result<Self, NodeCustomErrors> {
         let pointer_to_utxo_set: UtxoSetPointer = Arc::new(RwLock::new(HashMap::new()));
-        generate_utxo_set(&block_chain, pointer_to_utxo_set.clone())?;
+        generate_utxo_set(&blockchain.blocks, pointer_to_utxo_set.clone())?;
         let pointer_to_accounts_in_node = Arc::new(RwLock::new(Arc::new(RwLock::new(vec![]))));
 
         let node_pointers = NodeDataPointers::new(
             connected_nodes.clone(),
-            headers.clone(),
-            block_chain.clone(),
-            header_heights.clone(),
+            blockchain.clone(),
             pointer_to_accounts_in_node.clone(),
             pointer_to_utxo_set.clone(),
         );
@@ -61,9 +56,7 @@ impl Node {
         let peers_handler = NodeMessageHandler::new(log_sender, ui_sender, node_pointers.clone())?;
         Ok(Node {
             connected_nodes,
-            headers,
-            block_chain,
-            header_heights,
+            blockchain,
             utxo_set: pointer_to_utxo_set,
             accounts: pointer_to_accounts_in_node,
             peers_handler,
@@ -131,7 +124,8 @@ impl Node {
         tx_hash: &[u8; 32],
     ) -> MerkleProofOfInclusionResult {
         let block_chain = self
-            .block_chain
+            .blockchain
+            .blocks
             .read()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
         let block_option = block_chain.get(block_hash);
