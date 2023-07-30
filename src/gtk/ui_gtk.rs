@@ -189,12 +189,38 @@ fn build_ui(
                 println!("Account changed to: {}", account.address);
                 // TODO: Actualizar Overview --> Balance y recent transactions y pestana transactions
             }
+
+            UIEvent::ShowPendingTransaction(account, transaction) => {
+                let row = liststore_transactions.append();
+                liststore_transactions.set(
+                    &row,
+                    &[
+                        (0, &"Pending".to_value()),
+                        (1, &transaction.hex_hash().to_value()),
+                        (2, &"P2PKH".to_value()),
+                        (3, &transaction.amount().to_value()),
+                    ],
+                );
+            }
+
             UIEvent::NewPendingTx(transaction) => {
                 let row = liststore_transactions.append();
                 liststore_transactions.set(
                     &row,
                     &[
                         (0, &"Pending".to_value()),
+                        (1, &transaction.hex_hash().to_value()),
+                        (2, &"P2PKH".to_value()),
+                        (3, &transaction.amount().to_value()),
+                    ],
+                );
+            }
+            UIEvent::ShowConfirmedTransaction(block, account, transaction) => {
+                let row = liststore_transactions.append();
+                liststore_transactions.set(
+                    &row,
+                    &[
+                        (0, &"Confirmed".to_value()),
                         (1, &transaction.hex_hash().to_value()),
                         (2, &"P2PKH".to_value()),
                         (3, &transaction.amount().to_value()),
