@@ -58,7 +58,7 @@ fn run_node(
     ui_sender: Option<glib::Sender<UIEvent>>,
     node_rx: Option<Receiver<WalletEvent>>,
 ) -> Result<(), NodeCustomErrors> {
-    wait_for_start_button(&node_rx);
+    //wait_for_start_button(&node_rx);
     send_event_to_ui(&ui_sender, UIEvent::StartHandshake);
     let config = Config::from(args)?;
     let (log_sender, log_sender_handles) = set_up_loggers(&config)?;
@@ -157,13 +157,17 @@ fn handle_ui_request(
                     println!("Error al crear la prueba de inclusion");
                 }
             }
+
             WalletEvent::GetAccountRequest => {
                 if let Some(account) = wallet.get_current_account() {
                     send_event_to_ui(ui_sender, UIEvent::AccountChanged(account));
                 }
+
+            WalletEvent::Finish => {
+                break;
+
             }
             _ => (),
         }
     }
-    println!("TERMINA HANDLE UI REQUEST!!!! \n");
 }

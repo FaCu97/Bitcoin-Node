@@ -1,6 +1,8 @@
 use std::{cell::RefCell, rc::Rc, sync::mpsc::Sender, time::Duration};
 
+
 use crate::wallet_event::WalletEvent;
+
 use gtk::{
     gdk,
     glib::{self, Priority},
@@ -72,10 +74,12 @@ fn build_ui(
     });
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
+
     initial_window.show();
     //main_window.show();
 
     let sender_to_get_account = sender_to_node.clone();
+
 
     /*
         for i in 0..50 {
@@ -110,9 +114,11 @@ fn build_ui(
         update_label(ref_to_loading_account_label.clone());
         Continue(true)
     });
+
     start_button_clicked(&builder.clone(), sender_to_node.clone());
     login_button_clicked(&builder.clone(), sender_to_node.clone());
     send_button_clicked(&builder.clone(), sender_to_node.clone());
+
     let sender_to_change_account = sender_to_node.clone();
     ref2_to_dropdown.connect_changed(move |combobox| {
         // Obtener el texto de la opción seleccionada
