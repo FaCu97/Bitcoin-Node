@@ -93,6 +93,8 @@ fn build_ui(
     //initial_window.show();
     main_window.show();
     let ref_main_window = main_window.clone();
+
+    // models
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
     let liststore_transactions: gtk::ListStore = builder.object("liststore-transactions").unwrap();
@@ -201,6 +203,16 @@ fn build_ui(
                         (3, &transaction.amount().to_value()),
                     ],
                 );
+
+                show_dialog_message_pop_up(
+                    format!(
+                        "New incoming pending transaction: {} received for account: {}",
+                        transaction.hex_hash(),
+                        account.address
+                    )
+                    .as_str(),
+                    "Account added succesfully",
+                );
             }
 
             UIEvent::NewPendingTx(transaction) => {
@@ -225,6 +237,17 @@ fn build_ui(
                         (2, &"P2PKH".to_value()),
                         (3, &transaction.amount().to_value()),
                     ],
+                );
+
+                show_dialog_message_pop_up(
+                    format!(
+                        "Transaction confirmed: {} for account: {} in block: {}",
+                        transaction.hex_hash(),
+                        account.address,
+                        block.hex_hash()
+                    )
+                    .as_str(),
+                    "Account added succesfully",
                 );
             }
             _ => (),
