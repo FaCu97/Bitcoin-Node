@@ -144,7 +144,7 @@ fn handle_ui_request(
                     send_event_to_ui(
                         ui_sender,
                         UIEvent::MakeTransactionStatus(
-                            "the transaction made succesfuly".to_string(),
+                            "The transaction was made succesfuly!".to_string(),
                         ),
                     );
                 }
