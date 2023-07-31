@@ -54,7 +54,7 @@ impl Wallet {
                 )));
             }
         };
-        validate_transaction_data(self.accounts.clone(), account_index, amount, fee)?;
+        validate_transaction_data(amount, fee)?;
         let transaction: Transaction = self
             .accounts
             .write()
@@ -196,25 +196,23 @@ impl Wallet {
         };
         Ok(make_merkle_proof(&hashes, &tx_hash))
     }
+
+    /// Devuelve la cuenta actual de la wallet
+    pub fn get_current_account(&self) -> Option<Account> {
+        if let Some(index) = self.current_account_index {
+            return Some(
+                self.accounts
+                    .read()
+                    .map_err(|err| NodeCustomErrors::LockError(err.to_string()))
+                    .unwrap()[index]
+                    .clone(),
+            );
+        }
+        None
+    }
 }
 
-fn validate_transaction_data(
-    accounts: Arc<RwLock<Vec<Account>>>,
-    account_index: usize,
-    amount: i64,
-    fee: i64,
-) -> Result<(), Box<dyn Error>> {
-    let accounts_len = accounts
-        .read()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .len();
-    if accounts_len < account_index {
-        return Err(Box::new(std::io::Error::new(
-            io::ErrorKind::Other,
-            "El indice ingresado es incorrecto.",
-        )));
-    }
-
+fn validate_transaction_data(amount: i64, fee: i64) -> Result<(), Box<dyn Error>> {
     if (amount + fee) <= 0 {
         return Err(Box::new(std::io::Error::new(
             io::ErrorKind::Other,

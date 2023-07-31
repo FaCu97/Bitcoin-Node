@@ -137,12 +137,16 @@ fn handle_ui_request(
                     send_event_to_ui(ui_sender, UIEvent::ChangeAccountError(err.to_string()));
                 }
             }
-            WalletEvent::MakeTransactionRequest(address, amount, fee) => {
-                if wallet
-                    .make_transaction(ui_sender, &address, amount, fee)
-                    .is_err()
-                {
-                    println!("Error al crear la transaccion");
+            WalletEvent::MakeTransaction(address, amount, fee) => {
+                if let Err(err) = wallet.make_transaction(ui_sender, &address, amount, fee) {
+                    send_event_to_ui(ui_sender, UIEvent::MakeTransactionStatus(err.to_string()));
+                } else {
+                    send_event_to_ui(
+                        ui_sender,
+                        UIEvent::MakeTransactionStatus(
+                            "The transaction was made succesfuly!".to_string(),
+                        ),
+                    );
                 }
             }
             WalletEvent::PoiOfTransactionRequest(block_hash, transaction_hash) => {
@@ -151,6 +155,12 @@ fn handle_ui_request(
                     .is_err()
                 {
                     println!("Error al crear la prueba de inclusion");
+                }
+            }
+
+            WalletEvent::GetAccountRequest => {
+                if let Some(account) = wallet.get_current_account() {
+                    send_event_to_ui(ui_sender, UIEvent::AccountChanged(account));
                 }
             }
             WalletEvent::Finish => {
