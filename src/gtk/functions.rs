@@ -290,8 +290,6 @@ fn initialize_blocks_tab(
     block_table: &TreeView,
     blocks: &Blocks,
 ) {
-    println!("INICIALIZO TAB BLOQUESSSSS");
-
     // temporal tree model
     let tree_model = gtk::ListStore::new(&[
         String::static_type(),
@@ -321,7 +319,6 @@ fn initialize_headers_tab(
     header_table: &TreeView,
     headers: &Headers,
 ) {
-    println!("INICIALIZO TAB HEADERS");
     // temporal tree model
     let tree_model = gtk::ListStore::new(&[
         String::static_type(),
