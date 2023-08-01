@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc, sync::mpsc::Sender, time::Duration};
 
 
-use crate::wallet_event::WalletEvent;
+use crate::{wallet_event::WalletEvent, gtk::functions::show_dialog_message_pop_up};
 
 use gtk::{
     gdk,
@@ -84,16 +84,31 @@ fn build_ui(
     let search_headers_entry: gtk::SearchEntry = builder.object("search-block-headers").unwrap();
     let search_blocks_button: gtk::Button = builder.object("search-blocks-button").unwrap();
     let search_headers_button: gtk::Button = builder.object("search-header-button").unwrap();
+    let sender_to_find_block = sender_to_node.clone();
     search_blocks_button.connect_clicked(move |_| {
         let text = search_blocks_entry.text().to_string();
-        println!("searching block {}", text);
-        search_blocks_entry.set_text("");
+        if let Ok(block_hash) = text.parse::<[u8; 32]>() {
+            println!("searching block {}", text);
+            search_blocks_entry.set_text("");
+            sender_to_find_block
+                .send(WalletEvent::SearchBlock(block_hash))
+                .unwrap();
+        } else {
+            show_dialog_message_pop_up(format!("Error {text} is not a valid block hash").as_str(), "Error searching block")
+        }
     });
+    let sender_to_find_header = sender_to_node.clone();
     search_headers_button.connect_clicked(move |_| {
         let text = search_headers_entry.text().to_string();
-        println!("searching header {}", text);
-        
-        search_headers_entry.set_text("");
+        if let Ok(block_hash) = text.parse::<[u8; 32]>() {
+            println!("searching header {}", text);
+            search_headers_entry.set_text("");
+            sender_to_find_header
+                .send(WalletEvent::SearchHeader(block_hash))
+                .unwrap();
+        } else {
+            show_dialog_message_pop_up(format!("Error {text} is not a valid block hash").as_str(), "Error searching header")
+        }
     });
     
 
