@@ -62,20 +62,14 @@ fn run_node(
     send_event_to_ui(&ui_sender, UIEvent::StartHandshake);
     let config = Config::from(args)?;
     let (log_sender, log_sender_handles) = set_up_loggers(&config)?;
-    let active_nodes = get_active_nodes_from_dns_seed(&config, &log_sender)?;
-    let pointer_to_nodes = handshake_with_nodes(&config, &log_sender, active_nodes)?;
-    let (headers, blocks, headers_height) =
-        initial_block_download(&config, &log_sender, &ui_sender, pointer_to_nodes.clone())?;
-    send_event_to_ui(&ui_sender, UIEvent::LoadingUtxoSet);
-    let mut node = Node::new(
-        &log_sender,
+    let node_ips = get_active_nodes_from_dns_seed(&config, &log_sender)?;
+    let nodes = handshake_with_nodes(&config, &log_sender, node_ips)?;
+    let blockchain = initial_block_download(&config, &log_sender, &ui_sender, nodes.clone())?;
+    let mut node = Node::new(&log_sender, &ui_sender, nodes, blockchain.clone())?;
+    send_event_to_ui(
         &ui_sender,
-        pointer_to_nodes,
-        headers.clone(),
-        blocks.clone(),
-        headers_height,
-    )?;
-    send_event_to_ui(&ui_sender, UIEvent::InitializeUITabs((headers, blocks)));
+        UIEvent::InitializeUITabs((blockchain.headers, blockchain.blocks)),
+    );
     let mut wallet = Wallet::new(node.clone())?;
     let server = NodeServer::new(&config, &log_sender, &ui_sender, &mut node)?;
     interact_with_user(&ui_sender, &mut wallet, node_rx);

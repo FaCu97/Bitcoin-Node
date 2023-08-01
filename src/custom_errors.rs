@@ -22,6 +22,7 @@ pub enum NodeCustomErrors {
     ArgumentsError(String),
     BlockchainDownloadError(String),
     OtherError(String),
+    UtxoError(String),
 }
 
 impl fmt::Display for NodeCustomErrors {
@@ -78,6 +79,9 @@ impl fmt::Display for NodeCustomErrors {
             }
             NodeCustomErrors::BlockchainDownloadError(msg) => {
                 write!(f, "Error during the Blockchain download: {}", msg)
+            }
+            NodeCustomErrors::UtxoError(msg) => {
+                write!(f, "Error during the Utxo setup: {}", msg)
             }
         }
     }

@@ -35,9 +35,6 @@ pub fn handle_ui_event(
                 format!("Headers downloaded: {}", headers_downloaded).as_str(),
             );
         }
-        UIEvent::LoadingUtxoSet => {
-            actualize_message_and_spinner(&builder, true, "Loading utxo set...");
-        }
         UIEvent::InitializeUITabs((headers, blocks)) => {
             render_main_window(&builder, &headers, &blocks);
         }

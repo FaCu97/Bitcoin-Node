@@ -1,5 +1,6 @@
 pub mod account;
 pub mod address_decoder;
+pub mod blockchain;
 pub mod blockchain_download;
 pub mod blocks;
 pub mod compact_size_uint;
