@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.40.0 -->
+<!-- Generated with glade 3.38.2 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
   <!-- interface-css-provider-path styles.css -->
@@ -184,14 +184,6 @@
       <!-- column-name Amount -->
       <column type="gint"/>
     </columns>
-    <data>
-      <row>
-        <col id="0" translatable="yes">Confirmed</col>
-        <col id="1" translatable="yes">cfe12b65fbb6f4778c6c365ac6a25a527db4995c8e34cd1fb067cc565f1b6373</col>
-        <col id="2" translatable="yes">P2PKH</col>
-        <col id="3">500</col>
-      </row>
-    </data>
   </object>
   <object class="GtkImage" id="user-image">
     <property name="visible">True</property>
