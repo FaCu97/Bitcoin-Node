@@ -79,6 +79,7 @@
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
+            <property name="relief">none</property>
             <style>
               <class name="start-button"/>
             </style>
@@ -1113,7 +1114,7 @@
                     </child>
                     <child>
                       <object class="GtkButton" id="login-button">
-                        <property name="label" translatable="yes">Login</property>
+                        <property name="label" translatable="yes"> Login</property>
                         <property name="width-request">100</property>
                         <property name="height-request">55</property>
                         <property name="visible">True</property>
@@ -1121,6 +1122,7 @@
                         <property name="receives-default">True</property>
                         <property name="image">user-image</property>
                         <property name="always-show-image">True</property>
+                        <property name="relief">none</property>
                         <style>
                           <class name="app-button"/>
                         </style>
