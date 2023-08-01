@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.40.0 -->
+<!-- Generated with glade 3.38.2 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
   <!-- interface-css-provider-path styles.css -->
@@ -165,13 +165,6 @@
       <!-- column-name Time -->
       <column type="gchararray"/>
     </columns>
-    <data>
-      <row>
-        <col id="0">2000</col>
-        <col id="1" translatable="yes">00000000000000093000dcc2e14c848b5a22ecbe0a3eef9e3290c7705c3d2b18</col>
-        <col id="2" translatable="yes">2023-05-05 12:02</col>
-      </row>
-    </data>
   </object>
   <object class="GtkListStore" id="liststore-transactions">
     <columns>
