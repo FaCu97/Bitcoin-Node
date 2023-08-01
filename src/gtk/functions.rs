@@ -79,7 +79,7 @@ pub fn handle_ui_event(
             liststore_blocks.set(
                 &row,
                 &[
-                    (0, &0.to_value()),
+                    (0, &block.get_height().to_value()),
                     (1, &block.hex_hash()),
                     (2, &block.utc_time()),
                     (3, &block.txn_count.decoded_value().to_value()),
@@ -298,12 +298,12 @@ fn initialize_blocks_tab(
     ]);
     block_table.set_model(Some(&tree_model));
 
-    for (index, block) in blocks.read().unwrap().values().enumerate().take(100) {
+    for block in blocks.read().unwrap().values().take(100) {
         let row = liststore_blocks.append();
         liststore_blocks.set(
             &row,
             &[
-                (0, &(index as u32).to_value()), // a completar
+                (0, &block.get_height().to_value()),
                 (1, &block.hex_hash()),
                 (2, &block.utc_time()),
                 (3, &block.txn_count.decoded_value().to_value()),
