@@ -223,6 +223,7 @@ fn download_full_blockchain_from_single_node(
     Ok(())
 }
 
+/// Actualiza el utxo_set a medida que recibe los bloques por el channel
 fn load_utxo_set(
     rx: Receiver<Vec<Block>>,
     utxo_set: UtxoSetPointer,
