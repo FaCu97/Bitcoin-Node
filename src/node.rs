@@ -2,7 +2,8 @@ use gtk::glib;
 
 use crate::{
     account::Account,
-    blocks::{block::Block, block_header::BlockHeader},
+    blockchain::Blockchain,
+    blocks::block::Block,
     custom_errors::NodeCustomErrors,
     gtk::ui_events::UIEvent,
     handler::node_message_handler::NodeMessageHandler,
@@ -12,13 +13,11 @@ use crate::{
     utxo_tuple::UtxoTuple,
 };
 use std::{
-    collections::HashMap,
     error::Error,
     net::TcpStream,
     sync::{Arc, RwLock},
 };
 
-type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
 type MerkleProofOfInclusionResult = Result<Option<Vec<([u8; 32], bool)>>, NodeCustomErrors>;
 
 /// Almacena la blockchain y el utxo set. Mantiene referencias a las cuentas y los nodos conectados.
@@ -26,10 +25,7 @@ type MerkleProofOfInclusionResult = Result<Option<Vec<([u8; 32], bool)>>, NodeCu
 #[derive(Debug, Clone)]
 pub struct Node {
     pub connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
-    pub headers: Arc<RwLock<Vec<BlockHeader>>>,
-    pub block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-    pub header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
-    pub utxo_set: UtxoSetPointer,
+    pub blockchain: Blockchain,
     pub accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     pub peers_handler: NodeMessageHandler,
     pub node_pointers: NodeDataPointers,
@@ -41,30 +37,18 @@ impl Node {
         log_sender: &LogSender,
         ui_sender: &Option<glib::Sender<UIEvent>>,
         connected_nodes: Arc<RwLock<Vec<TcpStream>>>,
-        headers: Arc<RwLock<Vec<BlockHeader>>>,
-        block_chain: Arc<RwLock<HashMap<[u8; 32], Block>>>,
-        header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
+        blockchain: Blockchain,
     ) -> Result<Self, NodeCustomErrors> {
-        let pointer_to_utxo_set: UtxoSetPointer = Arc::new(RwLock::new(HashMap::new()));
-        generate_utxo_set(&block_chain, pointer_to_utxo_set.clone())?;
         let pointer_to_accounts_in_node = Arc::new(RwLock::new(Arc::new(RwLock::new(vec![]))));
-
         let node_pointers = NodeDataPointers::new(
             connected_nodes.clone(),
-            headers.clone(),
-            block_chain.clone(),
-            header_heights.clone(),
+            blockchain.clone(),
             pointer_to_accounts_in_node.clone(),
-            pointer_to_utxo_set.clone(),
         );
-
         let peers_handler = NodeMessageHandler::new(log_sender, ui_sender, node_pointers.clone())?;
         Ok(Node {
             connected_nodes,
-            headers,
-            block_chain,
-            header_heights,
-            utxo_set: pointer_to_utxo_set,
+            blockchain: blockchain.clone(),
             accounts: pointer_to_accounts_in_node,
             peers_handler,
             node_pointers,
@@ -82,6 +66,7 @@ impl Node {
     ) -> Result<Vec<UtxoTuple>, Box<dyn Error>> {
         let mut account_utxo_set: Vec<UtxoTuple> = Vec::new();
         for utxo in self
+            .blockchain
             .utxo_set
             .read()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
@@ -131,7 +116,8 @@ impl Node {
         tx_hash: &[u8; 32],
     ) -> MerkleProofOfInclusionResult {
         let block_chain = self
-            .block_chain
+            .blockchain
+            .blocks
             .read()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
         let block_option = block_chain.get(block_hash);
@@ -158,21 +144,4 @@ impl Node {
             connection,
         )
     }
-}
-
-/// Funcion que se encarga de generar la lista de utxos
-fn generate_utxo_set(
-    block_chain: &Arc<RwLock<HashMap<[u8; 32], Block>>>,
-    utxo_set: UtxoSetPointer,
-) -> Result<UtxoSetPointer, NodeCustomErrors> {
-    let block_chain_lock = block_chain
-        .read()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
-
-    for block in block_chain_lock.values() {
-        block
-            .give_me_utxos(utxo_set.clone())
-            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
-    }
-    Ok(utxo_set)
 }

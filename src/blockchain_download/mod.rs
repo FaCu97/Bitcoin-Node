@@ -7,16 +7,20 @@ use super::blocks::block::Block;
 use super::blocks::block_header::BlockHeader;
 use super::config::Config;
 use super::logwriter::log_writer::{write_in_log, LogSender};
+use crate::blockchain::Blockchain;
 use crate::custom_errors::NodeCustomErrors;
 use crate::gtk::ui_events::{send_event_to_ui, UIEvent};
+use crate::utxo_tuple::UtxoTuple;
 use std::collections::HashMap;
 use std::net::TcpStream;
-use std::sync::mpsc::channel;
+use std::sync::mpsc::{channel, Receiver};
 use std::sync::{Arc, RwLock};
 use std::{thread, vec};
 mod blocks_download;
 pub(crate) mod headers_download;
 mod utils;
+
+type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
 
 // Gensis block header hardcoded to start the download (this is the first block of the blockchain)
 // data taken from: https://en.bitcoin.it/wiki/Genesis_block
@@ -32,12 +36,6 @@ const GENESIS_BLOCK_HEADER: BlockHeader = BlockHeader {
     nonce: 414098458,
 };
 
-type HeadersBlocksTuple = (
-    Arc<RwLock<Vec<BlockHeader>>>,
-    Arc<RwLock<HashMap<[u8; 32], Block>>>,
-    Arc<RwLock<HashMap<[u8; 32], usize>>>,
-);
-
 /// Recieves a list of TcpStreams that are the connection with nodes already established and downloads
 /// all the headers from the blockchain and the blocks from a config date. Returns the headers and blocks in
 /// two separete lists in case of exit or an error in case of faliure
@@ -46,7 +44,7 @@ pub fn initial_block_download(
     log_sender: &LogSender,
     ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-) -> Result<HeadersBlocksTuple, NodeCustomErrors> {
+) -> Result<Blockchain, NodeCustomErrors> {
     write_in_log(
         &log_sender.info_log_sender,
         "EMPIEZA DESCARGA INICIAL DE BLOQUES",
@@ -56,6 +54,7 @@ pub fn initial_block_download(
     let pointer_to_headers = Arc::new(RwLock::new(headers));
     let blocks: HashMap<[u8; 32], Block> = HashMap::new();
     let pointer_to_blocks = Arc::new(RwLock::new(blocks));
+    let utxo_set: UtxoSetPointer = Arc::new(RwLock::new(HashMap::new()));
     let mut heights_hashmap: HashMap<[u8; 32], usize> = HashMap::new();
     heights_hashmap.insert([0u8; 32], 0); // genesis hash
     let header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>> =
@@ -83,6 +82,7 @@ pub fn initial_block_download(
             pointer_to_headers.clone(),
             pointer_to_blocks.clone(),
             header_heights.clone(),
+            utxo_set.clone(),
         )?;
     } else {
         download_full_blockchain_from_multiple_nodes(
@@ -93,6 +93,7 @@ pub fn initial_block_download(
             pointer_to_headers.clone(),
             pointer_to_blocks.clone(),
             header_heights.clone(),
+            utxo_set.clone(),
         )?;
     }
 
@@ -106,7 +107,12 @@ pub fn initial_block_download(
         &log_sender.info_log_sender,
         format!("TOTAL DE BLOQUES DESCARGADOS: {}\n", amount_of_blocks).as_str(),
     );
-    Ok((pointer_to_headers, pointer_to_blocks, header_heights))
+    Ok(Blockchain::new(
+        pointer_to_headers,
+        pointer_to_blocks,
+        header_heights,
+        utxo_set,
+    ))
 }
 
 /// Se encarga de descargar todos los headers y bloques de la blockchain en multiples thread, en un thread descarga los headers
@@ -120,6 +126,7 @@ fn download_full_blockchain_from_multiple_nodes(
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
+    utxo_set: UtxoSetPointer,
 ) -> Result<(), NodeCustomErrors> {
     // channel to comunicate headers download thread with blocks download thread
     let (tx, rx) = channel();
@@ -144,6 +151,11 @@ fn download_full_blockchain_from_multiple_nodes(
     let config = config.clone();
     let log_sender = log_sender.clone();
     let ui_sender = ui_sender.clone();
+    let (tx_1, rx_1) = channel();
+    let utxo_set_clone = utxo_set.clone();
+    let join_handle = thread::spawn(move || -> Result<(), NodeCustomErrors> {
+        load_utxo_set(rx_1, utxo_set_clone)
+    });
     threads_handle.push(thread::spawn(move || {
         download_blocks(
             &config,
@@ -153,9 +165,13 @@ fn download_full_blockchain_from_multiple_nodes(
             (blocks, headers),
             rx,
             tx,
+            tx_1,
         )
     }));
     join_threads(threads_handle)?;
+    join_handle
+        .join()
+        .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
     Ok(())
 }
 
@@ -169,6 +185,7 @@ fn download_full_blockchain_from_single_node(
     headers: Arc<RwLock<Vec<BlockHeader>>>,
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
+    utxo_set: UtxoSetPointer,
 ) -> Result<(), NodeCustomErrors> {
     let (tx, rx) = channel();
     download_missing_headers(
@@ -181,6 +198,11 @@ fn download_full_blockchain_from_single_node(
         tx,
     )?;
     let mut node = get_node(nodes.clone())?;
+    let (tx_1, rx_1) = channel();
+    let utxo_set_clone = utxo_set.clone();
+    let join_handle = thread::spawn(move || -> Result<(), NodeCustomErrors> {
+        load_utxo_set(rx_1, utxo_set_clone)
+    });
     send_event_to_ui(ui_sender, UIEvent::StartDownloadingBlocks);
     for blocks_to_download in rx {
         download_blocks_single_node(
@@ -191,9 +213,27 @@ fn download_full_blockchain_from_single_node(
             blocks_to_download,
             &mut node,
             blocks.clone(),
+            tx_1.clone(),
         )?;
     }
     return_node_to_vec(nodes, node)?;
+    join_handle
+        .join()
+        .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
+    Ok(())
+}
+
+fn load_utxo_set(
+    rx: Receiver<Vec<Block>>,
+    utxo_set: UtxoSetPointer,
+) -> Result<(), NodeCustomErrors> {
+    for blocks in rx {
+        for block in blocks {
+            block
+                .give_me_utxos(utxo_set.clone())
+                .map_err(|err| NodeCustomErrors::UtxoError(err.to_string()))?;
+        }
+    }
     Ok(())
 }
 

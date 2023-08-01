@@ -219,7 +219,7 @@ pub fn handle_messages_from_node(
                         &log_sender,
                         tx.clone(),
                         &payload,
-                        node_pointers.headers.clone(),
+                        node_pointers.blockchain.headers.clone(),
                         node_pointers.clone(),
                     )
                 }),
@@ -228,7 +228,7 @@ pub fn handle_messages_from_node(
                         &log_sender,
                         tx.clone(),
                         &payload,
-                        node_pointers.block_chain.clone(),
+                        node_pointers.blockchain.blocks.clone(),
                         node_pointers.accounts.clone(),
                     )
                 }),
@@ -251,7 +251,7 @@ pub fn handle_messages_from_node(
                     handle_getheaders_message(
                         tx.clone(),
                         &payload,
-                        node_pointers.headers.clone(),
+                        node_pointers.blockchain.headers.clone(),
                         node_pointers.clone(),
                     )
                 }),

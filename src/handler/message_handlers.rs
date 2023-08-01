@@ -72,7 +72,11 @@ pub fn handle_headers_message(
                     .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
             }
         }
-        load_header_heights(&vec![header], &node_pointers.header_heights, &headers)?;
+        load_header_heights(
+            &vec![header],
+            &node_pointers.blockchain.header_heights,
+            &headers,
+        )?;
     }
     Ok(())
 }
@@ -240,25 +244,30 @@ pub fn handle_block_message(
     let new_block = BlockMessage::unmarshalling(&payload.to_vec())
         .map_err(|err| NodeCustomErrors::UnmarshallingError(err.to_string()))?;
     if new_block.validate().0 {
-        let header_is_not_included_yet =
-            header_is_not_included(new_block.block_header, node_pointers.headers.clone())?;
+        let header_is_not_included_yet = header_is_not_included(
+            new_block.block_header,
+            node_pointers.blockchain.headers.clone(),
+        )?;
         if header_is_not_included_yet {
             include_new_header(
                 log_sender,
                 new_block.block_header,
-                node_pointers.headers.clone(),
+                node_pointers.blockchain.headers.clone(),
             )?;
             include_new_block(
                 log_sender,
                 ui_sender,
                 new_block.clone(),
-                node_pointers.block_chain.clone(),
+                node_pointers.blockchain.blocks.clone(),
             )?;
             new_block.contains_pending_tx(log_sender, ui_sender, node_pointers.accounts.clone())?;
             new_block
-                .give_me_utxos(node_pointers.utxo_set.clone())
+                .give_me_utxos(node_pointers.blockchain.utxo_set.clone())
                 .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
-            update_accounts_utxo_set(node_pointers.accounts.clone(), node_pointers.utxo_set)?;
+            update_accounts_utxo_set(
+                node_pointers.accounts.clone(),
+                node_pointers.blockchain.utxo_set,
+            )?;
         }
     } else {
         write_in_log(
@@ -461,6 +470,7 @@ fn get_index_of_header(
         return Ok(0);
     }
     match node_pointers
+        .blockchain
         .header_heights
         .read()
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
