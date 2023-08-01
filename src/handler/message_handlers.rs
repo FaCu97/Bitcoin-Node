@@ -253,6 +253,7 @@ pub fn handle_block_message(
                 log_sender,
                 new_block.block_header,
                 node_pointers.blockchain.headers.clone(),
+                node_pointers.blockchain.header_heights.clone(),
             )?;
             include_new_block(
                 log_sender,
@@ -388,11 +389,16 @@ fn include_new_header(
     log_sender: &LogSender,
     header: BlockHeader,
     headers: Arc<RwLock<Vec<BlockHeader>>>,
+    headers_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
 ) -> NodeMessageHandlerResult {
     headers
         .write()
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
         .push(header);
+    headers_heights
+        .write()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .insert(header.hash(), headers.read().unwrap().len() - 1);
     write_in_log(
         &log_sender.info_log_sender,
         "Recibo un nuevo header, lo agrego a la cadena de headers!",
