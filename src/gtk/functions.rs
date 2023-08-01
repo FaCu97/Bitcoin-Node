@@ -3,7 +3,7 @@ use std::{
     sync::{mpsc, Arc, RwLock},
 };
 
-use gtk::{prelude::*, Builder, ProgressBar, Spinner, Window};
+use gtk::{prelude::*, Builder, ProgressBar, Spinner, TreeView, Window};
 
 use crate::{
     account::Account,
@@ -128,9 +128,11 @@ fn render_main_window(builder: &Builder, headers: &Headers, blocks: &Blocks) {
     let main_window: gtk::Window = builder.object("main-window").unwrap();
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
+    let header_table: TreeView = builder.object("header_table").unwrap();
+
     initial_window.close();
     main_window.show();
-    initialize_headers_tab(&liststore_headers, &headers);
+    initialize_headers_tab(&liststore_headers, &header_table, &headers);
     initialize_blocks_tab(&liststore_blocks, &blocks);
 }
 
@@ -303,11 +305,33 @@ fn initialize_blocks_tab(liststore_blocks: &gtk::ListStore, blocks: &Blocks) {
     }
 }
 
-fn initialize_headers_tab(liststore_headers: &gtk::ListStore, headers: &Headers) {
+fn initialize_headers_tab(
+    liststore_headers: &gtk::ListStore,
+    header_table: &TreeView,
+    headers: &Headers,
+) {
     println!("INICIALIZO TAB HEADERS");
-    let mut i = 0;
-    for (index, header) in headers.read().unwrap().iter().enumerate() {
-        i += 1;
+    // temporal tree model
+    let tree_model = gtk::ListStore::new(&[
+        String::static_type(),
+        String::static_type(),
+        String::static_type(),
+    ]);
+    header_table.set_model(Some(&tree_model));
+
+    for (index, header) in headers.read().unwrap().iter().enumerate().rev().take(100) {
+        let row = liststore_headers.append();
+        liststore_headers.set(
+            &row,
+            &[
+                (0, &((index) as u32).to_value()),
+                (1, &header.hex_hash()),
+                (2, &header.utc_time()),
+            ],
+        );
+    }
+
+    for (index, header) in headers.read().unwrap().iter().enumerate().take(100).rev() {
         let row = liststore_headers.append();
         liststore_headers.set(
             &row,
@@ -317,10 +341,9 @@ fn initialize_headers_tab(liststore_headers: &gtk::ListStore, headers: &Headers)
                 (2, &header.utc_time()),
             ],
         );
-        if i == 50 {
-            break;
-        }
     }
+
+    header_table.set_model(Some(liststore_headers));
 }
 
 fn update_overview(account: &Account, available_label: &gtk::Label) {

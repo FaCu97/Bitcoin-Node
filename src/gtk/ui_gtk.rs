@@ -1,6 +1,5 @@
 use std::{cell::RefCell, rc::Rc, sync::mpsc::Sender, time::Duration};
 
-
 use crate::wallet_event::WalletEvent;
 
 use gtk::{
@@ -79,7 +78,6 @@ fn build_ui(
     //main_window.show();
 
     let sender_to_get_account = sender_to_node.clone();
-
 
     /*
         for i in 0..50 {
