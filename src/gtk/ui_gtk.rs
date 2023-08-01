@@ -75,10 +75,8 @@ fn build_ui(
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
 
-    //initial_window.show();
+    initial_window.show();
     //main_window.show();
-    let main_window: gtk::Window = builder.object("main-window").unwrap();
-    main_window.show();
 
     let sender_to_get_account = sender_to_node.clone();
 
