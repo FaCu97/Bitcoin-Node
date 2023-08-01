@@ -3,11 +3,14 @@ use std::{
     sync::{mpsc, Arc, RwLock},
 };
 
-use gtk::{prelude::*, Builder, ProgressBar, Spinner, Window};
+use gtk::{prelude::*, Builder, ProgressBar, Spinner, TreeView, Window};
 
 use crate::{
     account::Account,
-    blocks::{block::Block, block_header::BlockHeader},
+    blocks::{
+        block::{self, Block},
+        block_header::BlockHeader,
+    },
     wallet_event::WalletEvent,
 };
 
@@ -16,12 +19,13 @@ use super::ui_events::UIEvent;
 type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
 type Headers = Arc<RwLock<Vec<BlockHeader>>>;
 
+const AMOUNT_TO_SHOW: usize = 500;
+
 pub fn handle_ui_event(
     builder: Builder,
     ui_event: UIEvent,
     sender_to_get_account: mpsc::Sender<WalletEvent>,
 ) {
-    let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     match ui_event {
         UIEvent::ActualizeBlocksDownloaded(blocks_downloaded, blocks_to_download) => {
             actualize_progress_bar(&builder, blocks_downloaded, blocks_to_download);
@@ -75,16 +79,16 @@ pub fn handle_ui_event(
         }
 
         UIEvent::AddBlock(block) => {
-            let row = liststore_blocks.append();
-            liststore_blocks.set(
-                &row,
-                &[
-                    (0, &0.to_value()),
-                    (1, &block.hex_hash()),
-                    (2, &block.utc_time()),
-                    (3, &block.txn_count.decoded_value().to_value()),
-                ],
+            let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
+            let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
+
+            add_row_first_to_liststore_block(&liststore_blocks, &block);
+            add_row_first_to_liststore_headers(
+                &liststore_headers,
+                &block.block_header,
+                block.get_height(),
             );
+
             sender_to_get_account
                 .send(WalletEvent::GetAccountRequest)
                 .unwrap();
@@ -128,10 +132,13 @@ fn render_main_window(builder: &Builder, headers: &Headers, blocks: &Blocks) {
     let main_window: gtk::Window = builder.object("main-window").unwrap();
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
+    let header_table: TreeView = builder.object("header_table").unwrap();
+    let block_table: TreeView = builder.object("block_table").unwrap();
+
     initial_window.close();
     main_window.show();
-    initialize_headers_tab(&liststore_headers, &headers);
-    initialize_blocks_tab(&liststore_blocks, &blocks);
+    initialize_headers_tab(&liststore_headers, &header_table, &headers);
+    initialize_blocks_tab(&liststore_blocks, &block_table, &headers, &blocks);
 }
 
 fn update_account_tab(builder: &Builder, account: Account) {
@@ -282,45 +289,128 @@ fn validate_amount_and_fee(amount: String, fee: String) -> Option<(i64, i64)> {
     Some((valid_amount, valid_fee))
 }
 
-fn initialize_blocks_tab(liststore_blocks: &gtk::ListStore, blocks: &Blocks) {
-    println!("INICIALIZO TAB BLOQUESSSSS");
-    let mut i = 0;
-    for block in blocks.read().unwrap().values() {
-        i += 1;
-        let row = liststore_blocks.append();
-        liststore_blocks.set(
-            &row,
-            &[
-                (0, &i.to_value()), // a comletar
-                (1, &block.hex_hash()),
-                (2, &block.utc_time()),
-                (3, &block.txn_count.decoded_value().to_value()),
-            ],
-        );
-        if i == 50 {
-            break;
-        }
+fn initialize_blocks_tab(
+    liststore_blocks: &gtk::ListStore,
+    block_table: &TreeView,
+    headers: &Headers,
+    blocks: &Blocks,
+) {
+    // temporal tree model
+    let tree_model = gtk::ListStore::new(&[
+        String::static_type(),
+        String::static_type(),
+        String::static_type(),
+    ]);
+    block_table.set_model(Some(&tree_model));
+    let mut block_hash: Vec<[u8; 32]> = Vec::new();
+    for header in headers.read().unwrap().iter().rev().take(AMOUNT_TO_SHOW) {
+        block_hash.push(header.hash());
     }
+
+    for hash in block_hash {
+        let blocks_lock = blocks.read().unwrap();
+        let block = blocks_lock.get(&hash).unwrap();
+        add_row_last_to_liststore_block(liststore_blocks, block)
+    }
+    block_table.set_model(Some(liststore_blocks));
 }
 
-fn initialize_headers_tab(liststore_headers: &gtk::ListStore, headers: &Headers) {
-    println!("INICIALIZO TAB HEADERS");
-    let mut i = 0;
-    for (index, header) in headers.read().unwrap().iter().enumerate() {
-        i += 1;
-        let row = liststore_headers.append();
-        liststore_headers.set(
-            &row,
-            &[
-                (0, &(index as u32).to_value()),
-                (1, &header.hex_hash()),
-                (2, &header.utc_time()),
-            ],
-        );
-        if i == 50 {
-            break;
-        }
+fn initialize_headers_tab(
+    liststore_headers: &gtk::ListStore,
+    header_table: &TreeView,
+    headers: &Headers,
+) {
+    // temporal tree model
+    let tree_model = gtk::ListStore::new(&[
+        String::static_type(),
+        String::static_type(),
+        String::static_type(),
+    ]);
+    header_table.set_model(Some(&tree_model));
+
+    for (index, header) in headers
+        .read()
+        .unwrap()
+        .iter()
+        .enumerate()
+        .rev()
+        .take(AMOUNT_TO_SHOW / 2)
+    {
+        add_row_last_to_liststore_headers(liststore_headers, header, index as u32);
     }
+
+    for (index, header) in headers
+        .read()
+        .unwrap()
+        .iter()
+        .enumerate()
+        .take(AMOUNT_TO_SHOW / 2)
+        .rev()
+    {
+        add_row_last_to_liststore_headers(liststore_headers, header, index as u32);
+    }
+
+    header_table.set_model(Some(liststore_headers));
+}
+
+/// Agrega una fila al final de la lista de bloques
+fn add_row_last_to_liststore_block(liststore_blocks: &gtk::ListStore, block: &Block) {
+    let row = liststore_blocks.append();
+    add_block_row(liststore_blocks, row, block);
+}
+
+/// Agrega una fila al principio de la lista de bloques
+fn add_row_first_to_liststore_block(liststore_blocks: &gtk::ListStore, block: &Block) {
+    let row = liststore_blocks.prepend();
+    add_block_row(liststore_blocks, row, block);
+}
+/// Agrega una fila liststore de headers
+fn add_block_row(liststore_blocks: &gtk::ListStore, row: gtk::TreeIter, block: &Block) {
+    liststore_blocks.set(
+        &row,
+        &[
+            (0, &block.get_height().to_value()),
+            (1, &block.hex_hash()),
+            (2, &block.utc_time()),
+            (3, &block.txn_count.decoded_value().to_value()),
+        ],
+    );
+}
+
+/// Agrega una fila al final de la lista de bloques
+fn add_row_last_to_liststore_headers(
+    liststore_headers: &gtk::ListStore,
+    header: &BlockHeader,
+    height: u32,
+) {
+    let row = liststore_headers.append();
+    add_header_row(liststore_headers, row, header, height);
+}
+
+/// Agrega una fila al principio de la lista de bloques
+fn add_row_first_to_liststore_headers(
+    liststore_headers: &gtk::ListStore,
+    header: &BlockHeader,
+    height: u32,
+) {
+    let row = liststore_headers.prepend();
+    add_header_row(liststore_headers, row, header, height);
+}
+/// Agrega una fila liststore de headers
+fn add_header_row(
+    liststore_headers: &gtk::ListStore,
+    row: gtk::TreeIter,
+    header: &BlockHeader,
+    height: u32,
+) {
+    liststore_headers.set(
+        &row,
+        &[
+            (0, &height.to_value()),
+            (1, &header.hex_hash()),
+            (2, &header.utc_time()),
+        ],
+    );
 }
 
 fn update_overview(account: &Account, available_label: &gtk::Label) {

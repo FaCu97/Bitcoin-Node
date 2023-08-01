@@ -258,6 +258,11 @@ impl Block {
     pub fn utc_time(&self) -> String {
         self.block_header.utc_time()
     }
+
+    /// Devuelve la altura del bloque
+    pub fn get_height(&self) -> u32 {
+        self.txn[0].get_height()
+    }
 }
 
 #[cfg(test)]
