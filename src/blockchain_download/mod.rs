@@ -151,10 +151,10 @@ fn download_full_blockchain_from_multiple_nodes(
     let config = config.clone();
     let log_sender = log_sender.clone();
     let ui_sender = ui_sender.clone();
-    let (tx_1, rx_1) = channel();
+    let (tx_1, rx_utxo_set) = channel();
     let utxo_set_clone = utxo_set.clone();
     let join_handle = thread::spawn(move || -> Result<(), NodeCustomErrors> {
-        load_utxo_set(rx_1, utxo_set_clone)
+        load_utxo_set(rx_utxo_set, utxo_set_clone)
     });
     threads_handle.push(thread::spawn(move || {
         download_blocks(
