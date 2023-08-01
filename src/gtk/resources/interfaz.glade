@@ -147,14 +147,6 @@
       <!-- column-name tx-count -->
       <column type="gint"/>
     </columns>
-    <data>
-      <row>
-        <col id="0">2000</col>
-        <col id="1" translatable="yes">00000000000000093000dcc2e14c848b5a22ecbe0a3eef9e3290c7705c3d2b18</col>
-        <col id="2" translatable="yes">2023-05-05</col>
-        <col id="3">20</col>
-      </row>
-    </data>
   </object>
   <object class="GtkListStore" id="liststore-headers">
     <columns>
