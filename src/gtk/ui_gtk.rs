@@ -79,6 +79,23 @@ fn build_ui(
     let main_window: gtk::Window = builder.object("main-window").unwrap();
 
     main_window.show();
+    // SEARCH ENTRIES
+    let search_blocks_entry: gtk::SearchEntry = builder.object("search-block").unwrap();
+    let search_headers_entry: gtk::SearchEntry = builder.object("search-block-headers").unwrap();
+    let search_blocks_button: gtk::Button = builder.object("search-blocks-button").unwrap();
+    let search_headers_button: gtk::Button = builder.object("search-header-button").unwrap();
+    search_blocks_button.connect_clicked(move |_| {
+        let text = search_blocks_entry.text().to_string();
+        println!("searching block {}", text);
+        search_blocks_entry.set_text("");
+    });
+    search_headers_button.connect_clicked(move |_| {
+        let text = search_headers_entry.text().to_string();
+        println!("searching header {}", text);
+        
+        search_headers_entry.set_text("");
+    });
+    
 
     let sender_to_get_account = sender_to_node.clone();
 
