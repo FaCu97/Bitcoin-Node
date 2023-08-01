@@ -75,10 +75,10 @@ fn build_ui(
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
 
-    //initial_window.show();
-    let main_window: gtk::Window = builder.object("main-window").unwrap();
+    initial_window.show();
+    //let main_window: gtk::Window = builder.object("main-window").unwrap();
 
-    main_window.show();
+    //main_window.show();
     // SEARCH ENTRIES
     let search_blocks_entry: gtk::SearchEntry = builder.object("search-block").unwrap();
     let search_headers_entry: gtk::SearchEntry = builder.object("search-block-headers").unwrap();
@@ -90,26 +90,28 @@ fn build_ui(
         let text = search_blocks_entry.text().to_string();
         if let Some(block_hash) = hex_string_to_bytes(text.as_str()) {
             println!("searching block {}", text);
-            search_blocks_entry.set_text("");
             sender_to_find_block
                 .send(WalletEvent::SearchBlock(block_hash))
                 .unwrap();
         } else {
             show_dialog_message_pop_up(format!("Error {text} is not a valid block hash").as_str(), "Error searching block")
         }
+        search_blocks_entry.set_text("");
+
     });
     let sender_to_find_header = sender_to_node.clone();
     search_headers_button.connect_clicked(move |_| {
         let text = search_headers_entry.text().to_string();
         if let Some(block_hash) = hex_string_to_bytes(text.as_str()) {
             println!("searching header {}", text);
-            search_headers_entry.set_text("");
             sender_to_find_header
                 .send(WalletEvent::SearchHeader(block_hash))
                 .unwrap();
         } else {
             show_dialog_message_pop_up(format!("Error {text} is not a valid block hash").as_str(), "Error searching header")
         }
+        search_headers_entry.set_text("");
+
     });
     
     
