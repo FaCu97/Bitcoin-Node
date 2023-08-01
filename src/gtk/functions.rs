@@ -129,11 +129,12 @@ fn render_main_window(builder: &Builder, headers: &Headers, blocks: &Blocks) {
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
     let header_table: TreeView = builder.object("header_table").unwrap();
+    let block_table: TreeView = builder.object("block_table").unwrap();
 
     initial_window.close();
     main_window.show();
     initialize_headers_tab(&liststore_headers, &header_table, &headers);
-    initialize_blocks_tab(&liststore_blocks, &blocks);
+    initialize_blocks_tab(&liststore_blocks, &block_table, &blocks);
 }
 
 fn update_account_tab(builder: &Builder, account: Account) {
@@ -284,25 +285,35 @@ fn validate_amount_and_fee(amount: String, fee: String) -> Option<(i64, i64)> {
     Some((valid_amount, valid_fee))
 }
 
-fn initialize_blocks_tab(liststore_blocks: &gtk::ListStore, blocks: &Blocks) {
+fn initialize_blocks_tab(
+    liststore_blocks: &gtk::ListStore,
+    block_table: &TreeView,
+    blocks: &Blocks,
+) {
     println!("INICIALIZO TAB BLOQUESSSSS");
-    let mut i = 0;
-    for block in blocks.read().unwrap().values() {
-        i += 1;
+
+    // temporal tree model
+    let tree_model = gtk::ListStore::new(&[
+        String::static_type(),
+        String::static_type(),
+        String::static_type(),
+    ]);
+    block_table.set_model(Some(&tree_model));
+
+    for (index, block) in blocks.read().unwrap().values().enumerate().take(100) {
         let row = liststore_blocks.append();
         liststore_blocks.set(
             &row,
             &[
-                (0, &i.to_value()), // a comletar
+                (0, &(index as u32).to_value()), // a completar
                 (1, &block.hex_hash()),
                 (2, &block.utc_time()),
                 (3, &block.txn_count.decoded_value().to_value()),
             ],
         );
-        if i == 50 {
-            break;
-        }
     }
+
+    block_table.set_model(Some(liststore_blocks));
 }
 
 fn initialize_headers_tab(
