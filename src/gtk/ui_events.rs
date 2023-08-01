@@ -30,6 +30,9 @@ pub enum UIEvent {
     ActualizeHeadersDownloaded(usize),
     ActualizeBlocksDownloaded(usize, usize),
     MakeTransactionStatus(String),
+    BlockFound(Block),
+    HeaderFound(BlockHeader),
+    NotFound,
 }
 
 pub fn send_event_to_ui(ui_sender: &Option<glib::Sender<UIEvent>>, event: UIEvent) {
