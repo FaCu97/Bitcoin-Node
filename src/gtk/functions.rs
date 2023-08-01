@@ -89,6 +89,15 @@ pub fn handle_ui_event(
                 .send(WalletEvent::GetAccountRequest)
                 .unwrap();
         }
+        UIEvent::BlockFound(block) => {
+            show_dialog_message_pop_up(format!("encontre al bloque {}", block.hex_hash()).as_str(), "Block found");
+        }
+        UIEvent::HeaderFound(header) => {
+            show_dialog_message_pop_up(format!("encontre al header {}", header.hex_hash()).as_str(), "Header found");
+        }
+        UIEvent::NotFound => {
+            show_dialog_message_pop_up("Not found", "Not found");
+        }
         _ => (),
     }
 }
@@ -359,4 +368,27 @@ pub fn show_dialog_message_pop_up(message: &str, title: &str) {
     content_area.style_context().add_class("dialog");
     dialog.run();
     dialog.close();
+}
+
+
+/// Convierte un string hexadecimal a un array de bytes que representa el hash
+/// Recibe un string hexadecimal de 64 caracteres
+/// Devuelve un array de bytes de 32 bytes
+/// Si el string no es hexadecimal o no tiene 64 caracteres, devuelve None
+pub fn hex_string_to_bytes(hex_string: &str) -> Option<[u8; 32]> {
+    if hex_string.len() != 64 {
+        return None; // La longitud del string hexadecimal debe ser de 64 caracteres (32 bytes en hexadecimal)
+    }
+    let mut result = [0u8; 32];
+    let hex_chars: Vec<_> = hex_string.chars().collect();
+    for i in 0..32 {
+        let start = i * 2;
+        let end = start + 2;
+        if let Ok(byte) = u8::from_str_radix(&hex_chars[start..end].iter().collect::<String>(), 16) {
+            result[31 - i] = byte; // Invertimos el orden de asignación para obtener el resultado invertido
+        } else {
+            return None; // La cadena contiene caracteres no hexadecimales
+        }
+    }
+    Some(result)
 }

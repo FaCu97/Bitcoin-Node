@@ -11,7 +11,7 @@ use gtk::{
 };
 
 use super::functions::{
-    handle_ui_event, login_button_clicked, send_button_clicked, start_button_clicked,
+    handle_ui_event, login_button_clicked, send_button_clicked, start_button_clicked, hex_string_to_bytes,
 };
 use super::ui_events::UIEvent;
 
@@ -85,9 +85,10 @@ fn build_ui(
     let search_blocks_button: gtk::Button = builder.object("search-blocks-button").unwrap();
     let search_headers_button: gtk::Button = builder.object("search-header-button").unwrap();
     let sender_to_find_block = sender_to_node.clone();
+
     search_blocks_button.connect_clicked(move |_| {
         let text = search_blocks_entry.text().to_string();
-        if let Ok(block_hash) = text.parse::<[u8; 32]>() {
+        if let Some(block_hash) = hex_string_to_bytes(text.as_str()) {
             println!("searching block {}", text);
             search_blocks_entry.set_text("");
             sender_to_find_block
@@ -100,7 +101,7 @@ fn build_ui(
     let sender_to_find_header = sender_to_node.clone();
     search_headers_button.connect_clicked(move |_| {
         let text = search_headers_entry.text().to_string();
-        if let Ok(block_hash) = text.parse::<[u8; 32]>() {
+        if let Some(block_hash) = hex_string_to_bytes(text.as_str()) {
             println!("searching header {}", text);
             search_headers_entry.set_text("");
             sender_to_find_header
@@ -110,6 +111,7 @@ fn build_ui(
             show_dialog_message_pop_up(format!("Error {text} is not a valid block hash").as_str(), "Error searching header")
         }
     });
+    
     
 
     let sender_to_get_account = sender_to_node.clone();
