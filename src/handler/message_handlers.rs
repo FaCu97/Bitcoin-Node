@@ -384,6 +384,7 @@ fn include_new_block(
 }
 
 /// Recibe un header a agregar a la cadena de headers y el Arc apuntando a la cadena de headers y lo agrega
+/// a la lista de headers y al diccionario de alturas de headers.
 /// Devuelve Ok(()) en caso de poder agregarlo correctamente o error del tipo NodeHandlerError en caso de no poder
 fn include_new_header(
     log_sender: &LogSender,
