@@ -8,7 +8,7 @@ use gtk::glib;
 
 use crate::{
     account::Account,
-    blocks::utils_block::{make_merkle_proof, string_to_bytes},
+    blocks::{utils_block::{make_merkle_proof, string_to_bytes}, block::Block, block_header::BlockHeader},
     custom_errors::NodeCustomErrors,
     gtk::ui_events::{send_event_to_ui, UIEvent},
     node::Node,
@@ -206,6 +206,20 @@ impl Wallet {
             );
         }
         None
+    }
+
+    /// Busca un bloque en la blockchain
+    /// Recibe el hash del bloque en formato hex
+    /// Devuelve el bloque si lo encuentra, None en caso contrario
+    pub fn search_block(&self, hash: [u8; 32]) -> Option<Block> {
+        self.node.search_block(hash)
+    }
+
+    /// Busca un header en la blockchain
+    /// Recibe el hash del header en formato hex
+    /// Devuelve el header si lo encuentra, None en caso contrario
+    pub fn search_header(&self, hash: [u8; 32]) -> Option<BlockHeader> {
+        self.node.search_header(hash)
     }
 }
 

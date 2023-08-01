@@ -157,6 +157,20 @@ fn handle_ui_request(
                     send_event_to_ui(ui_sender, UIEvent::AccountChanged(account));
                 }
             }
+            WalletEvent::SearchBlock(block_hash) => {
+                if let Some(block) = wallet.search_block(block_hash) {
+                    send_event_to_ui(ui_sender, UIEvent::BlockFound(block));
+                } else {
+                    send_event_to_ui(ui_sender, UIEvent::NotFound);
+                }
+            }
+            WalletEvent::SearchHeader(block_hash) => {
+                if let Some(header) = wallet.search_header(block_hash) {
+                    send_event_to_ui(ui_sender, UIEvent::HeaderFound(header));
+                } else {
+                    send_event_to_ui(ui_sender, UIEvent::NotFound);
+                }
+            }
             WalletEvent::Finish => {
                 break;
             }
