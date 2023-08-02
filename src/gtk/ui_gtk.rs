@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc, sync::mpsc::Sender, time::Duration};
 
-use crate::{gtk::functions::show_dialog_message_pop_up, wallet_event::WalletEvent};
+use crate::{gtk::ui_functions::show_dialog_message_pop_up, wallet_event::WalletEvent};
 
 use gtk::{
     gdk,
@@ -9,7 +9,7 @@ use gtk::{
     Application, CssProvider, StyleContext, Window,
 };
 
-use super::functions::{
+use super::ui_functions::{
     handle_ui_event, hex_string_to_bytes, login_button_clicked, send_button_clicked,
     start_button_clicked,
 };
