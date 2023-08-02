@@ -21,7 +21,10 @@ pub(crate) mod headers_download;
 mod utils;
 
 type UtxoSetPointer = Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>;
-
+type BlocksAndHeaders = (
+    Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    Arc<RwLock<Vec<BlockHeader>>>,
+);
 // Gensis block header hardcoded to start the download (this is the first block of the blockchain)
 // data taken from: https://en.bitcoin.it/wiki/Genesis_block
 const GENESIS_BLOCK_HEADER: BlockHeader = BlockHeader {
@@ -79,8 +82,7 @@ pub fn initial_block_download(
             log_sender,
             ui_sender,
             nodes,
-            pointer_to_headers.clone(),
-            pointer_to_blocks.clone(),
+            (pointer_to_blocks.clone(), pointer_to_headers.clone()),
             header_heights.clone(),
             utxo_set.clone(),
         )?;
@@ -90,8 +92,7 @@ pub fn initial_block_download(
             log_sender,
             ui_sender,
             nodes,
-            pointer_to_headers.clone(),
-            pointer_to_blocks.clone(),
+            (pointer_to_blocks.clone(), pointer_to_headers.clone()),
             header_heights.clone(),
             utxo_set.clone(),
         )?;
@@ -123,8 +124,7 @@ fn download_full_blockchain_from_multiple_nodes(
     log_sender: &LogSender,
     ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    (blocks, headers): BlocksAndHeaders,
     header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
     utxo_set: UtxoSetPointer,
 ) -> Result<(), NodeCustomErrors> {
@@ -163,8 +163,7 @@ fn download_full_blockchain_from_multiple_nodes(
             &ui_sender,
             nodes,
             (blocks, headers),
-            rx,
-            tx,
+            (tx, rx),
             tx_utxo_set,
         )
     }));
@@ -182,8 +181,7 @@ fn download_full_blockchain_from_single_node(
     log_sender: &LogSender,
     ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
-    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
+    (blocks, headers): BlocksAndHeaders,
     header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
     utxo_set: UtxoSetPointer,
 ) -> Result<(), NodeCustomErrors> {
@@ -209,10 +207,9 @@ fn download_full_blockchain_from_single_node(
             config,
             log_sender,
             ui_sender,
-            headers.clone(),
+            (blocks.clone(), headers.clone()),
             blocks_to_download,
             &mut node,
-            blocks.clone(),
             tx_1.clone(),
         )?;
     }

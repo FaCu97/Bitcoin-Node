@@ -26,10 +26,11 @@ use super::{
     utils::{get_node, return_node_to_vec},
 };
 
-type BlockAndHeaders = (
+type BlocksAndHeaders = (
     Arc<RwLock<HashMap<[u8; 32], Block>>>,
     Arc<RwLock<Vec<BlockHeader>>>,
 );
+
 type BlocksTuple = (
     Vec<BlockHeader>,
     Arc<RwLock<HashMap<[u8; 32], Block>>>,
@@ -57,9 +58,8 @@ pub fn download_blocks(
     log_sender: &LogSender,
     ui_sender: &Option<glib::Sender<UIEvent>>,
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-    (blocks, headers): BlockAndHeaders,
-    rx: Receiver<Vec<BlockHeader>>,
-    tx: Sender<Vec<BlockHeader>>,
+    (blocks, headers): BlocksAndHeaders,
+    (tx, rx): (Sender<Vec<BlockHeader>>, Receiver<Vec<BlockHeader>>),
     tx_utxo_set: Sender<Vec<Block>>,
 ) -> Result<(), NodeCustomErrors> {
     // recieves in the channel the vec of headers sent by the function downloading headers
@@ -88,8 +88,7 @@ pub fn download_blocks(
                 ui_sender,
                 (blocks_to_download_chunk.clone(), headers.clone()),
                 nodes.clone(),
-                tx.clone(),
-                tx_utxo_set.clone(),
+                (tx.clone(), tx_utxo_set.clone()),
                 blocks.clone(),
             )?);
         }
@@ -113,8 +112,7 @@ fn download_blocks_chunck(
     ui_sender: &Option<glib::Sender<UIEvent>>,
     (block_headers, headers): (Vec<BlockHeader>, Arc<RwLock<Vec<BlockHeader>>>),
     nodes: Arc<RwLock<Vec<TcpStream>>>,
-    tx: Sender<Vec<BlockHeader>>,
-    tx_utxo_set: Sender<Vec<Block>>,
+    (tx, tx_utxo_set): (Sender<Vec<BlockHeader>>, Sender<Vec<Block>>),
     blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
 ) -> Result<JoinHandle<Result<(), NodeCustomErrors>>, NodeCustomErrors> {
     let config_cloned = config.clone();
@@ -128,8 +126,7 @@ fn download_blocks_chunck(
             &ui_sender,
             (block_headers, blocks, headers),
             node,
-            tx,
-            tx_utxo_set,
+            (tx, tx_utxo_set),
             nodes,
         )
     }))
@@ -148,8 +145,7 @@ fn download_blocks_single_thread(
     ui_sender: &Option<glib::Sender<UIEvent>>,
     (block_headers, blocks, headers): BlocksTuple,
     mut node: TcpStream,
-    tx: Sender<Vec<BlockHeader>>,
-    tx_utxo_set: Sender<Vec<Block>>,
+    (tx, tx_utxo_set): (Sender<Vec<BlockHeader>>, Sender<Vec<Block>>),
     nodes: Arc<RwLock<Vec<TcpStream>>>,
 ) -> Result<(), NodeCustomErrors> {
     let mut current_blocks: HashMap<[u8; 32], Block> = HashMap::new();
@@ -282,10 +278,9 @@ pub fn download_blocks_single_node(
     config: &Arc<Config>,
     log_sender: &LogSender,
     ui_sender: &Option<glib::Sender<UIEvent>>,
-    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    (blocks, headers): BlocksAndHeaders,
     block_headers: Vec<BlockHeader>,
     node: &mut TcpStream,
-    blocks: Arc<RwLock<HashMap<[u8; 32], Block>>>,
     tx: Sender<Vec<Block>>,
 ) -> Result<(), NodeCustomErrors> {
     let mut current_blocks: HashMap<[u8; 32], Block> = HashMap::new();
