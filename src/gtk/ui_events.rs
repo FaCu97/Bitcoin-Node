@@ -32,6 +32,7 @@ pub enum UIEvent {
     MakeTransactionStatus(String),
     LoadingUtxoSet,
     NewPendingTx(Transaction),
+    UpdateTransactions(Vec<(String, Transaction)>),
 }
 
 pub fn send_event_to_ui(ui_sender: &Option<glib::Sender<UIEvent>>, event: UIEvent) {

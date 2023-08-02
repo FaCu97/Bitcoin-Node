@@ -166,6 +166,11 @@ fn handle_ui_request(
             WalletEvent::Finish => {
                 break;
             }
+            WalletEvent::GetTransactionsRequest => {
+                if let Some(transactions) = wallet.get_transactions() {
+                    send_event_to_ui(ui_sender, UIEvent::UpdateTransactions(transactions));
+                }
+            }
             _ => (),
         }
     }

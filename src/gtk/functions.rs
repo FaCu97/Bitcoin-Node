@@ -25,7 +25,7 @@ pub fn handle_ui_event(
     let mut liststore_transactions: gtk::ListStore =
         builder.object("liststore-transactions").unwrap();
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
-    let tx_table = builder.object("tx_table").unwrap();
+    let tx_table: TreeView = builder.object("tx_table").unwrap();
     let mut transactions: Vec<(String, Transaction)> = Vec::new();
     match ui_event {
         UIEvent::ActualizeBlocksDownloaded(blocks_downloaded, blocks_to_download) => {
@@ -103,17 +103,6 @@ pub fn handle_ui_event(
                     return;
                 }
             }
-
-            let row = liststore_transactions.append();
-            liststore_transactions.set(
-                &row,
-                &[
-                    (0, &"Pending".to_value()),
-                    (1, &transaction.hex_hash().to_value()),
-                    (2, &"P2PKH".to_value()),
-                    (3, &transaction.amount().to_value()),
-                ],
-            );
             show_dialog_message_pop_up(
                 format!(
                     "New incoming pending transaction: {} received for account: {}",
@@ -123,24 +112,27 @@ pub fn handle_ui_event(
                 .as_str(),
                 "Account added succesfully",
             );
-            transactions.push(("Pending".to_string(), transaction));
+            sender_to_get_account
+                .send(WalletEvent::GetTransactionsRequest)
+                .unwrap();
+            //    transactions.extend_from_slice(&[("Pending".to_string(), transaction)]);
+            //    render_transactions(&transactions, tx_table);
+        }
+
+        UIEvent::UpdateTransactions(transactions) => {
+            render_transactions(&transactions, tx_table);
         }
 
         UIEvent::NewPendingTx(transaction) => {
-            let row = liststore_transactions.append();
-            liststore_transactions.set(
-                &row,
-                &[
-                    (0, &"Pending".to_value()),
-                    (1, &transaction.hex_hash().to_value()),
-                    (2, &"P2PKH".to_value()),
-                    (3, &transaction.amount().to_value()),
-                ],
-            );
-            transactions.push(("Pending".to_string(), transaction));
+            sender_to_get_account
+                .send(WalletEvent::GetTransactionsRequest)
+                .unwrap();
+            //    transactions.extend_from_slice(&[("Pending".to_string(), transaction)]);
+            //    println!("NEW TX. Transactions length: {}", transactions.len());
+            //    render_transactions(&transactions, tx_table);
         }
         UIEvent::ShowConfirmedTransaction(block, account, transaction) => {
-            for tx in transactions.iter_mut() {
+            /*     for tx in transactions.iter_mut() {
                 if tx.1.hash() == transaction.hash() {
                     tx.0 = "Confirmed".to_string();
                     show_dialog_message_pop_up(
@@ -153,20 +145,11 @@ pub fn handle_ui_event(
                         .as_str(),
                         "Account added succesfully",
                     );
-                    show_transactions(transactions, tx_table, liststore_transactions);
+                    render_transactions(&transactions, tx_table);
                     return;
                 }
             }
-            let row = liststore_transactions.append();
-            liststore_transactions.set(
-                &row,
-                &[
-                    (0, &"Confirmed".to_value()),
-                    (1, &transaction.hex_hash().to_value()),
-                    (2, &"P2PKH".to_value()),
-                    (3, &transaction.amount().to_value()),
-                ],
-            );
+            */
             show_dialog_message_pop_up(
                 format!(
                     "Transaction confirmed: {} for account: {} in block: {}",
@@ -177,27 +160,29 @@ pub fn handle_ui_event(
                 .as_str(),
                 "Account added succesfully",
             );
-            transactions.push(("Confirmed".to_string(), transaction));
+            sender_to_get_account
+                .send(WalletEvent::GetTransactionsRequest)
+                .unwrap();
+            //    transactions.extend_from_slice(&[("Confirmed".to_string(), transaction)]);
+            //    render_transactions(&transactions, tx_table);
         }
         _ => (),
     }
 }
 
-fn show_transactions(
-    transactions: Vec<(String, Transaction)>,
-    tx_table: TreeView,
-    mut liststore_transactions: ListStore,
-) {
-    liststore_transactions = gtk::ListStore::new(&[
+fn render_transactions(transactions: &Vec<(String, Transaction)>, tx_table: TreeView) {
+    let tree_model = gtk::ListStore::new(&[
         String::static_type(),
         String::static_type(),
         String::static_type(),
+        i32::static_type(),
     ]);
-    tx_table.set_model(Some(&liststore_transactions));
 
-    for txn in transactions {
-        let row = liststore_transactions.append();
-        liststore_transactions.set(
+    let len = transactions.len();
+    for i in 0..len {
+        let txn = transactions.get(i).unwrap();
+        let row = tree_model.append();
+        tree_model.set(
             &row,
             &[
                 (0, &txn.0.to_value()),
@@ -207,6 +192,7 @@ fn show_transactions(
             ],
         );
     }
+    tx_table.set_model(Some(&tree_model));
 }
 /// Esta funcion renderiza la barra de carga de bloques descargados
 fn actualize_progress_bar(builder: &Builder, blocks_downloaded: usize, blocks_to_download: usize) {

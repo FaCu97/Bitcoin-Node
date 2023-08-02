@@ -210,6 +210,22 @@ impl Wallet {
         }
         None
     }
+
+    pub fn get_transactions(&self) -> Option<Vec<(String, Transaction)>> {
+        if let Some(index) = self.current_account_index {
+            match self
+                .accounts
+                .read()
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))
+                .unwrap()[index]
+                .get_transactions()
+            {
+                Ok(transactions) => return Some(transactions),
+                Err(_) => return None,
+            }
+        }
+        None
+    }
 }
 
 fn validate_transaction_data(amount: i64, fee: i64) -> Result<(), Box<dyn Error>> {

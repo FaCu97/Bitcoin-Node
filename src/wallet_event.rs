@@ -14,4 +14,5 @@ pub enum WalletEvent {
     Finish,
     ChangeAccount(AccountIndex),
     GetAccountRequest,
+    GetTransactionsRequest,
 }
