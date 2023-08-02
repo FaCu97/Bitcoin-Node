@@ -61,9 +61,7 @@ pub fn handle_ui_request(
                 handle_search_header(ui_sender, wallet, block_hash);
             }
             WalletEvent::GetTransactionsRequest => {
-                if let Some(transactions) = wallet.get_transactions() {
-                    send_event_to_ui(ui_sender, UIEvent::UpdateTransactions(transactions));
-                }
+                handle_get_transactions(ui_sender, wallet);
             }
             WalletEvent::Finish => {
                 break;
@@ -172,5 +170,12 @@ fn handle_search_header(
         send_event_to_ui(ui_sender, UIEvent::HeaderFound(header, height));
     } else {
         send_event_to_ui(ui_sender, UIEvent::NotFound);
+    }
+}
+
+/// Solicita a la wallet que envie a la UI las transacciones de la cuenta actual
+pub fn handle_get_transactions(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wallet) {
+    if let Some(transactions) = wallet.get_transactions() {
+        send_event_to_ui(ui_sender, UIEvent::UpdateTransactions(transactions));
     }
 }
