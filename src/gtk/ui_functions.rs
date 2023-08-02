@@ -1,9 +1,9 @@
 use std::{
     collections::HashMap,
-    sync::{mpsc, Arc, RwLock},
+    sync::{mpsc, Arc, RwLock}, cell::RefCell, rc::Rc,
 };
 
-use gtk::{prelude::*, Builder, ProgressBar, Spinner, TreeView, Window};
+use gtk::{prelude::*, Builder, ProgressBar, Spinner, TreeView, Window, CssProvider, gdk, StyleContext};
 
 use crate::{
     account::Account,
@@ -497,4 +497,37 @@ pub fn hex_string_to_bytes(hex_string: &str) -> Option<[u8; 32]> {
         }
     }
     Some(result)
+}
+
+/// Recibe un Label y cambia su texto por el siguiente en la lista de waiting_labels
+pub fn update_label(label: Rc<RefCell<gtk::Label>>) -> Continue {
+    let waiting_labels = [
+        "Hold tight! Setting up your Bitcoin account...",
+        "We're ensuring your account's security...",
+        "Be patient! Your Bitcoin account is being created...",
+    ];
+    let current_text = label.borrow().text().to_string();
+    for i in 0..waiting_labels.len() {
+        if current_text == waiting_labels[i] {
+            let next_text = waiting_labels[(i + 1) % waiting_labels.len()];
+            label.borrow().set_text(next_text);
+            break;
+        }
+    }
+    Continue(true)
+}
+
+
+/// Le agrega el estilo del archivo css a la pantalla
+pub fn add_css_to_screen() {
+    let css_provider: CssProvider = CssProvider::new();
+    css_provider
+        .load_from_path("src/gtk/resources/styles.css")
+        .expect("Failed to load CSS file.");
+    let screen: gdk::Screen = gdk::Screen::default().expect("Failed to get default screen.");
+    StyleContext::add_provider_for_screen(
+        &screen,
+        &css_provider,
+        gtk::STYLE_PROVIDER_PRIORITY_USER,
+    );
 }

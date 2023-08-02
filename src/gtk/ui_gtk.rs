@@ -3,17 +3,18 @@ use std::{cell::RefCell, rc::Rc, sync::mpsc::Sender, time::Duration};
 use crate::{gtk::ui_functions::show_dialog_message_pop_up, wallet_event::WalletEvent};
 
 use gtk::{
-    gdk,
     glib::{self, Priority},
     prelude::*,
-    Application, CssProvider, StyleContext, Window,
+    Application, Window,
 };
 
 use super::ui_functions::{
     handle_ui_event, hex_string_to_bytes, login_button_clicked, send_button_clicked,
-    start_button_clicked,
+    start_button_clicked, update_label, add_css_to_screen,
 };
 use super::ui_events::UIEvent;
+
+const GLADE_FILE: &str = include_str!("resources/interfaz.glade");
 
 /// Recibe un sender para enviarle el sender que envia eventos a la UI y un sender para enviarle eventos al nodo
 /// Crea la UI y la ejecuta
@@ -36,24 +37,10 @@ fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<W
         println!("Failed to initialize GTK.");
         return;
     }
-
-    let glade_src = include_str!("resources/interfaz.glade");
-    let builder = gtk::Builder::from_string(glade_src);
-    let css_provider: CssProvider = CssProvider::new();
-    css_provider
-        .load_from_path("src/gtk/resources/styles.css")
-        .expect("Failed to load CSS file.");
-    let screen: gdk::Screen = gdk::Screen::default().expect("Failed to get default screen.");
-    StyleContext::add_provider_for_screen(
-        &screen,
-        &css_provider,
-        gtk::STYLE_PROVIDER_PRIORITY_USER,
-    );
-
+    let builder = gtk::Builder::from_string(GLADE_FILE);
+    add_css_to_screen();
     let initial_window: Window = builder.object("initial-window").unwrap();
-
     // login elements
-
     let status_login: gtk::Label = builder.object("status-login").unwrap();
     let ref_to_status_login = status_login;
     let loading_account_label: gtk::Label = builder.object("load-account").unwrap();
@@ -75,10 +62,9 @@ fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<W
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
 
-    initial_window.show();
-    //let main_window: gtk::Window = builder.object("main-window").unwrap();
-
-    //main_window.show();
+    //initial_window.show();
+    let main_window: gtk::Window = builder.object("main-window").unwrap();
+    main_window.show();
     // SEARCH ENTRIES
     let search_blocks_entry: gtk::SearchEntry = builder.object("search-block").unwrap();
     let search_headers_entry: gtk::SearchEntry = builder.object("search-block-headers").unwrap();
@@ -119,31 +105,6 @@ fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<W
     });
 
     let sender_to_get_account = sender_to_node.clone();
-
-    /*
-        for i in 0..50 {
-            let row = liststore_blocks.append();
-            liststore_blocks.set(
-                &row,
-                &[
-                    (0, &i.to_value()),
-                    (1, &"new id"),
-                    (2, &"new merkle root"),
-                    (3, &50.to_value()),
-                ],
-            );
-        }
-        let row = liststore_blocks.append();
-        liststore_blocks.set(
-            &row,
-            &[
-                (0, &2001.to_value()),
-                (1, &"new id"),
-                (2, &"new merkle root"),
-                (3, &50.to_value()),
-            ],
-        );
-    */
     let ref_to_builder = builder.clone();
     rx.attach(None, move |msg| {
         handle_ui_event(ref_to_builder.clone(), msg, sender_to_get_account.clone());
@@ -176,19 +137,4 @@ fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<W
     gtk::main();
 }
 
-fn update_label(label: Rc<RefCell<gtk::Label>>) -> Continue {
-    let waiting_labels = [
-        "Hold tight! Setting up your Bitcoin account...",
-        "We're ensuring your account's security...",
-        "Be patient! Your Bitcoin account is being created...",
-    ];
-    let current_text = label.borrow().text().to_string();
-    for i in 0..waiting_labels.len() {
-        if current_text == waiting_labels[i] {
-            let next_text = waiting_labels[(i + 1) % waiting_labels.len()];
-            label.borrow().set_text(next_text);
-            break;
-        }
-    }
-    Continue(true)
-}
+
