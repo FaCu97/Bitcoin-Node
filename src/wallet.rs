@@ -211,6 +211,8 @@ impl Wallet {
         None
     }
 
+    /// Devuelve una lista con las transacciones de la cuenta actual
+    /// Si no hay cuenta actual devuelve None
     pub fn get_transactions(&self) -> Option<Vec<(String, Transaction)>> {
         if let Some(index) = self.current_account_index {
             match self

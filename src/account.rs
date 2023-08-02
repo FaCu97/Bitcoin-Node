@@ -158,6 +158,7 @@ impl Account {
         Ok(())
     }
 
+    /// Devuelve las transacciones pendientes y las confirmadas de la cuenta
     pub fn get_transactions(&self) -> Result<Vec<(String, Transaction)>, Box<dyn Error>> {
         let mut transactions: Vec<(String, Transaction)> = Vec::new();
         // itero las pending tx
