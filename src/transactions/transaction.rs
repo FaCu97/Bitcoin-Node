@@ -365,6 +365,11 @@ impl Transaction {
         }
         amount
     }
+    /// Devuelve la altura del bloque en el que se encuentra la transacción.
+    /// Válido sólo para las coinbase transactions.
+    pub fn get_height(&self) -> u32 {
+        self.tx_in[0].get_height()
+    }
 }
 
 #[cfg(test)]

@@ -18,13 +18,13 @@ use std::time::Duration;
 pub fn handshake_with_nodes(
     config: &Arc<Config>,
     log_sender: &LogSender,
-    active_nodes: Vec<Ipv4Addr>,
+    node_ips: Vec<Ipv4Addr>,
 ) -> Result<Arc<RwLock<Vec<TcpStream>>>, NodeCustomErrors> {
     write_in_log(&log_sender.info_log_sender, "INICIO DE HANDSHAKE");
     println!("Realizando handshake con los nodos...");
-    let chunk_size = (active_nodes.len() as f64 / config.n_threads as f64).ceil() as usize;
+    let chunk_size = (node_ips.len() as f64 / config.n_threads as f64).ceil() as usize;
     let active_nodes_chunks = Arc::new(RwLock::new(
-        active_nodes
+        node_ips
             .chunks(chunk_size)
             .map(|chunk| chunk.to_vec())
             .collect::<Vec<_>>(),

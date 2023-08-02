@@ -1,153 +1,55 @@
-use std::{cell::RefCell, rc::Rc, sync::mpsc::Sender, time::Duration};
+use std::sync::mpsc::Sender;
 
+use super::ui_events::UIEvent;
+use super::{
+    callbacks::connect_ui_callbacks,
+    ui_functions::{add_css_to_screen, handle_ui_event},
+};
 use crate::wallet_event::WalletEvent;
-
 use gtk::{
-    gdk,
     glib::{self, Priority},
     prelude::*,
-    Application, CssProvider, StyleContext, Window,
+    Application, Window,
 };
 
-use super::functions::{
-    handle_ui_event, login_button_clicked, send_button_clicked, start_button_clicked,
-};
-use super::ui_events::UIEvent;
+const GLADE_FILE: &str = include_str!("resources/interfaz.glade");
 
+/// Recibe un sender para enviarle el sender que envia eventos a la UI y un sender para enviarle eventos al nodo
+/// Crea la UI y la ejecuta
 pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<WalletEvent>) {
     let app = Application::builder()
         .application_id("org.gtk-rs.bitcoin")
         .build();
-    app.connect_activate(move |app| {
-        println!("UI thread");
-        build_ui(app, &ui_sender, &sender_to_node);
+    app.connect_activate(move |_| {
+        build_ui(&ui_sender, &sender_to_node);
     });
     let args: Vec<String> = vec![]; // necessary to not use main program args
     app.run_with_args(&args);
 }
 
-fn build_ui(
-    _app: &Application,
-    ui_sender: &Sender<glib::Sender<UIEvent>>,
-    sender_to_node: &Sender<WalletEvent>,
-) {
+/// Recibe un sender para enviarle el sender que envia eventos a la UI y un sender para enviarle eventos al nodo
+/// Inicializa la UI, carga el archivo glade y conecta los callbacks de los botones. Envia el sender que envia eventos a la UI al nodo y
+/// muestra la ventana inicial
+fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<WalletEvent>) {
     if gtk::init().is_err() {
         println!("Failed to initialize GTK.");
         return;
     }
-
-    let glade_src = include_str!("resources/interfaz.glade");
-    let builder = gtk::Builder::from_string(glade_src);
-    let css_provider: CssProvider = CssProvider::new();
-    css_provider
-        .load_from_path("src/gtk/resources/styles.css")
-        .expect("Failed to load CSS file.");
-    let screen: gdk::Screen = gdk::Screen::default().expect("Failed to get default screen.");
-    StyleContext::add_provider_for_screen(
-        &screen,
-        &css_provider,
-        gtk::STYLE_PROVIDER_PRIORITY_USER,
-    );
-
-    let initial_window: Window = builder.object("initial-window").unwrap();
-
-    // login elements
-
-    let status_login: gtk::Label = builder.object("status-login").unwrap();
-    let ref_to_status_login = status_login.clone();
-    let loading_account_label: gtk::Label = builder.object("load-account").unwrap();
-    let ref_to_loading_account_label = Rc::new(RefCell::new(loading_account_label.clone()));
-    let dropdown: gtk::ComboBoxText = builder.object("dropdown-menu").unwrap();
-    let ref2_to_dropdown = dropdown.clone();
-
-    // send tab elements
-    let send_balance: gtk::Label = builder.object("send-balance").unwrap();
-
-    // overview tab elements
-    let available_label: gtk::Label = builder.object("available label").unwrap();
-    let ref_to_available_label = available_label.clone();
-    // cuando cambia uno, cambia el otro
-    ref_to_available_label.connect_notify_local(Some("label"), move |label, _| {
-        let new_text = label.text().to_string();
-        send_balance.set_label(new_text.as_str());
-    });
     let (tx, rx) = glib::MainContext::channel(Priority::default());
+    // envio sender de eventos a la UI al thread del nodo
     ui_sender.send(tx).expect("could not send sender to client");
-
+    let builder = gtk::Builder::from_string(GLADE_FILE);
+    add_css_to_screen();
+    let initial_window: Window = builder.object("initial-window").unwrap();
     initial_window.show();
+    //let main_window: gtk::Window = builder.object("main-window").unwrap();
     //main_window.show();
-
-    let sender_to_get_account = sender_to_node.clone();
-
-    /*
-        for i in 0..50 {
-            let row = liststore_blocks.append();
-            liststore_blocks.set(
-                &row,
-                &[
-                    (0, &i.to_value()),
-                    (1, &"new id"),
-                    (2, &"new merkle root"),
-                    (3, &50.to_value()),
-                ],
-            );
-        }
-        let row = liststore_blocks.append();
-        liststore_blocks.set(
-            &row,
-            &[
-                (0, &2001.to_value()),
-                (1, &"new id"),
-                (2, &"new merkle root"),
-                (3, &50.to_value()),
-            ],
-        );
-    */
-    let ref_to_builder = builder.clone();
+    let tx_to_node = sender_to_node.clone();
+    let builder_clone = builder.clone();
     rx.attach(None, move |msg| {
-        handle_ui_event(ref_to_builder.clone(), msg, sender_to_get_account.clone());
+        handle_ui_event(builder_clone.clone(), msg, tx_to_node.clone());
         Continue(true)
     });
-    gtk::glib::timeout_add_local(Duration::from_secs(5), move || {
-        update_label(ref_to_loading_account_label.clone());
-        Continue(true)
-    });
-
-    start_button_clicked(&builder.clone(), sender_to_node.clone());
-    login_button_clicked(&builder.clone(), sender_to_node.clone());
-    send_button_clicked(&builder.clone(), sender_to_node.clone());
-
-    let sender_to_change_account = sender_to_node.clone();
-    ref2_to_dropdown.connect_changed(move |combobox| {
-        // Obtener el texto de la opción seleccionada
-        if let Some(selected_text) = combobox.active_text() {
-            if selected_text != ref_to_status_login.text() {
-                ref_to_status_login.set_label(selected_text.as_str());
-                ref_to_status_login.set_visible(true);
-                if let Some(new_index) = combobox.active() {
-                    sender_to_change_account
-                        .send(WalletEvent::ChangeAccount(new_index as usize))
-                        .unwrap();
-                }
-            }
-        }
-    });
+    connect_ui_callbacks(&builder, sender_to_node);
     gtk::main();
-}
-
-fn update_label(label: Rc<RefCell<gtk::Label>>) -> Continue {
-    let waiting_labels = [
-        "Hold tight! Setting up your Bitcoin account...",
-        "We're ensuring your account's security...",
-        "Be patient! Your Bitcoin account is being created...",
-    ];
-    let current_text = label.borrow().text().to_string();
-    for i in 0..waiting_labels.len() {
-        if current_text == waiting_labels[i] {
-            let next_text = waiting_labels[(i + 1) % waiting_labels.len()];
-            label.borrow().set_text(next_text);
-            break;
-        }
-    }
-    Continue(true)
 }

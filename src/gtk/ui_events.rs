@@ -12,6 +12,7 @@ use crate::{
 
 type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
 type Headers = Arc<RwLock<Vec<BlockHeader>>>;
+type Height = usize;
 
 #[derive(Clone, Debug)]
 pub enum UIEvent {
@@ -30,9 +31,11 @@ pub enum UIEvent {
     ActualizeHeadersDownloaded(usize),
     ActualizeBlocksDownloaded(usize, usize),
     MakeTransactionStatus(String),
-    LoadingUtxoSet,
     NewPendingTx(),
     UpdateTransactions(Vec<(String, Transaction)>),
+    BlockFound(Block),
+    HeaderFound(BlockHeader, Height),
+    NotFound,
 }
 
 /// Envia un evento a la interfaz
