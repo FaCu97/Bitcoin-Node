@@ -15,20 +15,23 @@ use super::functions::{
 };
 use super::ui_events::UIEvent;
 
+/// Recibe un sender para enviarle el sender que envia eventos a la UI y un sender para enviarle eventos al nodo
+/// Crea la UI y la ejecuta
 pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<WalletEvent>) {
     let app = Application::builder()
         .application_id("org.gtk-rs.bitcoin")
         .build();
-    app.connect_activate(move |app| {
-        println!("UI thread");
-        build_ui(app, &ui_sender, &sender_to_node);
+    app.connect_activate(move |_| {
+        build_ui( &ui_sender, &sender_to_node);
     });
     let args: Vec<String> = vec![]; // necessary to not use main program args
     app.run_with_args(&args);
 }
 
+/// Recibe un sender para enviarle el sender que envia eventos a la UI y un sender para enviarle eventos al nodo
+/// Inicializa la UI, carga el archivo glade y conecta los callbacks de los botones. Envia el sender que envia eventos a la UI al nodo y 
+/// muestra la ventana inicial
 fn build_ui(
-    _app: &Application,
     ui_sender: &Sender<glib::Sender<UIEvent>>,
     sender_to_node: &Sender<WalletEvent>,
 ) {

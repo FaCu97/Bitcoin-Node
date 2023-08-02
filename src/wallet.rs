@@ -63,7 +63,8 @@ impl Wallet {
     }
 
     /// Agrega una cuenta a la wallet.
-    /// Devuelve error si las claves ingresadas son inválidas
+    /// Devuelve error si las claves ingresadas son inválidas y envia el error a la UI.
+    /// En caso de que la cuenta se agregue correctamente, le envia un evento a la UI para que la muestre
     pub fn add_account(
         &mut self,
         ui_sender: &Option<glib::Sender<UIEvent>>,
@@ -117,6 +118,7 @@ impl Wallet {
     }
 
     /// Cambia el indice de la cuenta actual de la wallet. Si se le pasa un indice fuera de rango devuelve error.
+    /// En caso de que se cambie correctamente, le envia un evento a la UI para que la actualice
     pub fn change_account(
         &mut self,
         ui_sender: &Option<glib::Sender<UIEvent>>,
