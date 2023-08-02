@@ -48,11 +48,13 @@ impl Blockchain {
     /// Busca un header en la blockchain
     /// Recibe el hash del header en formato hex
     /// Devuelve el header si lo encuentra, None en caso de error al obtener el lock o no encontrarlo
-    pub fn search_header(&self, hash: [u8; 32]) -> Option<BlockHeader> {
+    pub fn search_header(&self, hash: [u8; 32]) -> Option<(BlockHeader, usize)> {
         if let Ok(index) = self.header_heights.read() {
             if let Some(height) = index.get(&hash) {
                 if let Ok(headers) = self.headers.read() {
-                    return headers.get(*height).cloned();
+                    if let Some(header) = headers.get(*height).cloned() {
+                        return Some((header, *height));
+                    }
                 }
             }
         }

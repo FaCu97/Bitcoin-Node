@@ -218,7 +218,7 @@ impl Wallet {
     /// Busca un header en la blockchain
     /// Recibe el hash del header en formato hex
     /// Devuelve el header si lo encuentra, None en caso contrario
-    pub fn search_header(&self, hash: [u8; 32]) -> Option<BlockHeader> {
+    pub fn search_header(&self, hash: [u8; 32]) -> Option<(BlockHeader, usize)> {
         self.node.search_header(hash)
     }
 }

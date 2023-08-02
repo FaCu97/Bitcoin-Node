@@ -94,10 +94,10 @@ pub fn handle_ui_event(
                 .unwrap();
         }
         UIEvent::BlockFound(block) => {
-            show_dialog_message_pop_up(format!("encontre al bloque {}", block.hex_hash()).as_str(), "Block found");
+            show_dialog_message_pop_up(format!("Height: {} \nHash: {} \nTime (UTC): {} \nTx Count: {}", block.get_height(), block.hex_hash(), block.utc_time(), block.txn_count.decoded_value().to_string()).as_str(), "Block found");
         }
-        UIEvent::HeaderFound(header) => {
-            show_dialog_message_pop_up(format!("encontre al header {}", header.hex_hash()).as_str(), "Header found");
+        UIEvent::HeaderFound(header, height) => {
+            show_dialog_message_pop_up(format!("Height: {} \nHash: {} \nTime (UTC): {}", height, header.hex_hash(), header.utc_time()).as_str(), "Header found");
         }
         UIEvent::NotFound => {
             show_dialog_message_pop_up("Not found", "Not found");

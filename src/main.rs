@@ -165,8 +165,8 @@ fn handle_ui_request(
                 }
             }
             WalletEvent::SearchHeader(block_hash) => {
-                if let Some(header) = wallet.search_header(block_hash) {
-                    send_event_to_ui(ui_sender, UIEvent::HeaderFound(header));
+                if let Some((header, height)) = wallet.search_header(block_hash) {
+                    send_event_to_ui(ui_sender, UIEvent::HeaderFound(header, height));
                 } else {
                     send_event_to_ui(ui_sender, UIEvent::NotFound);
                 }
