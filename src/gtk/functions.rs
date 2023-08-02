@@ -7,10 +7,7 @@ use gtk::{prelude::*, Builder, ProgressBar, Spinner, TreeView, Window};
 
 use crate::{
     account::Account,
-    blocks::{
-        block::Block,
-        block_header::BlockHeader,
-    },
+    blocks::{block::Block, block_header::BlockHeader},
     wallet_event::WalletEvent,
 };
 
@@ -94,10 +91,29 @@ pub fn handle_ui_event(
                 .unwrap();
         }
         UIEvent::BlockFound(block) => {
-            show_dialog_message_pop_up(format!("Height: {} \nHash: {} \nTime (UTC): {} \nTx Count: {}", block.get_height(), block.hex_hash(), block.utc_time(), block.txn_count.decoded_value()).as_str(), "Block found");
+            show_dialog_message_pop_up(
+                format!(
+                    "Height: {} \nHash: {} \nTime (UTC): {} \nTx Count: {}",
+                    block.get_height(),
+                    block.hex_hash(),
+                    block.utc_time(),
+                    block.txn_count.decoded_value()
+                )
+                .as_str(),
+                "Block found",
+            );
         }
         UIEvent::HeaderFound(header, height) => {
-            show_dialog_message_pop_up(format!("Height: {} \nHash: {} \nTime (UTC): {}", height, header.hex_hash(), header.utc_time()).as_str(), "Header found");
+            show_dialog_message_pop_up(
+                format!(
+                    "Height: {} \nHash: {} \nTime (UTC): {}",
+                    height,
+                    header.hex_hash(),
+                    header.utc_time()
+                )
+                .as_str(),
+                "Header found",
+            );
         }
         UIEvent::NotFound => {
             show_dialog_message_pop_up("Not found", "Not found");
@@ -460,7 +476,6 @@ pub fn show_dialog_message_pop_up(message: &str, title: &str) {
     dialog.close();
 }
 
-
 /// Convierte un string hexadecimal a un array de bytes que representa el hash
 /// Recibe un string hexadecimal de 64 caracteres
 /// Devuelve un array de bytes de 32 bytes
@@ -474,7 +489,8 @@ pub fn hex_string_to_bytes(hex_string: &str) -> Option<[u8; 32]> {
     for i in 0..32 {
         let start = i * 2;
         let end = start + 2;
-        if let Ok(byte) = u8::from_str_radix(&hex_chars[start..end].iter().collect::<String>(), 16) {
+        if let Ok(byte) = u8::from_str_radix(&hex_chars[start..end].iter().collect::<String>(), 16)
+        {
             result[31 - i] = byte; // Invertimos el orden de asignación para obtener el resultado invertido
         } else {
             return None; // La cadena contiene caracteres no hexadecimales

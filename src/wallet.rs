@@ -8,7 +8,11 @@ use gtk::glib;
 
 use crate::{
     account::Account,
-    blocks::{utils_block::{make_merkle_proof, string_to_bytes}, block::Block, block_header::BlockHeader},
+    blocks::{
+        block::Block,
+        block_header::BlockHeader,
+        utils_block::{make_merkle_proof, string_to_bytes},
+    },
     custom_errors::NodeCustomErrors,
     gtk::ui_events::{send_event_to_ui, UIEvent},
     node::Node,

@@ -1,7 +1,6 @@
 use std::{cell::RefCell, rc::Rc, sync::mpsc::Sender, time::Duration};
 
-
-use crate::{wallet_event::WalletEvent, gtk::functions::show_dialog_message_pop_up};
+use crate::{gtk::functions::show_dialog_message_pop_up, wallet_event::WalletEvent};
 
 use gtk::{
     gdk,
@@ -11,7 +10,8 @@ use gtk::{
 };
 
 use super::functions::{
-    handle_ui_event, login_button_clicked, send_button_clicked, start_button_clicked, hex_string_to_bytes,
+    handle_ui_event, hex_string_to_bytes, login_button_clicked, send_button_clicked,
+    start_button_clicked,
 };
 use super::ui_events::UIEvent;
 
@@ -22,19 +22,16 @@ pub fn run_ui(ui_sender: Sender<glib::Sender<UIEvent>>, sender_to_node: Sender<W
         .application_id("org.gtk-rs.bitcoin")
         .build();
     app.connect_activate(move |_| {
-        build_ui( &ui_sender, &sender_to_node);
+        build_ui(&ui_sender, &sender_to_node);
     });
     let args: Vec<String> = vec![]; // necessary to not use main program args
     app.run_with_args(&args);
 }
 
 /// Recibe un sender para enviarle el sender que envia eventos a la UI y un sender para enviarle eventos al nodo
-/// Inicializa la UI, carga el archivo glade y conecta los callbacks de los botones. Envia el sender que envia eventos a la UI al nodo y 
+/// Inicializa la UI, carga el archivo glade y conecta los callbacks de los botones. Envia el sender que envia eventos a la UI al nodo y
 /// muestra la ventana inicial
-fn build_ui(
-    ui_sender: &Sender<glib::Sender<UIEvent>>,
-    sender_to_node: &Sender<WalletEvent>,
-) {
+fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<WalletEvent>) {
     if gtk::init().is_err() {
         println!("Failed to initialize GTK.");
         return;
@@ -97,10 +94,12 @@ fn build_ui(
                 .send(WalletEvent::SearchBlock(block_hash))
                 .unwrap();
         } else {
-            show_dialog_message_pop_up(format!("Error {text} is not a valid block hash").as_str(), "Error searching block")
+            show_dialog_message_pop_up(
+                format!("Error {text} is not a valid block hash").as_str(),
+                "Error searching block",
+            )
         }
         search_blocks_entry.set_text("");
-
     });
     let sender_to_find_header = sender_to_node.clone();
     search_headers_button.connect_clicked(move |_| {
@@ -111,12 +110,13 @@ fn build_ui(
                 .send(WalletEvent::SearchHeader(block_hash))
                 .unwrap();
         } else {
-            show_dialog_message_pop_up(format!("Error {text} is not a valid block hash").as_str(), "Error searching header")
+            show_dialog_message_pop_up(
+                format!("Error {text} is not a valid block hash").as_str(),
+                "Error searching header",
+            )
         }
         search_headers_entry.set_text("");
     });
-    
-    
 
     let sender_to_get_account = sender_to_node.clone();
 

@@ -1,6 +1,10 @@
-use std::sync::mpsc::Receiver;
+use crate::{
+    custom_errors::NodeCustomErrors,
+    gtk::ui_events::{send_event_to_ui, UIEvent},
+    wallet::Wallet,
+};
 use gtk::glib;
-use crate::{gtk::ui_events::{UIEvent, send_event_to_ui}, wallet::Wallet, custom_errors::NodeCustomErrors};
+use std::sync::mpsc::Receiver;
 
 type Address = String;
 type WifPrivateKey = String;
@@ -35,7 +39,7 @@ pub fn handle_ui_request(
     for event in rx {
         match event {
             WalletEvent::AddAccountRequest(wif, address) => {
-                handle_add_account(ui_sender, wallet, wif, address);      
+                handle_add_account(ui_sender, wallet, wif, address);
             }
             WalletEvent::ChangeAccount(account_index) => {
                 handle_change_account(ui_sender, wallet, account_index);
@@ -66,8 +70,15 @@ pub fn handle_ui_request(
 /// Recibe un sender que envia eventos a la UI, una wallet, la private-key wif y una direccion
 /// Se encarga de llamar al metodo de la wallet que agrega una cuenta. En caso de error al agregar la cuenta
 /// envia un evento a la UI para que muestre el error
-fn handle_add_account(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wallet, private_key_wif: String, address: String) {
-    if let Err(NodeCustomErrors::LockError(err)) = wallet.add_account(ui_sender, private_key_wif, address) {
+fn handle_add_account(
+    ui_sender: &Option<glib::Sender<UIEvent>>,
+    wallet: &mut Wallet,
+    private_key_wif: String,
+    address: String,
+) {
+    if let Err(NodeCustomErrors::LockError(err)) =
+        wallet.add_account(ui_sender, private_key_wif, address)
+    {
         send_event_to_ui(ui_sender, UIEvent::AddAccountError(err));
     }
 }
@@ -75,7 +86,11 @@ fn handle_add_account(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wa
 /// Recibe un sender que envia eventos a la UI, una wallet y el indice de la cuenta a cambiar
 /// Se encarga de llamar al metodo de la wallet que cambia la cuenta actual. En caso de error al cambiar la cuenta
 /// envia un evento a la UI para que muestre el error
-fn handle_change_account(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wallet, account_index: usize) {
+fn handle_change_account(
+    ui_sender: &Option<glib::Sender<UIEvent>>,
+    wallet: &mut Wallet,
+    account_index: usize,
+) {
     if let Err(err) = wallet.change_account(ui_sender, account_index) {
         send_event_to_ui(ui_sender, UIEvent::ChangeAccountError(err.to_string()));
     }
@@ -94,15 +109,29 @@ fn handle_get_account(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wa
 /// Se encarga de llamar al metodo de la wallet que realiza una transaccion. En caso de error al realizar la transaccion
 /// envia un evento a la UI para que muestre el error. En caso de que la transaccion se realice correctamente envia un evento
 /// a la UI para que muestre que la transaccion se realizo correctamente
-fn handle_make_transaction(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wallet, address: String, amount: i64, fee: i64) {
+fn handle_make_transaction(
+    ui_sender: &Option<glib::Sender<UIEvent>>,
+    wallet: &mut Wallet,
+    address: String,
+    amount: i64,
+    fee: i64,
+) {
     if let Err(err) = wallet.make_transaction(&address, amount, fee) {
         send_event_to_ui(ui_sender, UIEvent::MakeTransactionStatus(err.to_string()));
     } else {
-        send_event_to_ui(ui_sender,UIEvent::MakeTransactionStatus("The transaction was made succesfuly!".to_string()));
+        send_event_to_ui(
+            ui_sender,
+            UIEvent::MakeTransactionStatus("The transaction was made succesfuly!".to_string()),
+        );
     }
 }
 
-fn handle_poi(_ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wallet, block_hash: String, transaction_hash: String) {
+fn handle_poi(
+    _ui_sender: &Option<glib::Sender<UIEvent>>,
+    wallet: &mut Wallet,
+    block_hash: String,
+    transaction_hash: String,
+) {
     if let Err(err) = wallet.tx_proof_of_inclusion(block_hash, transaction_hash) {
         println!("Error al crear la prueba de inclusion. Error {}", err);
     }
@@ -112,7 +141,11 @@ fn handle_poi(_ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wallet, b
 /// Se encarga de llamar al metodo de la wallet que busca un bloque por su hash. En caso de que el bloque exista
 /// envia un evento a la UI para que muestre el bloque. En caso de que el bloque no exista envia un evento a la UI
 /// para que muestre que no se encontro el bloque
-fn handle_search_block(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wallet, block_hash: [u8; 32]) {
+fn handle_search_block(
+    ui_sender: &Option<glib::Sender<UIEvent>>,
+    wallet: &mut Wallet,
+    block_hash: [u8; 32],
+) {
     if let Some(block) = wallet.search_block(block_hash) {
         send_event_to_ui(ui_sender, UIEvent::BlockFound(block));
     } else {
@@ -124,7 +157,11 @@ fn handle_search_block(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut W
 /// Se encarga de llamar al metodo de la wallet que busca un header por su hash. En caso de que el header exista
 /// envia un evento a la UI para que muestre el header. En caso de que el header no exista envia un evento a la UI
 /// para que muestre que no se encontro el header
-fn handle_search_header(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wallet, block_hash: [u8; 32]) {
+fn handle_search_header(
+    ui_sender: &Option<glib::Sender<UIEvent>>,
+    wallet: &mut Wallet,
+    block_hash: [u8; 32],
+) {
     if let Some((header, height)) = wallet.search_header(block_hash) {
         send_event_to_ui(ui_sender, UIEvent::HeaderFound(header, height));
     } else {

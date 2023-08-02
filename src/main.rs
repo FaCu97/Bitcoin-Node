@@ -12,7 +12,7 @@ use bitcoin::node::Node;
 use bitcoin::server::NodeServer;
 use bitcoin::terminal_ui::terminal_ui;
 use bitcoin::wallet::Wallet;
-use bitcoin::wallet_event::{WalletEvent, handle_ui_request};
+use bitcoin::wallet_event::{handle_ui_request, WalletEvent};
 use gtk::glib;
 use std::sync::mpsc::{channel, Receiver};
 use std::{env, thread};
@@ -33,7 +33,7 @@ fn main() -> Result<(), NodeCustomErrors> {
     Ok(())
 }
 
-/// Crea los channels para comunicar el nodo con la interfaz grafica, corre 
+/// Crea los channels para comunicar el nodo con la interfaz grafica, corre
 /// la interfaz grafica en el thread principal y corre el nodo en un thread secundario
 /// Devuelve un error si no se puede crear la interfaz grafica o si no se puede correr el nodo
 /// Ok(()) si se corre el nodo correctamente
@@ -49,7 +49,7 @@ fn run_with_ui(args: Vec<String>) -> Result<(), NodeCustomErrors> {
             NodeCustomErrors::ThreadChannelError(err.to_string())
         })?;
         // run the node with the ui sender
-        run_node(&args, Some(ui_tx), Some(receiver_from_ui_to_node)) 
+        run_node(&args, Some(ui_tx), Some(receiver_from_ui_to_node))
     });
     // run the ui in the main thread
     run_ui(tx, sender_from_ui_to_node);
