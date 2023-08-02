@@ -5,9 +5,9 @@ use gtk::{
     prelude::*,
     Application, Window,
 };
-use super::ui_functions::{
-    handle_ui_event, add_css_to_screen, handle_dynamic_ui,
-};
+use super::{ui_functions::{
+    handle_ui_event, add_css_to_screen,
+}, callbacks::connect_ui_callbacks};
 use super::ui_events::UIEvent;
 
 const GLADE_FILE: &str = include_str!("resources/interfaz.glade");
@@ -48,7 +48,7 @@ fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<W
         handle_ui_event(builder_clone.clone(), msg, tx_to_node.clone());
         Continue(true)
     });
-    handle_dynamic_ui(&builder, sender_to_node);
+    connect_ui_callbacks(&builder, sender_to_node);
     gtk::main();
 }
 
