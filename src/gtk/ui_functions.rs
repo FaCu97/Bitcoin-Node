@@ -235,7 +235,7 @@ pub fn login_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>
     });
 }
 
-///Esta funcion realiza la accion que corresponde al presionar el boton de send creando una nueva
+/// Esta funcion realiza la accion que corresponde al presionar el boton de send creando una nueva
 /// transaccion en caso de que los datos ingresados sean validos, la informacion de la transaccion
 /// es mostrada en la interfaz a traves de un pop up
 pub fn send_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
