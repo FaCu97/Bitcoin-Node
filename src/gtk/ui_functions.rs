@@ -1,16 +1,13 @@
 use std::{
     collections::HashMap,
-    sync::{mpsc, Arc, RwLock},
+    sync::{mpsc::{self}, Arc, RwLock},
 };
 
-use gtk::{prelude::*, Builder, ProgressBar, Spinner, TreeView, Window};
+use gtk::{prelude::*, Builder, ProgressBar, Spinner, TreeView, Window, CssProvider, gdk, StyleContext};
 
 use crate::{
     account::Account,
-    blocks::{
-        block::{self, Block},
-        block_header::BlockHeader,
-    },
+    blocks::{block::Block, block_header::BlockHeader},
     wallet_event::WalletEvent,
 };
 
@@ -93,6 +90,34 @@ pub fn handle_ui_event(
                 .send(WalletEvent::GetAccountRequest)
                 .unwrap();
         }
+        UIEvent::BlockFound(block) => {
+            show_dialog_message_pop_up(
+                format!(
+                    "Height: {} \nHash: {} \nTime (UTC): {} \nTx Count: {}",
+                    block.get_height(),
+                    block.hex_hash(),
+                    block.utc_time(),
+                    block.txn_count.decoded_value()
+                )
+                .as_str(),
+                "Block found",
+            );
+        }
+        UIEvent::HeaderFound(header, height) => {
+            show_dialog_message_pop_up(
+                format!(
+                    "Height: {} \nHash: {} \nTime (UTC): {}",
+                    height,
+                    header.hex_hash(),
+                    header.utc_time()
+                )
+                .as_str(),
+                "Header found",
+            );
+        }
+        UIEvent::NotFound => {
+            show_dialog_message_pop_up("Not found", "Not found");
+        }
         _ => (),
     }
 }
@@ -137,8 +162,8 @@ fn render_main_window(builder: &Builder, headers: &Headers, blocks: &Blocks) {
 
     initial_window.close();
     main_window.show();
-    initialize_headers_tab(&liststore_headers, &header_table, &headers);
-    initialize_blocks_tab(&liststore_blocks, &block_table, &headers, &blocks);
+    initialize_headers_tab(&liststore_headers, &header_table, headers);
+    initialize_blocks_tab(&liststore_blocks, &block_table, headers, blocks);
 }
 
 fn update_account_tab(builder: &Builder, account: Account) {
@@ -170,73 +195,6 @@ fn render_account_tab(builder: &Builder) {
     dropdown.set_sensitive(true);
 }
 
-/// Esta funcion realiza la accion que corresponde al presionar el boton de start
-pub fn start_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
-    let start_button: gtk::Button = builder.object("start-button").unwrap();
-    let ref_start_btn = start_button.clone();
-    start_button.connect_clicked(move |_| {
-        sender.send(WalletEvent::Start).unwrap();
-        ref_start_btn.set_visible(false);
-    });
-}
-/// Esta funcion realiza la accion que corresponde al presionar el boton de login
-pub fn login_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
-    // elementos de la interfaz
-    let login_button: gtk::Button = builder.object("login-button").unwrap();
-    let address_entry: gtk::Entry = builder.object("address").unwrap();
-    let private_key_entry: gtk::Entry = builder.object("private-key").unwrap();
-    let account_loading_spinner: Spinner = builder.object("account-spin").unwrap();
-    let loading_account_label: gtk::Label = builder.object("load-account").unwrap();
-    let ref_account_spin = account_loading_spinner.clone();
-    let ref_loading_account_label = loading_account_label.clone();
-    let dropdown: gtk::ComboBoxText = builder.object("dropdown-menu").unwrap();
-    let ref_to_dropdown = dropdown.clone();
-    let ref_to_buttons = get_buttons(&builder);
-    let ref_to_entries = get_entries(&builder);
-    // accion al clickearse el boton de login
-    login_button.connect_clicked(move |_| {
-        disable_buttons_and_entries(&ref_to_buttons, &ref_to_entries);
-        ref_to_dropdown.set_sensitive(false);
-        ref_account_spin.set_visible(true);
-        ref_loading_account_label.set_visible(true);
-
-        let address = String::from(address_entry.text());
-        let private_key = String::from(private_key_entry.text());
-        address_entry.set_text("");
-        private_key_entry.set_text("");
-        sender
-            .send(WalletEvent::AddAccountRequest(private_key, address))
-            .unwrap();
-    });
-}
-
-///Esta funcion realiza la accion que corresponde al presionar el boton de send creando una nueva
-/// transaccion en caso de que los datos ingresados sean validos, la informacion de la transaccion
-/// es mostrada en la interfaz a traves de un pop up
-pub fn send_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
-    let send_button: gtk::Button = builder.object("send-button").unwrap();
-    let pay_to_entry: gtk::Entry = builder.object("pay to entry").unwrap();
-    let fee_entry: gtk::Entry = builder.object("fee").unwrap();
-    let amount_entry: gtk::Entry = builder.object("amount-entry").unwrap();
-    send_button.connect_clicked(move |_| {
-        let address_to_send = String::from(pay_to_entry.text());
-        let amount = String::from(amount_entry.text());
-        let fee: String = String::from(fee_entry.text());
-        pay_to_entry.set_text("");
-        amount_entry.set_text("");
-        fee_entry.set_text("");
-        if let Some((valid_amount, valid_fee)) = validate_amount_and_fee(amount, fee) {
-            sender
-                .send(WalletEvent::MakeTransaction(
-                    address_to_send,
-                    valid_amount,
-                    valid_fee,
-                ))
-                .unwrap();
-        }
-    });
-}
-
 /// Esta funcion obtiene los botones de la interfaz
 pub fn get_buttons(builder: &Builder) -> Vec<gtk::Button> {
     let buttons = vec![
@@ -262,32 +220,7 @@ pub fn get_entries(builder: &Builder) -> Vec<gtk::Entry> {
     ];
     entries
 }
-/// esta funcion chequea si el usuario ingreso un amount y un fee validos
-/// en caso de que no sea asi, se muestra un pop up con un mensaje de error
-fn validate_amount_and_fee(amount: String, fee: String) -> Option<(i64, i64)> {
-    let valid_amount = match amount.parse::<i64>() {
-        Ok(amount) => amount,
-        Err(_) => {
-            show_dialog_message_pop_up(
-                "Error, please enter a valid amount of Satoshis",
-                "Failed to make transaction",
-            );
-            return None;
-        }
-    };
-    let valid_fee = match fee.parse::<i64>() {
-        Ok(fee) => fee,
-        Err(_) => {
-            show_dialog_message_pop_up(
-                "Error, please enter a valid fee of Satoshis",
-                "Failed to make transaction",
-            );
-            return None;
-        }
-    };
 
-    Some((valid_amount, valid_fee))
-}
 
 fn initialize_blocks_tab(
     liststore_blocks: &gtk::ListStore,
@@ -450,3 +383,47 @@ pub fn show_dialog_message_pop_up(message: &str, title: &str) {
     dialog.run();
     dialog.close();
 }
+
+/// Convierte un string hexadecimal a un array de bytes que representa el hash
+/// Recibe un string hexadecimal de 64 caracteres
+/// Devuelve un array de bytes de 32 bytes
+/// Si el string no es hexadecimal o no tiene 64 caracteres, devuelve None
+pub fn hex_string_to_bytes(hex_string: &str) -> Option<[u8; 32]> {
+    if hex_string.len() != 64 {
+        return None; // La longitud del string hexadecimal debe ser de 64 caracteres (32 bytes en hexadecimal)
+    }
+    let mut result = [0u8; 32];
+    let hex_chars: Vec<_> = hex_string.chars().collect();
+    for i in 0..32 {
+        let start = i * 2;
+        let end = start + 2;
+        if let Ok(byte) = u8::from_str_radix(&hex_chars[start..end].iter().collect::<String>(), 16)
+        {
+            result[31 - i] = byte; // Invertimos el orden de asignación para obtener el resultado invertido
+        } else {
+            return None; // La cadena contiene caracteres no hexadecimales
+        }
+    }
+    Some(result)
+}
+
+/// Le agrega el estilo del archivo css a la pantalla
+pub fn add_css_to_screen() {
+    let css_provider: CssProvider = CssProvider::new();
+    css_provider
+        .load_from_path("src/gtk/resources/styles.css")
+        .expect("Failed to load CSS file.");
+    let screen: gdk::Screen = gdk::Screen::default().expect("Failed to get default screen.");
+    StyleContext::add_provider_for_screen(
+        &screen,
+        &css_provider,
+        gtk::STYLE_PROVIDER_PRIORITY_USER,
+    );
+}
+
+
+
+
+
+
+

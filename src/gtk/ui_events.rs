@@ -12,6 +12,7 @@ use crate::{
 
 type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
 type Headers = Arc<RwLock<Vec<BlockHeader>>>;
+type Height = usize;
 
 #[derive(Clone, Debug)]
 pub enum UIEvent {
@@ -30,6 +31,9 @@ pub enum UIEvent {
     ActualizeHeadersDownloaded(usize),
     ActualizeBlocksDownloaded(usize, usize),
     MakeTransactionStatus(String),
+    BlockFound(Block),
+    HeaderFound(BlockHeader, Height),
+    NotFound,
 }
 
 pub fn send_event_to_ui(ui_sender: &Option<glib::Sender<UIEvent>>, event: UIEvent) {

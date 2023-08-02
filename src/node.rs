@@ -3,7 +3,7 @@ use gtk::glib;
 use crate::{
     account::Account,
     blockchain::Blockchain,
-    blocks::block::Block,
+    blocks::{block::Block, block_header::BlockHeader},
     custom_errors::NodeCustomErrors,
     gtk::ui_events::UIEvent,
     handler::node_message_handler::NodeMessageHandler,
@@ -48,7 +48,7 @@ impl Node {
         let peers_handler = NodeMessageHandler::new(log_sender, ui_sender, node_pointers.clone())?;
         Ok(Node {
             connected_nodes,
-            blockchain: blockchain.clone(),
+            blockchain,
             accounts: pointer_to_accounts_in_node,
             peers_handler,
             node_pointers,
@@ -143,5 +143,19 @@ impl Node {
             self.node_pointers.clone(),
             connection,
         )
+    }
+
+    /// Busca un bloque en la blockchain
+    /// Recibe el hash del bloque en formato hex
+    /// Devuelve el bloque si lo encuentra, None en caso contrario
+    pub fn search_block(&self, hash: [u8; 32]) -> Option<Block> {
+        self.blockchain.search_block(hash)
+    }
+
+    /// Busca un header en la blockchain
+    /// Recibe el hash del header en formato hex
+    /// Devuelve el header si lo encuentra, None en caso contrario
+    pub fn search_header(&self, hash: [u8; 32]) -> Option<(BlockHeader, usize)> {
+        self.blockchain.search_header(hash)
     }
 }

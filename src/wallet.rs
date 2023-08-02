@@ -8,7 +8,11 @@ use gtk::glib;
 
 use crate::{
     account::Account,
-    blocks::utils_block::{make_merkle_proof, string_to_bytes},
+    blocks::{
+        block::Block,
+        block_header::BlockHeader,
+        utils_block::{make_merkle_proof, string_to_bytes},
+    },
     custom_errors::NodeCustomErrors,
     gtk::ui_events::{send_event_to_ui, UIEvent},
     node::Node,
@@ -63,7 +67,8 @@ impl Wallet {
     }
 
     /// Agrega una cuenta a la wallet.
-    /// Devuelve error si las claves ingresadas son inválidas
+    /// Devuelve error si las claves ingresadas son inválidas y envia el error a la UI.
+    /// En caso de que la cuenta se agregue correctamente, le envia un evento a la UI para que la muestre
     pub fn add_account(
         &mut self,
         ui_sender: &Option<glib::Sender<UIEvent>>,
@@ -117,6 +122,7 @@ impl Wallet {
     }
 
     /// Cambia el indice de la cuenta actual de la wallet. Si se le pasa un indice fuera de rango devuelve error.
+    /// En caso de que se cambie correctamente, le envia un evento a la UI para que la actualice
     pub fn change_account(
         &mut self,
         ui_sender: &Option<glib::Sender<UIEvent>>,
@@ -206,6 +212,20 @@ impl Wallet {
             );
         }
         None
+    }
+
+    /// Busca un bloque en la blockchain
+    /// Recibe el hash del bloque en formato hex
+    /// Devuelve el bloque si lo encuentra, None en caso contrario
+    pub fn search_block(&self, hash: [u8; 32]) -> Option<Block> {
+        self.node.search_block(hash)
+    }
+
+    /// Busca un header en la blockchain
+    /// Recibe el hash del header en formato hex
+    /// Devuelve el header si lo encuentra, None en caso contrario
+    pub fn search_header(&self, hash: [u8; 32]) -> Option<(BlockHeader, usize)> {
+        self.node.search_header(hash)
     }
 }
 

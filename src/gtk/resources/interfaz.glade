@@ -786,12 +786,12 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkEntry" id="search-tx">
+                      <object class="GtkSearchEntry" id="search-tx">
                         <property name="width-request">550</property>
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
-                        <property name="placeholder-text" translatable="yes">enter a hash's transaction</property>
+                        <property name="placeholder-text" translatable="yes">Enter a hash's transaction</property>
                         <style>
                           <class name="input-user"/>
                         </style>
@@ -835,7 +835,7 @@
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <child>
-                      <object class="GtkEntry" id="search-block">
+                      <object class="GtkSearchEntry" id="search-block">
                         <property name="width-request">550</property>
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
@@ -964,12 +964,12 @@
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <child>
-                      <object class="GtkEntry" id="search-block-headers">
+                      <object class="GtkSearchEntry" id="search-block-headers">
                         <property name="width-request">550</property>
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
                         <property name="can-focus">True</property>
-                        <property name="placeholder-text" translatable="yes">enter a hash's block</property>
+                        <property name="placeholder-text" translatable="yes">Enter a hash's block</property>
                         <style>
                           <class name="input-user"/>
                         </style>
