@@ -1,10 +1,14 @@
-use std::{
-    sync::mpsc::{self, Sender}, cell::RefCell, rc::Rc, time::Duration,
-};
-use gtk::{prelude::*, Builder, Spinner};
-use crate::wallet_event::WalletEvent;
 use super::ui_functions::{
-    disable_buttons_and_entries, get_buttons, get_entries, hex_string_to_bytes, show_dialog_message_pop_up,
+    disable_buttons_and_entries, get_buttons, get_entries, hex_string_to_bytes,
+    show_dialog_message_pop_up,
+};
+use crate::wallet_event::WalletEvent;
+use gtk::{prelude::*, Builder, Spinner};
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    sync::mpsc::{self, Sender},
+    time::Duration,
 };
 
 /// Recibe un builder y un sender para enviarle eventos al nodo
@@ -18,7 +22,7 @@ pub fn connect_ui_callbacks(builder: &Builder, sender_to_node: &Sender<WalletEve
     login_button_clicked(builder, sender_to_node.clone());
     dropdown_accounts_changed(builder, sender_to_node.clone());
     close_main_window_on_exit(builder, sender_to_node.clone());
-    change_loading_account_label_periodically(builder); 
+    change_loading_account_label_periodically(builder);
 }
 
 /// Esta funcion realiza la accion que corresponde al presionar el boton de start
@@ -79,9 +83,7 @@ fn search_blocks_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEv
         let text = search_blocks_entry.text().to_string();
         if let Some(block_hash) = hex_string_to_bytes(text.as_str()) {
             println!("searching block {}", text);
-            sender
-                .send(WalletEvent::SearchBlock(block_hash))
-                .unwrap();
+            sender.send(WalletEvent::SearchBlock(block_hash)).unwrap();
         } else {
             show_dialog_message_pop_up(
                 format!("Error {text} is not a valid block hash").as_str(),
@@ -101,9 +103,7 @@ fn search_headers_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletE
         let text = search_headers_entry.text().to_string();
         if let Some(block_hash) = hex_string_to_bytes(text.as_str()) {
             println!("searching header {}", text);
-            sender
-                .send(WalletEvent::SearchHeader(block_hash))
-                .unwrap();
+            sender.send(WalletEvent::SearchHeader(block_hash)).unwrap();
         } else {
             show_dialog_message_pop_up(
                 format!("Error {text} is not a valid block hash").as_str(),
@@ -184,8 +184,6 @@ fn change_loading_account_label_periodically(builder: &Builder) {
         Continue(true)
     });
 }
-
-
 
 /*
 ***************************************************************************

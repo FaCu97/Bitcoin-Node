@@ -1,9 +1,14 @@
 use std::{
     collections::HashMap,
-    sync::{mpsc::{self}, Arc, RwLock},
+    sync::{
+        mpsc::{self},
+        Arc, RwLock,
+    },
 };
 
-use gtk::{prelude::*, Builder, ProgressBar, Spinner, TreeView, Window, CssProvider, gdk, StyleContext};
+use gtk::{
+    gdk, prelude::*, Builder, CssProvider, ProgressBar, Spinner, StyleContext, TreeView, Window,
+};
 
 use crate::{
     account::Account,
@@ -221,7 +226,6 @@ pub fn get_entries(builder: &Builder) -> Vec<gtk::Entry> {
     entries
 }
 
-
 fn initialize_blocks_tab(
     liststore_blocks: &gtk::ListStore,
     block_table: &TreeView,
@@ -420,10 +424,3 @@ pub fn add_css_to_screen() {
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
 }
-
-
-
-
-
-
-
