@@ -41,7 +41,7 @@ impl Blockchain {
         if let Ok(blocks) = self.blocks.read() {
             return blocks.get(&hash).cloned();
         } else {
-            return None;
+            None
         }
     }
 

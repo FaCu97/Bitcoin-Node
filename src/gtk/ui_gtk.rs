@@ -58,18 +58,18 @@ fn build_ui(
     // login elements
 
     let status_login: gtk::Label = builder.object("status-login").unwrap();
-    let ref_to_status_login = status_login.clone();
+    let ref_to_status_login = status_login;
     let loading_account_label: gtk::Label = builder.object("load-account").unwrap();
-    let ref_to_loading_account_label = Rc::new(RefCell::new(loading_account_label.clone()));
+    let ref_to_loading_account_label = Rc::new(RefCell::new(loading_account_label));
     let dropdown: gtk::ComboBoxText = builder.object("dropdown-menu").unwrap();
-    let ref2_to_dropdown = dropdown.clone();
+    let ref2_to_dropdown = dropdown;
 
     // send tab elements
     let send_balance: gtk::Label = builder.object("send-balance").unwrap();
 
     // overview tab elements
     let available_label: gtk::Label = builder.object("available label").unwrap();
-    let ref_to_available_label = available_label.clone();
+    let ref_to_available_label = available_label;
     // cuando cambia uno, cambia el otro
     ref_to_available_label.connect_notify_local(Some("label"), move |label, _| {
         let new_text = label.text().to_string();
@@ -78,10 +78,10 @@ fn build_ui(
     let (tx, rx) = glib::MainContext::channel(Priority::default());
     ui_sender.send(tx).expect("could not send sender to client");
 
-    //initial_window.show();
-    let main_window: gtk::Window = builder.object("main-window").unwrap();
+    initial_window.show();
+    //let main_window: gtk::Window = builder.object("main-window").unwrap();
 
-    main_window.show();
+    //main_window.show();
     // SEARCH ENTRIES
     let search_blocks_entry: gtk::SearchEntry = builder.object("search-block").unwrap();
     let search_headers_entry: gtk::SearchEntry = builder.object("search-block-headers").unwrap();
@@ -154,9 +154,9 @@ fn build_ui(
         Continue(true)
     });
 
-    start_button_clicked(&builder.clone(), sender_to_node.clone());
-    login_button_clicked(&builder.clone(), sender_to_node.clone());
-    send_button_clicked(&builder.clone(), sender_to_node.clone());
+    start_button_clicked(&builder, sender_to_node.clone());
+    login_button_clicked(&builder, sender_to_node.clone());
+    send_button_clicked(&builder, sender_to_node.clone());
 
     let sender_to_change_account = sender_to_node.clone();
     ref2_to_dropdown.connect_changed(move |combobox| {

@@ -152,7 +152,7 @@ fn download_full_blockchain_from_multiple_nodes(
     let log_sender = log_sender.clone();
     let ui_sender = ui_sender.clone();
     let (tx_utxo_set, rx_utxo_set) = channel();
-    let utxo_set_clone = utxo_set.clone();
+    let utxo_set_clone = utxo_set;
     let join_handle = thread::spawn(move || -> Result<(), NodeCustomErrors> {
         load_utxo_set(rx_utxo_set, utxo_set_clone)
     });
@@ -199,7 +199,7 @@ fn download_full_blockchain_from_single_node(
     )?;
     let mut node = get_node(nodes.clone())?;
     let (tx_1, rx_1) = channel();
-    let utxo_set_clone = utxo_set.clone();
+    let utxo_set_clone = utxo_set;
     let join_handle = thread::spawn(move || -> Result<(), NodeCustomErrors> {
         load_utxo_set(rx_1, utxo_set_clone)
     });

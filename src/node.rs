@@ -48,7 +48,7 @@ impl Node {
         let peers_handler = NodeMessageHandler::new(log_sender, ui_sender, node_pointers.clone())?;
         Ok(Node {
             connected_nodes,
-            blockchain: blockchain.clone(),
+            blockchain,
             accounts: pointer_to_accounts_in_node,
             peers_handler,
             node_pointers,

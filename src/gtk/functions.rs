@@ -8,7 +8,7 @@ use gtk::{prelude::*, Builder, ProgressBar, Spinner, TreeView, Window};
 use crate::{
     account::Account,
     blocks::{
-        block::{self, Block},
+        block::Block,
         block_header::BlockHeader,
     },
     wallet_event::WalletEvent,
@@ -94,7 +94,7 @@ pub fn handle_ui_event(
                 .unwrap();
         }
         UIEvent::BlockFound(block) => {
-            show_dialog_message_pop_up(format!("Height: {} \nHash: {} \nTime (UTC): {} \nTx Count: {}", block.get_height(), block.hex_hash(), block.utc_time(), block.txn_count.decoded_value().to_string()).as_str(), "Block found");
+            show_dialog_message_pop_up(format!("Height: {} \nHash: {} \nTime (UTC): {} \nTx Count: {}", block.get_height(), block.hex_hash(), block.utc_time(), block.txn_count.decoded_value()).as_str(), "Block found");
         }
         UIEvent::HeaderFound(header, height) => {
             show_dialog_message_pop_up(format!("Height: {} \nHash: {} \nTime (UTC): {}", height, header.hex_hash(), header.utc_time()).as_str(), "Header found");
@@ -146,8 +146,8 @@ fn render_main_window(builder: &Builder, headers: &Headers, blocks: &Blocks) {
 
     initial_window.close();
     main_window.show();
-    initialize_headers_tab(&liststore_headers, &header_table, &headers);
-    initialize_blocks_tab(&liststore_blocks, &block_table, &headers, &blocks);
+    initialize_headers_tab(&liststore_headers, &header_table, headers);
+    initialize_blocks_tab(&liststore_blocks, &block_table, headers, blocks);
 }
 
 fn update_account_tab(builder: &Builder, account: Account) {
@@ -196,12 +196,12 @@ pub fn login_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>
     let private_key_entry: gtk::Entry = builder.object("private-key").unwrap();
     let account_loading_spinner: Spinner = builder.object("account-spin").unwrap();
     let loading_account_label: gtk::Label = builder.object("load-account").unwrap();
-    let ref_account_spin = account_loading_spinner.clone();
-    let ref_loading_account_label = loading_account_label.clone();
+    let ref_account_spin = account_loading_spinner;
+    let ref_loading_account_label = loading_account_label;
     let dropdown: gtk::ComboBoxText = builder.object("dropdown-menu").unwrap();
-    let ref_to_dropdown = dropdown.clone();
-    let ref_to_buttons = get_buttons(&builder);
-    let ref_to_entries = get_entries(&builder);
+    let ref_to_dropdown = dropdown;
+    let ref_to_buttons = get_buttons(builder);
+    let ref_to_entries = get_entries(builder);
     // accion al clickearse el boton de login
     login_button.connect_clicked(move |_| {
         disable_buttons_and_entries(&ref_to_buttons, &ref_to_entries);
