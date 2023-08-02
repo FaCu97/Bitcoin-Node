@@ -7,6 +7,7 @@ type BlockHash = [u8; 32];
 type BlockHashString = String;
 type TransactionHash = String;
 
+/// Representa los eventos que la UI le envia a la wallet
 pub enum WalletEvent {
     Start,
     AddAccountRequest(WifPrivateKey, Address),
