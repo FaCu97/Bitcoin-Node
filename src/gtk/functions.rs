@@ -97,7 +97,7 @@ pub fn handle_ui_event(
                 .unwrap();
         }
         UIEvent::ShowPendingTransaction(account, transaction) => {
-            for tx in transactions {
+            for tx in transactions.iter() {
                 if tx.1.hash() == transaction.hash() {
                     // La transaccion ya está agregada
                     return;
