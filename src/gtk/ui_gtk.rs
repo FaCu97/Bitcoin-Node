@@ -1,3 +1,5 @@
+use std::sync::mpsc::Sender;
+
 use super::ui_events::UIEvent;
 use super::{
     callbacks::connect_ui_callbacks,
@@ -9,7 +11,6 @@ use gtk::{
     prelude::*,
     Application, Window,
 };
-use std::sync::mpsc::Sender;
 
 const GLADE_FILE: &str = include_str!("resources/interfaz.glade");
 

@@ -13,6 +13,7 @@ use gtk::{
 use crate::{
     account::Account,
     blocks::{block::Block, block_header::BlockHeader},
+    transactions::transaction::Transaction,
     wallet_event::WalletEvent,
 };
 
@@ -28,6 +29,7 @@ pub fn handle_ui_event(
     ui_event: UIEvent,
     sender_to_get_account: mpsc::Sender<WalletEvent>,
 ) {
+    let tx_table: TreeView = builder.object("tx_table").unwrap();
     match ui_event {
         UIEvent::ActualizeBlocksDownloaded(blocks_downloaded, blocks_to_download) => {
             actualize_progress_bar(&builder, blocks_downloaded, blocks_to_download);
@@ -74,25 +76,56 @@ pub fn handle_ui_event(
             println!("Account changed to: {}", account.address);
             let available_label = builder.object("available label").unwrap();
             update_overview(&account, &available_label);
+
+            // actualiza la pestana de transacciones
+            sender_to_get_account
+                .send(WalletEvent::GetTransactionsRequest)
+                .unwrap();
             // TODO: Actualizar Overview --> Balance y recent transactions y pestana transactions
         }
         UIEvent::MakeTransactionStatus(status) => {
             show_dialog_message_pop_up(status.as_str(), "transaction's status");
         }
-
         UIEvent::AddBlock(block) => {
-            let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
-            let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
-
-            add_row_first_to_liststore_block(&liststore_blocks, &block);
-            add_row_first_to_liststore_headers(
-                &liststore_headers,
-                &block.block_header,
-                block.get_height(),
+            handle_add_block(sender_to_get_account, &builder, &block);
+        }
+        UIEvent::ShowPendingTransaction(account, transaction) => {
+            show_dialog_message_pop_up(
+                format!(
+                    "New incoming pending transaction: {} received for account: {}",
+                    transaction.hex_hash(),
+                    account.address
+                )
+                .as_str(),
+                "Account added succesfully",
             );
-
             sender_to_get_account
-                .send(WalletEvent::GetAccountRequest)
+                .send(WalletEvent::GetTransactionsRequest)
+                .unwrap();
+        }
+
+        UIEvent::UpdateTransactions(transactions) => {
+            render_transactions(&transactions, tx_table);
+        }
+
+        UIEvent::NewPendingTx() => {
+            sender_to_get_account
+                .send(WalletEvent::GetTransactionsRequest)
+                .unwrap();
+        }
+        UIEvent::ShowConfirmedTransaction(block, account, transaction) => {
+            show_dialog_message_pop_up(
+                format!(
+                    "Transaction confirmed: {} for account: {} in block: {}",
+                    transaction.hex_hash(),
+                    account.address,
+                    block.hex_hash()
+                )
+                .as_str(),
+                "Account added succesfully",
+            );
+            sender_to_get_account
+                .send(WalletEvent::GetTransactionsRequest)
                 .unwrap();
         }
         UIEvent::BlockFound(block) => {
@@ -123,8 +156,49 @@ pub fn handle_ui_event(
         UIEvent::NotFound => {
             show_dialog_message_pop_up("Not found", "Not found");
         }
-        _ => (),
     }
+}
+
+/// Muestra las transacciones en la pestana de transacciones
+fn render_transactions(transactions: &Vec<(String, Transaction)>, tx_table: TreeView) {
+    let tree_model = gtk::ListStore::new(&[
+        String::static_type(),
+        String::static_type(),
+        String::static_type(),
+        i32::static_type(),
+    ]);
+
+    for tx in transactions {
+        let row = tree_model.append();
+        tree_model.set(
+            &row,
+            &[
+                (0, &tx.0.to_value()),
+                (1, &tx.1.hex_hash().to_value()),
+                (2, &"P2PKH".to_value()),
+                (3, &tx.1.amount().to_value()),
+            ],
+        );
+    }
+    tx_table.set_model(Some(&tree_model));
+}
+
+/// Agrega el bloque y header a las pestañas.
+/// Solicita a la wallet la cuenta para actualizar la información
+fn handle_add_block(
+    sender_to_get_account: mpsc::Sender<WalletEvent>,
+    builder: &Builder,
+    block: &Block,
+) {
+    let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
+    let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
+
+    add_row_first_to_liststore_block(&liststore_blocks, &block);
+    add_row_first_to_liststore_headers(&liststore_headers, &block.block_header, block.get_height());
+
+    sender_to_get_account
+        .send(WalletEvent::GetAccountRequest)
+        .unwrap();
 }
 
 /// Esta funcion renderiza la barra de carga de bloques descargados

@@ -31,11 +31,14 @@ pub enum UIEvent {
     ActualizeHeadersDownloaded(usize),
     ActualizeBlocksDownloaded(usize, usize),
     MakeTransactionStatus(String),
+    NewPendingTx(),
+    UpdateTransactions(Vec<(String, Transaction)>),
     BlockFound(Block),
     HeaderFound(BlockHeader, Height),
     NotFound,
 }
 
+/// Envia un evento a la interfaz
 pub fn send_event_to_ui(ui_sender: &Option<glib::Sender<UIEvent>>, event: UIEvent) {
     if let Some(ui_sender) = ui_sender {
         ui_sender

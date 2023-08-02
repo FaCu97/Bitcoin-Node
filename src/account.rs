@@ -105,7 +105,7 @@ impl Account {
         address_receiver: &str,
         amount: i64,
         fee: i64,
-    ) -> Result<[u8; 32], Box<dyn Error>> {
+    ) -> Result<Transaction, Box<dyn Error>> {
         address_decoder::validate_address(address_receiver)?;
         if !self.has_balance(amount + fee) {
             return Err(Box::new(std::io::Error::new(
@@ -133,7 +133,7 @@ impl Account {
         unsigned_transaction.validate(&utxos_to_spend)?;
 
         self.add_transaction(unsigned_transaction.clone())?;
-        Ok(unsigned_transaction.hash())
+        Ok(unsigned_transaction)
     }
 
     /// Recibe el utxo_set, lo recorre y setea el utxo_set de la cuenta.
@@ -156,6 +156,31 @@ impl Account {
         }
         self.utxo_set = account_utxo_set;
         Ok(())
+    }
+
+    /// Devuelve las transacciones pendientes y las confirmadas de la cuenta
+    pub fn get_transactions(&self) -> Result<Vec<(String, Transaction)>, Box<dyn Error>> {
+        let mut transactions: Vec<(String, Transaction)> = Vec::new();
+        // itero las pending tx
+        for tx in self
+            .pending_transactions
+            .read()
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+            .iter()
+        {
+            transactions.push(("Pending".to_string(), tx.clone()));
+        }
+
+        for tx in self
+            .confirmed_transactions
+            .read()
+            .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+            .iter()
+        {
+            transactions.push(("Confirmed".to_string(), tx.clone()));
+        }
+
+        Ok(transactions)
     }
 }
 /// Convierte la cadena de bytes a hexadecimal y la devuelve

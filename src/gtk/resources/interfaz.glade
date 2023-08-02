@@ -161,35 +161,15 @@
   </object>
   <object class="GtkListStore" id="liststore-transactions">
     <columns>
-      <!-- column-name status -->
+      <!-- column-name Status -->
       <column type="gchararray"/>
-      <!-- column-name date -->
+      <!-- column-name Hash -->
       <column type="gchararray"/>
-      <!-- column-name type -->
+      <!-- column-name Type -->
       <column type="gchararray"/>
-      <!-- column-name amount -->
+      <!-- column-name Amount -->
       <column type="gint"/>
     </columns>
-    <data>
-      <row>
-        <col id="0" translatable="yes">Confirmed</col>
-        <col id="1" translatable="yes">2023-01-01</col>
-        <col id="2" translatable="yes">P2PKH</col>
-        <col id="3">500</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">Pending</col>
-        <col id="1" translatable="yes">2022</col>
-        <col id="2" translatable="yes">P2PKH</col>
-        <col id="3">1000</col>
-      </row>
-      <row>
-        <col id="0" translatable="yes">Confirmed</col>
-        <col id="1" translatable="yes">2022-01-06</col>
-        <col id="2" translatable="yes">P2PKH</col>
-        <col id="3">2000</col>
-      </row>
-    </data>
   </object>
   <object class="GtkImage" id="user-image">
     <property name="visible">True</property>
@@ -693,7 +673,7 @@
                     <property name="can-focus">False</property>
                     <child>
                       <object class="GtkScrolledWindow">
-                        <property name="width-request">700</property>
+                        <property name="width-request">720</property>
                         <property name="height-request">350</property>
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
@@ -717,10 +697,7 @@
                                 </child>
                                 <child>
                                   <object class="GtkTreeViewColumn" id="status">
-                                    <property name="resizable">True</property>
-                                    <property name="min-width">15</property>
-                                    <property name="max-width">3</property>
-                                    <property name="title" translatable="yes">status</property>
+                                    <property name="title" translatable="yes">Status</property>
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
@@ -731,8 +708,8 @@
                                   </object>
                                 </child>
                                 <child>
-                                  <object class="GtkTreeViewColumn" id="date">
-                                    <property name="title" translatable="yes">date</property>
+                                  <object class="GtkTreeViewColumn" id="hash">
+                                    <property name="title" translatable="yes">Hash</property>
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
@@ -744,7 +721,7 @@
                                 </child>
                                 <child>
                                   <object class="GtkTreeViewColumn" id="type">
-                                    <property name="title" translatable="yes">type</property>
+                                    <property name="title" translatable="yes">Type</property>
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
@@ -755,17 +732,8 @@
                                   </object>
                                 </child>
                                 <child>
-                                  <object class="GtkTreeViewColumn" id="label">
-                                    <property name="title" translatable="yes">label</property>
-                                    <property name="expand">True</property>
-                                    <child>
-                                      <object class="GtkCellRendererText"/>
-                                    </child>
-                                  </object>
-                                </child>
-                                <child>
                                   <object class="GtkTreeViewColumn" id="amount">
-                                    <property name="title" translatable="yes">amount(satoshis)</property>
+                                    <property name="title" translatable="yes">Amount (sat)</property>
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
@@ -781,8 +749,8 @@
                         </child>
                       </object>
                       <packing>
-                        <property name="x">50</property>
-                        <property name="y">92</property>
+                        <property name="x">40</property>
+                        <property name="y">90</property>
                       </packing>
                     </child>
                     <child>
