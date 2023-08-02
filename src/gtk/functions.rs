@@ -22,8 +22,6 @@ pub fn handle_ui_event(
     ui_event: UIEvent,
     sender_to_get_account: mpsc::Sender<WalletEvent>,
 ) {
-    let mut liststore_transactions: gtk::ListStore =
-        builder.object("liststore-transactions").unwrap();
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     let tx_table: TreeView = builder.object("tx_table").unwrap();
     match ui_event {
@@ -75,6 +73,11 @@ pub fn handle_ui_event(
             println!("Account changed to: {}", account.address);
             let available_label = builder.object("available label").unwrap();
             update_overview(&account, &available_label);
+
+            // actualiza la pestana de transacciones
+            sender_to_get_account
+                .send(WalletEvent::GetTransactionsRequest)
+                .unwrap();
             // TODO: Actualizar Overview --> Balance y recent transactions y pestana transactions
         }
         UIEvent::MakeTransactionStatus(status) => {
