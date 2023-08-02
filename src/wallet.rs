@@ -16,6 +16,7 @@ use crate::{
     custom_errors::NodeCustomErrors,
     gtk::ui_events::{send_event_to_ui, UIEvent},
     node::Node,
+    transactions::transaction::Transaction,
 };
 
 #[derive(Debug, Clone)]
@@ -43,6 +44,7 @@ impl Wallet {
     /// Devuelve error en caso de que algo falle.
     pub fn make_transaction(
         &self,
+        ui_sender: &Option<glib::Sender<UIEvent>>,
         address_receiver: &str,
         amount: i64,
         fee: i64,
@@ -57,12 +59,13 @@ impl Wallet {
             }
         };
         validate_transaction_data(amount, fee)?;
-        let transaction_hash: [u8; 32] = self
+        let transaction: Transaction = self
             .accounts
             .write()
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[account_index]
             .make_transaction(address_receiver, amount, fee)?;
-        self.node.broadcast_tx(transaction_hash)?;
+        self.node.broadcast_tx(transaction.hash())?;
+        send_event_to_ui(ui_sender, UIEvent::NewPendingTx());
         Ok(())
     }
 
@@ -214,6 +217,23 @@ impl Wallet {
         None
     }
 
+    /// Devuelve una lista con las transacciones de la cuenta actual
+    /// Si no hay cuenta actual devuelve None
+    pub fn get_transactions(&self) -> Option<Vec<(String, Transaction)>> {
+        if let Some(index) = self.current_account_index {
+            match self
+                .accounts
+                .read()
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))
+                .unwrap()[index]
+                .get_transactions()
+            {
+                Ok(transactions) => return Some(transactions),
+                Err(_) => return None,
+            }
+        }
+        None
+    }
     /// Busca un bloque en la blockchain
     /// Recibe el hash del bloque en formato hex
     /// Devuelve el bloque si lo encuentra, None en caso contrario

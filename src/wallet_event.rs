@@ -24,6 +24,7 @@ pub enum WalletEvent {
     Finish,
     ChangeAccount(AccountIndex),
     GetAccountRequest,
+    GetTransactionsRequest,
     SearchBlock(BlockHash),
     SearchHeader(BlockHash),
 }
@@ -58,6 +59,9 @@ pub fn handle_ui_request(
             }
             WalletEvent::SearchHeader(block_hash) => {
                 handle_search_header(ui_sender, wallet, block_hash);
+            }
+            WalletEvent::GetTransactionsRequest => {
+                handle_get_transactions(ui_sender, wallet);
             }
             WalletEvent::Finish => {
                 break;
@@ -116,7 +120,7 @@ fn handle_make_transaction(
     amount: i64,
     fee: i64,
 ) {
-    if let Err(err) = wallet.make_transaction(&address, amount, fee) {
+    if let Err(err) = wallet.make_transaction(ui_sender, &address, amount, fee) {
         send_event_to_ui(ui_sender, UIEvent::MakeTransactionStatus(err.to_string()));
     } else {
         send_event_to_ui(
@@ -166,5 +170,12 @@ fn handle_search_header(
         send_event_to_ui(ui_sender, UIEvent::HeaderFound(header, height));
     } else {
         send_event_to_ui(ui_sender, UIEvent::NotFound);
+    }
+}
+
+/// Solicita a la wallet que envie a la UI las transacciones de la cuenta actual
+pub fn handle_get_transactions(ui_sender: &Option<glib::Sender<UIEvent>>, wallet: &mut Wallet) {
+    if let Some(transactions) = wallet.get_transactions() {
+        send_event_to_ui(ui_sender, UIEvent::UpdateTransactions(transactions));
     }
 }
