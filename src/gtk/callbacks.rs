@@ -17,11 +17,12 @@ pub fn connect_ui_callbacks(builder: &Builder, sender_to_node: &Sender<WalletEve
     search_headers_button_clicked(builder, sender_to_node.clone());
     login_button_clicked(builder, sender_to_node.clone());
     dropdown_accounts_changed(builder, sender_to_node.clone());
+    close_main_window_on_exit(builder, sender_to_node.clone());
     change_loading_account_label_periodically(builder); 
 }
 
 /// Esta funcion realiza la accion que corresponde al presionar el boton de start
-pub fn start_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
+fn start_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
     let start_button: gtk::Button = builder.object("start-button").unwrap();
     let ref_start_btn = start_button.clone();
     start_button.connect_clicked(move |_| {
@@ -31,7 +32,7 @@ pub fn start_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>
 }
 
 /// Sinconiza los labels de balance de la pestaña Overview y Send para que muestren el mismo balance
-pub fn sync_balance_labels(builder: &Builder) {
+fn sync_balance_labels(builder: &Builder) {
     let available_label: gtk::Label = builder.object("available label").unwrap();
     let send_balance: gtk::Label = builder.object("send-balance").unwrap();
     let ref_to_available_label = available_label;
@@ -45,7 +46,7 @@ pub fn sync_balance_labels(builder: &Builder) {
 /// Esta funcion realiza la accion que corresponde al presionar el boton de send creando una nueva
 /// transaccion en caso de que los datos ingresados sean validos, la informacion de la transaccion
 /// es mostrada en la interfaz a traves de un pop up
-pub fn send_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
+fn send_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
     let send_button: gtk::Button = builder.object("send-button").unwrap();
     let pay_to_entry: gtk::Entry = builder.object("pay to entry").unwrap();
     let fee_entry: gtk::Entry = builder.object("fee").unwrap();
@@ -71,7 +72,7 @@ pub fn send_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>)
 
 /// Realiza la accion correspondiente a apretar el boton de buscar bloques. Envia un evento al nodo para que busque el bloque
 /// en caso de que el hash ingresado sea valido. En caso contrario muestra un mensaje de error
-pub fn search_blocks_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
+fn search_blocks_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
     let search_blocks_entry: gtk::SearchEntry = builder.object("search-block").unwrap();
     let search_blocks_button: gtk::Button = builder.object("search-blocks-button").unwrap();
     search_blocks_button.connect_clicked(move |_| {
@@ -93,7 +94,7 @@ pub fn search_blocks_button_clicked(builder: &Builder, sender: mpsc::Sender<Wall
 
 /// Realiza la accion correspondiente a apretar el boton de buscar headers. Envia un evento al nodo para que busque el header
 /// en caso de que el hash ingresado sea valido. En caso contrario muestra un mensaje de error
-pub fn search_headers_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
+fn search_headers_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
     let search_headers_entry: gtk::SearchEntry = builder.object("search-block-headers").unwrap();
     let search_headers_button: gtk::Button = builder.object("search-header-button").unwrap();
     search_headers_button.connect_clicked(move |_| {
@@ -114,7 +115,7 @@ pub fn search_headers_button_clicked(builder: &Builder, sender: mpsc::Sender<Wal
 }
 
 /// Esta funcion realiza la accion que corresponde al presionar el boton de login
-pub fn login_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
+fn login_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
     // elementos de la interfaz
     let login_button: gtk::Button = builder.object("login-button").unwrap();
     let address_entry: gtk::Entry = builder.object("address").unwrap();
@@ -146,7 +147,7 @@ pub fn login_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>
 
 /// Realiza la accion correspondiente a apretar una opcion del dropdown de cuentas. Envia un evento al nodo para que cambie de cuenta
 /// y muestra el address de la cuenta seleccionada
-pub fn dropdown_accounts_changed(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
+fn dropdown_accounts_changed(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
     let dropdown: gtk::ComboBoxText = builder.object("dropdown-menu").unwrap();
     let status_login: gtk::Label = builder.object("status-login").unwrap();
     dropdown.connect_changed(move |combobox| {
@@ -163,8 +164,19 @@ pub fn dropdown_accounts_changed(builder: &Builder, sender: mpsc::Sender<WalletE
     });
 }
 
+/// Esta funcion realiza la accion que corresponde al presionar el boton de la cruz de la ventana principal.
+/// Le envia un evento al nodo para que termine su ejecucion y cierra todos sus threads
+fn close_main_window_on_exit(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
+    let main_window: gtk::Window = builder.object("main-window").unwrap();
+    main_window.connect_delete_event(move |_, _| {
+        sender.send(WalletEvent::Finish).unwrap();
+        gtk::main_quit();
+        Inhibit(false)
+    });
+}
+
 /// Cambia el label de loading account cada 5 segundos
-pub fn change_loading_account_label_periodically(builder: &Builder) {
+fn change_loading_account_label_periodically(builder: &Builder) {
     let loading_account_label: gtk::Label = builder.object("load-account").unwrap();
     let ref_to_loading_account_label = Rc::new(RefCell::new(loading_account_label));
     gtk::glib::timeout_add_local(Duration::from_secs(5), move || {
@@ -172,6 +184,8 @@ pub fn change_loading_account_label_periodically(builder: &Builder) {
         Continue(true)
     });
 }
+
+
 
 /*
 ***************************************************************************
@@ -207,7 +221,7 @@ fn validate_amount_and_fee(amount: String, fee: String) -> Option<(i64, i64)> {
 }
 
 /// Recibe un Label y cambia su texto por el siguiente en la lista de waiting_labels
-pub fn update_label(label: Rc<RefCell<gtk::Label>>) -> Continue {
+fn update_label(label: Rc<RefCell<gtk::Label>>) -> Continue {
     let waiting_labels = [
         "Hold tight! Setting up your Bitcoin account...",
         "We're ensuring your account's security...",
