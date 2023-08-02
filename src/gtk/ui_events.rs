@@ -31,7 +31,7 @@ pub enum UIEvent {
     ActualizeBlocksDownloaded(usize, usize),
     MakeTransactionStatus(String),
     LoadingUtxoSet,
-    NewPendingTx(Transaction),
+    NewPendingTx(),
     UpdateTransactions(Vec<(String, Transaction)>),
 }
 

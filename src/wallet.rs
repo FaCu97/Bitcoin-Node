@@ -61,7 +61,7 @@ impl Wallet {
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?[account_index]
             .make_transaction(address_receiver, amount, fee)?;
         self.node.broadcast_tx(transaction.hash())?;
-        send_event_to_ui(ui_sender, UIEvent::NewPendingTx(transaction));
+        send_event_to_ui(ui_sender, UIEvent::NewPendingTx());
         Ok(())
     }
 

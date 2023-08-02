@@ -117,7 +117,7 @@ pub fn handle_ui_event(
             render_transactions(&transactions, tx_table);
         }
 
-        UIEvent::NewPendingTx(transaction) => {
+        UIEvent::NewPendingTx() => {
             sender_to_get_account
                 .send(WalletEvent::GetTransactionsRequest)
                 .unwrap();
