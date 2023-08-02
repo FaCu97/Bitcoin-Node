@@ -131,6 +131,9 @@ impl TxIn {
         self.previous_output
     }
 
+    /// Devuelve la altura del bloque en el que se encuentra la transacción.
+    /// Si es una coinbase transaction devuelve la altura del bloque en el que se encuentra.
+    /// Si no es una coinbase transaction devuelve 0.
     pub fn get_height(&self) -> u32 {
         let mut bytes: Vec<u8> = vec![0];
         let height = &self.height;

@@ -117,7 +117,6 @@ fn build_ui(
 
     let sender_to_get_account = sender_to_node.clone();
 
-
     /*
         for i in 0..50 {
             let row = liststore_blocks.append();
