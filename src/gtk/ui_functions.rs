@@ -7,8 +7,7 @@ use std::{
 };
 
 use gtk::{
-    gdk, prelude::*, Builder, CssProvider, ListStore, ProgressBar, Spinner, StyleContext, TreeView,
-    Window,
+    gdk, prelude::*, Builder, CssProvider, ProgressBar, Spinner, StyleContext, TreeView, Window,
 };
 
 use crate::{
@@ -30,7 +29,6 @@ pub fn handle_ui_event(
     ui_event: UIEvent,
     sender_to_get_account: mpsc::Sender<WalletEvent>,
 ) {
-    let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     let tx_table: TreeView = builder.object("tx_table").unwrap();
     match ui_event {
         UIEvent::ActualizeBlocksDownloaded(blocks_downloaded, blocks_to_download) => {
@@ -170,7 +168,6 @@ pub fn handle_ui_event(
         UIEvent::NotFound => {
             show_dialog_message_pop_up("Not found", "Not found");
         }
-        _ => (),
     }
 }
 
