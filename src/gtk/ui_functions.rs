@@ -183,8 +183,10 @@ fn render_transactions(transactions: &Vec<(String, Transaction)>, tx_table: Tree
                 &row,
                 &[
                     (0, &pixbuf.to_value()),
-                    (1, &tx.1.hex_hash().to_value()),
-                    (2, &tx.1.amount().to_value()),
+                    (1, &tx.0.to_value()),
+                    (2, &tx.1.hex_hash().to_value()),
+                    (3, &"P2PKH".to_value()),
+                    (4, &tx.1.amount().to_value()),
                 ],
             );
         }
@@ -202,7 +204,7 @@ fn handle_add_block(
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
 
-    add_row_first_to_liststore_block(&liststore_blocks, &block);
+    add_row_first_to_liststore_block(&liststore_blocks, block);
     add_row_first_to_liststore_headers(&liststore_headers, &block.block_header, block.get_height());
 
     sender_to_node

@@ -41,10 +41,9 @@ fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<W
     let builder = gtk::Builder::from_string(GLADE_FILE);
     add_css_to_screen();
     let initial_window: Window = builder.object("initial-window").unwrap();
-    //initial_window.show();
-    show_tx_prueba(&builder);
-    let main_window: gtk::Window = builder.object("main-window").unwrap();
-    main_window.show();
+    initial_window.show();
+    //let main_window: gtk::Window = builder.object("main-window").unwrap();
+    //main_window.show();
     let tx_to_node = sender_to_node.clone();
     let builder_clone = builder.clone();
     rx.attach(None, move |msg| {
@@ -53,49 +52,4 @@ fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<W
     });
     connect_ui_callbacks(&builder, sender_to_node);
     gtk::main();
-}
-
-
-fn show_tx_prueba(builder: &gtk::Builder) {
-    let tx_table: gtk::TreeView = builder.object("tx_table").unwrap();
-    let tree_model = gtk::ListStore::new(&[
-        gtk::gdk_pixbuf::Pixbuf::static_type(),
-        String::static_type(),
-        String::static_type(),
-        String::static_type(),
-        i32::static_type(),
-    ]);
-
-        // Cargar la imagen "Pending.png" y convertirla en un GdkPixbuf
-    let pending = gtk::gdk_pixbuf::Pixbuf::from_file("src/gtk/resources/pending.png").ok();
-        // Cargar la imagen "Confirmed.png" y convertirla en un GdkPixbuf
-    let confirmed = gtk::gdk_pixbuf::Pixbuf::from_file("src/gtk/resources/confirmed.png").ok();
-
-    let row = tree_model.append();
-    if let Some(pixbuf) = pending {
-        tree_model.set(
-            &row,
-            &[
-                (0, &pixbuf.to_value()),
-                (1, &"Pending".to_value()),
-                (2, &"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef".to_value()),
-                (3, &"P2PKH".to_value()),
-                (4, &2000.to_value()),
-            ],
-        );
-    }
-    let row = tree_model.append();
-    if let Some(pixbuf) = confirmed {
-        tree_model.set(
-            &row,
-            &[
-                (0, &pixbuf.to_value()),
-                (1, &"Confirmed".to_value()),
-                (2, &"0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef".to_value()),
-                (3, &"P2PKH".to_value()),
-                (4, &2000.to_value()),
-            ],
-        );
-    }
-    tx_table.set_model(Some(&tree_model));
 }
