@@ -196,7 +196,7 @@ fn handle_add_block(
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
 
-    add_row_first_to_liststore_block(&liststore_blocks, &block);
+    add_row_first_to_liststore_block(&liststore_blocks, block);
     add_row_first_to_liststore_headers(&liststore_headers, &block.block_header, block.get_height());
 
     sender_to_get_account

@@ -136,19 +136,17 @@ fn handle_poi(
     block_hash: String,
     transaction_hash: String,
 ) {
-    let mut message = "".to_string();
+    let message;
     match wallet.tx_proof_of_inclusion(block_hash.clone(), transaction_hash.clone()) {
         Err(_) => message = "Block not found".to_string(),
         Ok(poi) => {
             if poi {
                 message =
-                    format!("The transaction {transaction_hash} was found on block {block_hash}")
-                        .to_string();
+                    format!("The transaction {transaction_hash} was found on block {block_hash}");
             } else {
                 message = format!(
                     "The transaction {transaction_hash} was not found on block {block_hash}"
-                )
-                .to_string();
+                );
             }
         }
     }
