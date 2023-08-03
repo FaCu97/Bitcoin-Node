@@ -50,16 +50,6 @@
     <property name="can-focus">False</property>
     <property name="pixbuf">src/gtk/resources/find.png</property>
   </object>
-  <object class="GtkImage" id="incoming-info-image">
-    <property name="visible">True</property>
-    <property name="can-focus">False</property>
-    <property name="pixbuf">src/gtk/resources/info.png</property>
-  </object>
-  <object class="GtkImage" id="outgoing-info-image">
-    <property name="visible">True</property>
-    <property name="can-focus">False</property>
-    <property name="pixbuf">src/gtk/resources/info.png</property>
-  </object>
   <object class="GtkWindow" id="initial-window">
     <property name="width-request">800</property>
     <property name="height-request">500</property>
@@ -387,196 +377,6 @@
 
 
 
-
-
-
-
-
-
-
-
-                    <!--
-
-                    <child>
-                      <object class="GtkSeparator" id="nodes-box">
-                        <property name="width-request">320</property>
-                        <property name="height-request">140</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <style>
-                          <class name="separator"/>
-                        </style>
-                      </object>
-                      <packing>
-                        <property name="x">10</property>
-                        <property name="y">300</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkLabel">
-                        <property name="width-request">100</property>
-                        <property name="height-request">50</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">Nodes</property>
-                        <style>
-                          <class name="headers"/>
-                        </style>
-                      </object>
-                      <packing>
-                        <property name="x">110</property>
-                        <property name="y">300</property>
-                      </packing>
-                    </child>
-                    <child>
-                      <object class="GtkSeparator">
-                        <property name="width-request">300</property>
-                        <property name="height-request">0</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="orientation">vertical</property>
-                        <style>
-                          <class name="separator"/>
-                        </style>
-                      </object>
-                      <packing>
-                        <property name="x">20</property>
-                        <property name="y">340</property>
-                      </packing>
-                    </child>
-
-                    <child>
-                      <object class="GtkLabel">
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">Outgoing nodes:</property>
-                        <attributes>
-                          <attribute name="font-desc" value="Sans 12"/>
-                        </attributes>
-                      </object>
-                      <packing>
-                        <property name="x">55</property>
-                        <property name="y">363</property>
-                      </packing>
-                    </child>
-
-                    <child>
-                      <object class="GtkLabel" id="outgoing-nodes">
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">0</property>
-                        <attributes>
-                          <attribute name="font-desc" value="Sans 12"/>
-                        </attributes>
-                      </object>
-                      <packing>
-                        <property name="x">185</property>
-                        <property name="y">363</property>
-                      </packing>
-                    </child>
-
-
-
-                    <child>
-                      <object class="GtkButton" id="outgoing-button">
-                        <property name="label" translatable="yes">Info</property>
-                        <property name="width-request">60</property>
-                        <property name="height-request">16</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">True</property>
-                        <property name="receives-default">True</property>
-                        <property name="image">outgoing-info-image</property>
-                        <property name="always-show-image">True</property>
-                        <property name="relief">none</property>
-                        <style>
-                          <class name="app-button"/>
-                        </style>
-                      </object>
-                      <packing>
-                        <property name="x">205</property>
-                        <property name="y">355</property>
-                      </packing>
-                    </child>
-
-                    <child>
-                      <object class="GtkLabel">
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">Incoming nodes:</property>
-                        <attributes>
-                          <attribute name="font-desc" value="Sans 12"/>
-                        </attributes>
-                      </object>
-                      <packing>
-                        <property name="x">55</property>
-                        <property name="y">408</property>
-                      </packing>
-                    </child>
-
-                    <child>
-                      <object class="GtkLabel" id="incoming-nodes">
-                        <property name="visible">True</property>
-                        <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">0</property>
-                        <attributes>
-                          <attribute name="font-desc" value="Sans 12"/>
-                        </attributes>
-                      </object>
-                      <packing>
-                        <property name="x">185</property>
-                        <property name="y">408</property>
-                      </packing>
-                    </child>
-
-
-                    <child>
-                      <object class="GtkButton" id="incoming-button">
-                        <property name="label" translatable="yes">Info</property>
-                        <property name="width-request">60</property>
-                        <property name="height-request">16</property>
-                        <property name="visible">True</property>
-                        <property name="can-focus">True</property>
-                        <property name="receives-default">True</property>
-                        <property name="image">incoming-info-image</property>
-                        <property name="always-show-image">True</property>
-                        <property name="relief">none</property>
-                        <style>
-                          <class name="app-button"/>
-                        </style>
-                      </object>
-                      <packing>
-                        <property name="x">205</property>
-                        <property name="y">400</property>
-                      </packing>
-                    </child>
-                    -->
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                     <child>
                       <object class="GtkSeparator" id="tx-box">
                         <property name="width-request">420</property>
@@ -606,6 +406,299 @@
                       <packing>
                         <property name="x">398</property>
                         <property name="y">65</property>
+                      </packing>
+                    </child>
+
+
+
+                    <child>
+                      <object class="GtkAccelLabel" id="recent-tx-1">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">5d9ed1b504054680e5d35432241f9cd1417f6df3774195fe558440368ea493f3</property>
+                        <style>
+                          <class name="recent-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">398</property>
+                        <property name="y">150</property>
+                      </packing>
+                    </child>
+
+                    <child>
+                      <object class="GtkImage" id="icon-tx-1">
+                        <property name="visible">True</property>
+                        <property name="file">src/gtk/resources/ov_pending.png</property>
+                        <property name="can-focus">False</property>
+                      </object>
+                      <packing>
+                        <property name="x">377</property>
+                        <property name="y">127</property>
+                      </packing>
+                    </child>
+
+                    <child>
+                      <object class="GtkAccelLabel" id="date-tx-1">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">03/08/23 19:50</property>
+                        <style>
+                          <class name="date-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">398</property>
+                        <property name="y">125</property>
+                      </packing>
+                    </child>
+
+                    <child>
+                      <object class="GtkAccelLabel" id="amount-tx-1">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">+10000</property>
+                        <style>
+                          <class name="date-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">670</property>
+                        <property name="y">125</property>
+                      </packing>
+                    </child>
+
+
+                    <child>
+                      <object class="GtkAccelLabel" id="recent-tx-2">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">5d9ed1b504054680e5d35432241f9cd1417f6df3774195fe558440368ea493f3</property>
+                        <style>
+                          <class name="recent-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">398</property>
+                        <property name="y">210</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkImage" id="icon-tx-2">
+                        <property name="visible">True</property>
+                        <property name="file">src/gtk/resources/ov_pending.png</property>
+                        <property name="can-focus">False</property>
+                      </object>
+                      <packing>
+                        <property name="x">377</property>
+                        <property name="y">187</property>
+                      </packing>
+                    </child>
+
+                    <child>
+                      <object class="GtkAccelLabel" id="date-tx-2">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">03/08/23 19:50</property>
+                        <style>
+                          <class name="date-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">398</property>
+                        <property name="y">185</property>
+                      </packing>
+                    </child>
+
+                    <child>
+                      <object class="GtkAccelLabel" id="amount-tx-2">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">+13000</property>
+                        <style>
+                          <class name="date-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">670</property>
+                        <property name="y">185</property>
+                      </packing>
+                    </child>
+
+
+                    <child>
+                      <object class="GtkAccelLabel" id="recent-tx-3">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">5d9ed1b504054680e5d35432241f9cd1417f6df3774195fe558440368ea493f3</property>
+                        <style>
+                          <class name="recent-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">398</property>
+                        <property name="y">270</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkImage" id="icon-tx-3">
+                        <property name="visible">True</property>
+                        <property name="file">src/gtk/resources/ov_confirmed.png</property>
+                        <property name="can-focus">False</property>
+                      </object>
+                      <packing>
+                        <property name="x">377</property>
+                        <property name="y">247</property>
+                      </packing>
+                    </child>
+
+                    <child>
+                      <object class="GtkAccelLabel" id="date-tx-3">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">03/08/23 19:50</property>
+                        <style>
+                          <class name="date-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">398</property>
+                        <property name="y">245</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel" id="amount-tx-3">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">-10000</property>
+                        <style>
+                          <class name="date-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">670</property>
+                        <property name="y">245</property>
+                      </packing>
+                    </child>
+
+
+
+
+
+
+
+
+                    <child>
+                      <object class="GtkAccelLabel" id="recent-tx-4">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">5d9ed1b504054680e5d35432241f9cd1417f6df3774195fe558440368ea493f3</property>
+                        <style>
+                          <class name="recent-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">398</property>
+                        <property name="y">330</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkImage" id="icon-tx-4">
+                        <property name="visible">True</property>
+                        <property name="file">src/gtk/resources/ov_confirmed.png</property>
+                        <property name="can-focus">False</property>
+                      </object>
+                      <packing>
+                        <property name="x">377</property>
+                        <property name="y">307</property>
+                      </packing>
+                    </child>
+
+                    <child>
+                      <object class="GtkAccelLabel" id="date-tx-4">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">03/08/23 19:50</property>
+                        <style>
+                          <class name="date-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">398</property>
+                        <property name="y">305</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkAccelLabel" id="amount-tx-4">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">+3000</property>
+                        <style>
+                          <class name="date-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">670</property>
+                        <property name="y">305</property>
+                      </packing>
+                    </child>
+
+
+
+                    <child>
+                      <object class="GtkAccelLabel" id="recent-tx-5">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">5d9ed1b504054680e5d35432241f9cd1417f6df3774195fe558440368ea493f3</property>
+                        <style>
+                          <class name="recent-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">398</property>
+                        <property name="y">390</property>
+                      </packing>
+                    </child>
+
+                    <child>
+                      <object class="GtkImage" id="icon-tx-5">
+                        <property name="visible">True</property>
+                        <property name="file">src/gtk/resources/ov_confirmed.png</property>
+                        <property name="can-focus">False</property>
+                      </object>
+                      <packing>
+                        <property name="x">377</property>
+                        <property name="y">367</property>
+                      </packing>
+                    </child>
+
+                    <child>
+                      <object class="GtkAccelLabel" id="date-tx-5">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">03/08/23 19:50</property>
+                        <style>
+                          <class name="date-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">398</property>
+                        <property name="y">365</property>
+                      </packing>
+                    </child>
+
+                    <child>
+                      <object class="GtkAccelLabel" id="amount-tx-5">
+                        <property name="visible">True</property>
+                        <property name="can-focus">False</property>
+                        <property name="label" translatable="yes">-3000</property>
+                        <style>
+                          <class name="date-txs"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">670</property>
+                        <property name="y">365</property>
                       </packing>
                     </child>
 
