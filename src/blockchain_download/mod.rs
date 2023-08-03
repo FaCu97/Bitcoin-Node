@@ -214,6 +214,7 @@ fn download_full_blockchain_from_single_node(
         )?;
     }
     return_node_to_vec(nodes, node)?;
+    drop(tx_1);
     join_handle
         .join()
         .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
