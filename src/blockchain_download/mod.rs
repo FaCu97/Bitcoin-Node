@@ -196,10 +196,10 @@ fn download_full_blockchain_from_single_node(
         tx,
     )?;
     let mut node = get_node(nodes.clone())?;
-    let (tx_1, rx_1) = channel();
+    let (tx_utxo_set, rx_utxo_set) = channel();
     let utxo_set_clone = utxo_set;
     let join_handle = thread::spawn(move || -> Result<(), NodeCustomErrors> {
-        load_utxo_set(rx_1, utxo_set_clone)
+        load_utxo_set(rx_utxo_set, utxo_set_clone)
     });
     send_event_to_ui(ui_sender, UIEvent::StartDownloadingBlocks);
     for blocks_to_download in rx {
@@ -210,11 +210,11 @@ fn download_full_blockchain_from_single_node(
             (blocks.clone(), headers.clone()),
             blocks_to_download,
             &mut node,
-            tx_1.clone(),
+            tx_utxo_set.clone(),
         )?;
     }
     return_node_to_vec(nodes, node)?;
-    drop(tx_1);
+    drop(tx_utxo_set);
     join_handle
         .join()
         .map_err(|err| NodeCustomErrors::ThreadJoinError(format!("{:?}", err)))??;
