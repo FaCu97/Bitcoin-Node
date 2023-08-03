@@ -175,8 +175,8 @@ pub fn change_loading_account_label_periodically(builder: &Builder) {
 }
 
 pub fn search_tx_poi_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
-    let search_poi_tx_entry: gtk::SearchEntry = builder.object("search-tx").unwrap();
-    let search_poi_block_entry: gtk::SearchEntry = builder.object("search-poi-block").unwrap();
+    let search_poi_tx_entry: gtk::Entry = builder.object("search-tx").unwrap();
+    let search_poi_block_entry: gtk::Entry = builder.object("search-poi-block").unwrap();
     let search_tx_poi_button: gtk::Button = builder.object("search-tx-button").unwrap();
 
     search_tx_poi_button.connect_clicked(move |_| {

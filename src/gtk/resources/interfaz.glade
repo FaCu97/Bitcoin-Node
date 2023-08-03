@@ -754,7 +754,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkSearchEntry" id="search-tx">
+                      <object class="GtkEntry" id="search-tx">
                         <property name="width-request">550</property>
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
@@ -789,7 +789,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkSearchEntry" id="search-poi-block">
+                      <object class="GtkEntry" id="search-poi-block">
                         <property name="width-request">550</property>
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
