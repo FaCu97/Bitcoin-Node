@@ -17,6 +17,7 @@ pub fn connect_ui_callbacks(builder: &Builder, sender_to_node: &Sender<WalletEve
     start_button_clicked(builder, sender_to_node.clone());
     send_button_clicked(builder, sender_to_node.clone());
     sync_balance_labels(builder);
+    sync_account_labels(builder);
     search_blocks_button_clicked(builder, sender_to_node.clone());
     search_headers_button_clicked(builder, sender_to_node.clone());
     login_button_clicked(builder, sender_to_node.clone());
@@ -44,6 +45,17 @@ fn sync_balance_labels(builder: &Builder) {
     ref_to_available_label.connect_notify_local(Some("label"), move |label, _| {
         let new_text = label.text().to_string();
         send_balance.set_label(new_text.as_str());
+    });
+}
+
+fn sync_account_labels(builder: &Builder) {
+    let overview_account: gtk::Label = builder.object("overview-account").unwrap();
+    let account_login: gtk::AccelLabel = builder.object("status-login").unwrap();
+    let ref_to_overview_account = overview_account;
+    // cuando cambia uno, cambia el otro automaticamente
+    ref_to_overview_account.connect_notify_local(Some("label"), move |label, _| {
+        let new_text = label.text().to_string();
+        account_login.set_label(new_text.as_str());
     });
 }
 
