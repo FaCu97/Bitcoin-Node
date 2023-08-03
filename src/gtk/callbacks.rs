@@ -82,7 +82,6 @@ fn search_blocks_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEv
     search_blocks_button.connect_clicked(move |_| {
         let text = search_blocks_entry.text().to_string();
         if let Some(block_hash) = hex_string_to_bytes(text.as_str()) {
-            println!("searching block {}", text);
             sender.send(WalletEvent::SearchBlock(block_hash)).unwrap();
         } else {
             show_dialog_message_pop_up(
@@ -102,7 +101,6 @@ fn search_headers_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletE
     search_headers_button.connect_clicked(move |_| {
         let text = search_headers_entry.text().to_string();
         if let Some(block_hash) = hex_string_to_bytes(text.as_str()) {
-            println!("searching header {}", text);
             sender.send(WalletEvent::SearchHeader(block_hash)).unwrap();
         } else {
             show_dialog_message_pop_up(
