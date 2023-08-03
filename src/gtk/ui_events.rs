@@ -15,6 +15,7 @@ type Headers = Arc<RwLock<Vec<BlockHeader>>>;
 type Height = usize;
 
 #[derive(Clone, Debug)]
+/// Representa los eventos que la wallet le envia a la UI para que los muestre
 pub enum UIEvent {
     StartHandshake,
     StartDownloadingHeaders,
