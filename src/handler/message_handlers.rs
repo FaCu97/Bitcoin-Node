@@ -263,7 +263,6 @@ pub fn handle_block_message(
                 node_pointers.accounts.clone(),
                 node_pointers.blockchain.utxo_set,
             )?;
-            
             include_new_block(
                 log_sender,
                 ui_sender,
