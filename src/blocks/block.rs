@@ -206,14 +206,6 @@ impl Block {
                         tx.hex_hash(),
                         account.address
                     );
-                    send_event_to_ui(
-                        ui_sender,
-                        UIEvent::ShowConfirmedTransaction(
-                            self.clone(),
-                            account.clone(),
-                            tx.clone(),
-                        ),
-                    );
                     let pending_transaction_index = account
                         .pending_transactions
                         .read()
@@ -240,6 +232,14 @@ impl Block {
                                 self.hex_hash()
                             )
                             .as_str(),
+                        );
+                        send_event_to_ui(
+                            ui_sender,
+                            UIEvent::ShowConfirmedTransaction(
+                                self.clone(),
+                                account.clone(),
+                                tx.clone(),
+                            ),
                         );
                     }
                 }
