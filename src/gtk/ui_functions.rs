@@ -165,6 +165,7 @@ fn render_transactions(transactions: &Vec<(String, Transaction)>, tx_table: Tree
         gdk_pixbuf::Pixbuf::static_type(),
         String::static_type(),
         String::static_type(),
+        String::static_type(),
         i32::static_type(),
     ]);
 
