@@ -255,12 +255,6 @@ pub fn handle_block_message(
                 node_pointers.blockchain.headers.clone(),
                 node_pointers.blockchain.header_heights.clone(),
             )?;
-            include_new_block(
-                log_sender,
-                ui_sender,
-                new_block.clone(),
-                node_pointers.blockchain.blocks.clone(),
-            )?;
             new_block.contains_pending_tx(log_sender, ui_sender, node_pointers.accounts.clone())?;
             new_block
                 .give_me_utxos(node_pointers.blockchain.utxo_set.clone())
@@ -268,6 +262,12 @@ pub fn handle_block_message(
             update_accounts_utxo_set(
                 node_pointers.accounts.clone(),
                 node_pointers.blockchain.utxo_set,
+            )?;
+            include_new_block(
+                log_sender,
+                ui_sender,
+                new_block,
+                node_pointers.blockchain.blocks,
             )?;
         }
     } else {
@@ -348,7 +348,7 @@ pub fn handle_tx_message(
 
 /*
 ***************************************************************************
-***************************************************************************
+********************** AUXILIAR FUNCTIONS *********************************
 ***************************************************************************
 */
 
