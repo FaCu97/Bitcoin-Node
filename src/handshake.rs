@@ -33,6 +33,13 @@ pub fn handshake_with_nodes(
     let sockets_lock = Arc::new(RwLock::new(sockets));
     let mut thread_handles = vec![];
     for i in 0..config.n_threads {
+        if i >= active_nodes_chunks
+            .read()
+            .map_err(|err| NodeCustomErrors::LockError(format!("{}", err)))?
+            .len()
+        {
+            break;
+        }
         let chunk = active_nodes_chunks
             .write()
             .map_err(|err| NodeCustomErrors::LockError(format!("{}", err)))?[i]
