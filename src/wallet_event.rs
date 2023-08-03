@@ -131,14 +131,28 @@ fn handle_make_transaction(
 }
 
 fn handle_poi(
-    _ui_sender: &Option<glib::Sender<UIEvent>>,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
     wallet: &mut Wallet,
     block_hash: String,
     transaction_hash: String,
 ) {
-    if let Err(err) = wallet.tx_proof_of_inclusion(block_hash, transaction_hash) {
-        println!("Error al crear la prueba de inclusion. Error {}", err);
+    let mut message = "".to_string();
+    match wallet.tx_proof_of_inclusion(block_hash.clone(), transaction_hash.clone()) {
+        Err(_) => message = "Block not found".to_string(),
+        Ok(poi) => {
+            if poi {
+                message =
+                    format!("The transaction {transaction_hash} was found on block {block_hash}")
+                        .to_string();
+            } else {
+                message = format!(
+                    "The transaction {transaction_hash} was not found on block {block_hash}"
+                )
+                .to_string();
+            }
+        }
     }
+    send_event_to_ui(ui_sender, UIEvent::POIResult(message));
 }
 
 /// Recibe un sender que envia eventos a la UI, una wallet y un hash de bloque
