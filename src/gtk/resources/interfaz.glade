@@ -362,11 +362,11 @@
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">mpwiQrE8D1P9ESgKbU5r9tSmKUFS2muTxS</property>
                         <attributes>
-                          <attribute name="font-desc" value="Sans 10"/>
+                          <attribute name="font-desc" value="Sans 11"/>
                         </attributes>
                       </object>
                       <packing>
-                        <property name="x">30</property>
+                        <property name="x">20</property>
                         <property name="y">250</property>
                       </packing>
                     </child>
@@ -413,7 +413,7 @@
 
                     <child>
                       <object class="GtkAccelLabel" id="recent-tx-1">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">5d9ed1b504054680e5d35432241f9cd1417f6df3774195fe558440368ea493f3</property>
                         <style>
@@ -428,7 +428,7 @@
 
                     <child>
                       <object class="GtkImage" id="icon-tx-1">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="file">src/gtk/resources/ov_pending.png</property>
                         <property name="can-focus">False</property>
                       </object>
@@ -439,13 +439,10 @@
                     </child>
 
                     <child>
-                      <object class="GtkAccelLabel" id="date-tx-1">
-                        <property name="visible">True</property>
+                      <object class="GtkAccelLabel" id="type-tx-1">
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">03/08/23 19:50</property>
-                        <style>
-                          <class name="date-txs"/>
-                        </style>
+                        <property name="label" translatable="yes">P2PKH</property>
                       </object>
                       <packing>
                         <property name="x">398</property>
@@ -455,12 +452,9 @@
 
                     <child>
                       <object class="GtkAccelLabel" id="amount-tx-1">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">+10000</property>
-                        <style>
-                          <class name="date-txs"/>
-                        </style>
                       </object>
                       <packing>
                         <property name="x">670</property>
@@ -471,7 +465,7 @@
 
                     <child>
                       <object class="GtkAccelLabel" id="recent-tx-2">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">5d9ed1b504054680e5d35432241f9cd1417f6df3774195fe558440368ea493f3</property>
                         <style>
@@ -485,7 +479,7 @@
                     </child>
                     <child>
                       <object class="GtkImage" id="icon-tx-2">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="file">src/gtk/resources/ov_pending.png</property>
                         <property name="can-focus">False</property>
                       </object>
@@ -496,13 +490,10 @@
                     </child>
 
                     <child>
-                      <object class="GtkAccelLabel" id="date-tx-2">
-                        <property name="visible">True</property>
+                      <object class="GtkAccelLabel" id="type-tx-2">
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">03/08/23 19:50</property>
-                        <style>
-                          <class name="date-txs"/>
-                        </style>
+                        <property name="label" translatable="yes">P2PKH</property>
                       </object>
                       <packing>
                         <property name="x">398</property>
@@ -512,12 +503,9 @@
 
                     <child>
                       <object class="GtkAccelLabel" id="amount-tx-2">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">+13000</property>
-                        <style>
-                          <class name="date-txs"/>
-                        </style>
                       </object>
                       <packing>
                         <property name="x">670</property>
@@ -528,13 +516,13 @@
 
                     <child>
                       <object class="GtkAccelLabel" id="recent-tx-3">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">5d9ed1b504054680e5d35432241f9cd1417f6df3774195fe558440368ea493f3</property>
-                        <style>
-                          <class name="recent-txs"/>
-                        </style>
                       </object>
+                      <style>
+                        <class name="recent-txs"/>
+                      </style>
                       <packing>
                         <property name="x">398</property>
                         <property name="y">270</property>
@@ -542,7 +530,7 @@
                     </child>
                     <child>
                       <object class="GtkImage" id="icon-tx-3">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="file">src/gtk/resources/ov_confirmed.png</property>
                         <property name="can-focus">False</property>
                       </object>
@@ -553,13 +541,10 @@
                     </child>
 
                     <child>
-                      <object class="GtkAccelLabel" id="date-tx-3">
-                        <property name="visible">True</property>
+                      <object class="GtkAccelLabel" id="type-tx-3">
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">03/08/23 19:50</property>
-                        <style>
-                          <class name="date-txs"/>
-                        </style>
+                        <property name="label" translatable="yes">P2PKH</property>
                       </object>
                       <packing>
                         <property name="x">398</property>
@@ -568,12 +553,9 @@
                     </child>
                     <child>
                       <object class="GtkAccelLabel" id="amount-tx-3">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">-10000</property>
-                        <style>
-                          <class name="date-txs"/>
-                        </style>
                       </object>
                       <packing>
                         <property name="x">670</property>
@@ -590,7 +572,7 @@
 
                     <child>
                       <object class="GtkAccelLabel" id="recent-tx-4">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">5d9ed1b504054680e5d35432241f9cd1417f6df3774195fe558440368ea493f3</property>
                         <style>
@@ -604,7 +586,7 @@
                     </child>
                     <child>
                       <object class="GtkImage" id="icon-tx-4">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="file">src/gtk/resources/ov_confirmed.png</property>
                         <property name="can-focus">False</property>
                       </object>
@@ -615,12 +597,12 @@
                     </child>
 
                     <child>
-                      <object class="GtkAccelLabel" id="date-tx-4">
-                        <property name="visible">True</property>
+                      <object class="GtkAccelLabel" id="type-tx-4">
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">03/08/23 19:50</property>
+                        <property name="label" translatable="yes">P2PKH</property>
                         <style>
-                          <class name="date-txs"/>
+                          <class name="type-txs"/>
                         </style>
                       </object>
                       <packing>
@@ -630,12 +612,9 @@
                     </child>
                     <child>
                       <object class="GtkAccelLabel" id="amount-tx-4">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">+3000</property>
-                        <style>
-                          <class name="date-txs"/>
-                        </style>
                       </object>
                       <packing>
                         <property name="x">670</property>
@@ -647,7 +626,7 @@
 
                     <child>
                       <object class="GtkAccelLabel" id="recent-tx-5">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">5d9ed1b504054680e5d35432241f9cd1417f6df3774195fe558440368ea493f3</property>
                         <style>
@@ -662,7 +641,7 @@
 
                     <child>
                       <object class="GtkImage" id="icon-tx-5">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="file">src/gtk/resources/ov_confirmed.png</property>
                         <property name="can-focus">False</property>
                       </object>
@@ -673,13 +652,10 @@
                     </child>
 
                     <child>
-                      <object class="GtkAccelLabel" id="date-tx-5">
-                        <property name="visible">True</property>
+                      <object class="GtkAccelLabel" id="type-tx-5">
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">03/08/23 19:50</property>
-                        <style>
-                          <class name="date-txs"/>
-                        </style>
+                        <property name="label" translatable="yes">P2PKH</property>
                       </object>
                       <packing>
                         <property name="x">398</property>
@@ -689,12 +665,9 @@
 
                     <child>
                       <object class="GtkAccelLabel" id="amount-tx-5">
-                        <property name="visible">True</property>
+                        <property name="visible">False</property>
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">-3000</property>
-                        <style>
-                          <class name="date-txs"/>
-                        </style>
                       </object>
                       <packing>
                         <property name="x">670</property>

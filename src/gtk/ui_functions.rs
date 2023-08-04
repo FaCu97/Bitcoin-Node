@@ -106,6 +106,7 @@ pub fn handle_ui_event(
 
         UIEvent::UpdateTransactions(transactions) => {
             render_transactions(&transactions, tx_table);
+            render_recent_transactions(&transactions, &builder);
         }
 
         UIEvent::NewPendingTx() => {
@@ -193,6 +194,35 @@ fn render_transactions(transactions: &Vec<(String, Transaction)>, tx_table: Tree
         }
     }
     tx_table.set_model(Some(&tree_model));
+}
+
+/// Shows the recent transactions in the overview tab
+fn render_recent_transactions(transactions: &Vec<(String,  Transaction)>, builder: &Builder) {
+     // Get the last five elements or all elements if there are fewer than five
+     let recent_transactions = if transactions.len() <= 5 {
+        &transactions[..]
+    } else {
+        &transactions[transactions.len() - 5..]
+    };
+    let amount_labels = ["amount-tx-1", "amount-tx-2", "amount-tx-3", "amount-tx-4", "amount-tx-5"];
+    let icons = ["icon-tx-1", "icon-tx-2", "icon-tx-3", "icon-tx-4", "icon-tx-5"];
+    let type_labels = ["type-tx-1", "type-tx-2", "type-tx-3", "type-tx-4", "type-tx-5"];
+    for (i, tx) in recent_transactions.iter().enumerate() {
+        let amount_label: gtk::AccelLabel = builder.object(amount_labels[i]).unwrap();
+        amount_label.set_label(format!("{}", tx.1.amount()).as_str());
+        amount_label.set_visible(true);
+        let icon: gtk::Image = builder.object(icons[i]).unwrap();
+        if tx.0 == "Pending" {
+            icon.set_from_file(Some("src/gtk/resources/pending.png"));
+        } else {
+            icon.set_from_file(Some("src/gtk/resources/confirmed.png"));
+        }
+        icon.set_visible(true);
+        let type_label: gtk::AccelLabel = builder.object(type_labels[i]).unwrap();
+        type_label.set_visible(true);
+    }
+
+    
 }
 
 /// Agrega el bloque y header a las pestañas.
