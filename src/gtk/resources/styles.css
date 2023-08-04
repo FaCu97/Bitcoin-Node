@@ -73,7 +73,7 @@
 }
 
 .spin{  
-    color : #2A7ACB;
+    color: rgb(249, 231, 130);
 }
 
 .account-spin{
@@ -102,4 +102,9 @@
 .recent-txs {
     color: #2A7ACB;
     font-size: 12px;
+}
+
+.box {
+    background-color: #718C9F;
+    border-radius: 20px;
 }

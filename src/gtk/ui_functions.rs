@@ -52,6 +52,8 @@ pub fn handle_ui_event(
         UIEvent::StartDownloadingHeaders => {
             let message_header: gtk::Label = builder.object("message-header").unwrap();
             let spinner: Spinner = builder.object("header-spin").unwrap();
+            let headers_box: gtk::Box = builder.object("headers-box").unwrap();
+            headers_box.set_visible(true);
             message_header.set_visible(true);
             spinner.set_visible(true);
         }
@@ -59,7 +61,7 @@ pub fn handle_ui_event(
             actualize_message_and_spinner(
                 &builder,
                 false,
-                format!("TOTAL HEADERS DOWNLOADED : {}", headers).as_str(),
+                format!("TOTAL HEADERS DOWNLOADED: {}", headers).as_str(),
             );
         }
         UIEvent::StartDownloadingBlocks => {
@@ -243,7 +245,7 @@ fn render_recent_transactions(transactions: &Vec<(String, Transaction, i64)>, bu
         hash.set_label(&tx.1.hex_hash());
         hash.set_visible(true);
         let amount_label: gtk::AccelLabel = builder.object(amount_labels[i]).unwrap();
-        amount_label.set_label(format!("{}", tx.2).as_str());
+        amount_label.set_label(format!("{} Satoshis", tx.2).as_str());
         amount_label.set_visible(true);
         let icon: gtk::Image = builder.object(icons[i]).unwrap();
         if tx.0 == "Pending" {
@@ -288,12 +290,16 @@ fn actualize_message_header(builder: &Builder, msg: &str) {
 
 fn actualize_message_and_spinner(builder: &Builder, visible: bool, msg: &str) {
     let total_headers_label: gtk::Label = builder.object("total-headers").unwrap();
+    let total_headers_box: gtk::Box = builder.object("total-box").unwrap();
     let message_header: gtk::Label = builder.object("message-header").unwrap();
+    let headers_box: gtk::Box = builder.object("headers-box").unwrap();
     let spinner: Spinner = builder.object("header-spin").unwrap();
-    total_headers_label.set_label(msg);
-    total_headers_label.set_visible(true);
     message_header.set_visible(visible);
     spinner.set_visible(visible);
+    headers_box.set_visible(visible);
+    total_headers_box.set_visible(true);
+    total_headers_label.set_label(msg);
+    total_headers_label.set_visible(true);
 }
 
 fn render_progress_bar(builder: &Builder) {
@@ -426,6 +432,7 @@ fn initialize_headers_tab(
         .unwrap()
         .iter()
         .enumerate()
+        .skip(1)  // Salteo primer header
         .take(AMOUNT_TO_SHOW / 2)
         .rev()
     {
