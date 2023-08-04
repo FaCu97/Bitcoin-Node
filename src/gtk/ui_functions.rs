@@ -167,7 +167,7 @@ pub fn handle_ui_event(
 }
 
 /// Muestra las transacciones en la pestana de transacciones
-fn render_transactions(transactions: &Vec<(String, Transaction)>, tx_table: TreeView) {
+fn render_transactions(transactions: &Vec<(String, Transaction, i64)>, tx_table: TreeView) {
     let tree_model = gtk::ListStore::new(&[
         gdk_pixbuf::Pixbuf::static_type(),
         String::static_type(),
@@ -194,7 +194,7 @@ fn render_transactions(transactions: &Vec<(String, Transaction)>, tx_table: Tree
                     (1, &tx.0.to_value()),
                     (2, &tx.1.hex_hash().to_value()),
                     (3, &"P2PKH".to_value()),
-                    (4, &tx.1.amount().to_value()),
+                    (4, &tx.2.to_value()),
                 ],
             );
         }
@@ -203,7 +203,7 @@ fn render_transactions(transactions: &Vec<(String, Transaction)>, tx_table: Tree
 }
 
 /// Shows the recent transactions in the overview tab
-fn render_recent_transactions(transactions: &Vec<(String, Transaction)>, builder: &Builder) {
+fn render_recent_transactions(transactions: &Vec<(String, Transaction, i64)>, builder: &Builder) {
     // Get the last five elements or all elements if there are fewer than five
     let recent_transactions = if transactions.len() <= 5 {
         &transactions[..]
@@ -243,7 +243,7 @@ fn render_recent_transactions(transactions: &Vec<(String, Transaction)>, builder
         hash.set_label(&tx.1.hex_hash());
         hash.set_visible(true);
         let amount_label: gtk::AccelLabel = builder.object(amount_labels[i]).unwrap();
-        amount_label.set_label(format!("{}", tx.1.amount()).as_str());
+        amount_label.set_label(format!("{}", tx.2).as_str());
         amount_label.set_visible(true);
         let icon: gtk::Image = builder.object(icons[i]).unwrap();
         if tx.0 == "Pending" {
