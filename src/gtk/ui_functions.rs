@@ -160,6 +160,9 @@ pub fn handle_ui_event(
         UIEvent::NotFound => {
             show_dialog_message_pop_up("Not found", "Not found");
         }
+        UIEvent::POIResult(message) => {
+            show_dialog_message_pop_up(message.as_str(), "POI Result");
+        }
     }
 }
 

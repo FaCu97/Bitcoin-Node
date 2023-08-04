@@ -24,6 +24,7 @@ pub fn connect_ui_callbacks(builder: &Builder, sender_to_node: &Sender<WalletEve
     dropdown_accounts_changed(builder, sender_to_node.clone());
     close_main_window_on_exit(builder, sender_to_node.clone());
     change_loading_account_label_periodically(builder);
+    search_tx_poi_button_clicked(builder, sender_to_node.clone());
 }
 
 /// Esta funcion realiza la accion que corresponde al presionar el boton de start
@@ -192,6 +193,52 @@ fn change_loading_account_label_periodically(builder: &Builder) {
     gtk::glib::timeout_add_local(Duration::from_secs(5), move || {
         update_label(ref_to_loading_account_label.clone());
         Continue(true)
+    });
+}
+
+pub fn search_tx_poi_button_clicked(builder: &Builder, sender: mpsc::Sender<WalletEvent>) {
+    let search_poi_tx_entry: gtk::Entry = builder.object("search-tx").unwrap();
+    let search_poi_block_entry: gtk::Entry = builder.object("search-poi-block").unwrap();
+    let search_tx_poi_button: gtk::Button = builder.object("search-tx-button").unwrap();
+
+    search_tx_poi_button.connect_clicked(move |_| {
+        let tx_hash_string = search_poi_tx_entry.text().to_string();
+        let block_hash_string = search_poi_block_entry.text().to_string();
+        let mut tx_is_valid = true;
+        let mut block_is_valid = true;
+        if hex_string_to_bytes(tx_hash_string.as_str()).is_none() {
+            tx_is_valid = false;
+        }
+        if hex_string_to_bytes(tx_hash_string.as_str()).is_none() {
+            block_is_valid = false;
+        }
+
+        if tx_is_valid && block_is_valid {
+            sender
+                .send(WalletEvent::PoiOfTransactionRequest(
+                    block_hash_string,
+                    tx_hash_string,
+                ))
+                .unwrap();
+        } else if !tx_is_valid && !block_is_valid {
+            show_dialog_message_pop_up(
+                format!("Error {tx_hash_string} and {block_hash_string} are not valid hashes")
+                    .as_str(),
+                "Error searching POI",
+            )
+        } else if !tx_is_valid {
+            show_dialog_message_pop_up(
+                format!("Error {tx_hash_string} is not a valid tx hash").as_str(),
+                "Error searching tx",
+            )
+        } else if !block_is_valid {
+            show_dialog_message_pop_up(
+                format!("Error {block_hash_string} is not a valid block hash").as_str(),
+                "Error searching block",
+            )
+        }
+        search_poi_tx_entry.set_text("");
+        search_poi_block_entry.set_text("");
     });
 }
 
