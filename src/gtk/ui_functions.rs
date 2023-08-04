@@ -432,7 +432,7 @@ fn initialize_headers_tab(
         .unwrap()
         .iter()
         .enumerate()
-        .skip(1)  // Salteo primer header
+        .skip(1) // Salteo primer header
         .take(AMOUNT_TO_SHOW / 2)
         .rev()
     {

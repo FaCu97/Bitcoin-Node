@@ -255,7 +255,6 @@ pub fn handle_block_message(
                 node_pointers.blockchain.headers.clone(),
                 node_pointers.blockchain.header_heights.clone(),
             )?;
-            new_block.contains_pending_tx(log_sender, ui_sender, node_pointers.accounts.clone())?;
             new_block
                 .give_me_utxos(node_pointers.blockchain.utxo_set.clone())
                 .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
@@ -263,6 +262,7 @@ pub fn handle_block_message(
                 node_pointers.accounts.clone(),
                 node_pointers.blockchain.utxo_set,
             )?;
+            new_block.contains_pending_tx(log_sender, ui_sender, node_pointers.accounts.clone())?;
             include_new_block(
                 log_sender,
                 ui_sender,
@@ -399,7 +399,14 @@ fn include_new_header(
     headers_heights
         .write()
         .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .insert(header.hash(), headers.read().unwrap().len() - 1);
+        .insert(
+            header.hash(),
+            headers
+                .read()
+                .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+                .len()
+                - 1,
+        );
     write_in_log(
         &log_sender.info_log_sender,
         "Recibo un nuevo header, lo agrego a la cadena de headers!",
@@ -433,15 +440,15 @@ fn update_accounts_utxo_set(
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
 ) -> Result<(), NodeCustomErrors> {
-    let accounts_lock = accounts
+    for account in accounts
         .read()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
-    let mut accounts_inner_lock = accounts_lock
-        .write()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
-
-    for account_lock in accounts_inner_lock.iter_mut() {
-        account_lock
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
+        .iter()
+    {
+        account
+            .clone()
             .set_utxos(utxo_set.clone())
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
     }
