@@ -750,11 +750,11 @@
                       </object>
                       <packing>
                         <property name="x">40</property>
-                        <property name="y">90</property>
+                        <property name="y">110</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkSearchEntry" id="search-tx">
+                      <object class="GtkEntry" id="search-tx">
                         <property name="width-request">550</property>
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
@@ -766,12 +766,12 @@
                       </object>
                       <packing>
                         <property name="x">49</property>
-                        <property name="y">27</property>
+                        <property name="y">15</property>
                       </packing>
                     </child>
                     <child>
                       <object class="GtkButton" id="search-tx-button">
-                        <property name="label" translatable="yes">Search</property>
+                        <property name="label" translatable="yes">Search POI</property>
                         <property name="width-request">100</property>
                         <property name="height-request">34</property>
                         <property name="visible">True</property>
@@ -784,8 +784,24 @@
                         </style>
                       </object>
                       <packing>
-                        <property name="x">648</property>
-                        <property name="y">27</property>
+                        <property name="x">638</property>
+                        <property name="y">30</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkEntry" id="search-poi-block">
+                        <property name="width-request">550</property>
+                        <property name="height-request">34</property>
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <property name="placeholder-text" translatable="yes">Enter a hash's block</property>
+                        <style>
+                          <class name="input-user"/>
+                        </style>
+                      </object>
+                      <packing>
+                        <property name="x">49</property>
+                        <property name="y">60</property>
                       </packing>
                     </child>
                     <style>
@@ -1089,8 +1105,8 @@
                         <property name="can-focus">True</property>
                         <property name="receives-default">True</property>
                         <property name="image">user-image</property>
-                        <property name="always-show-image">True</property>
                         <property name="relief">none</property>
+                        <property name="always-show-image">True</property>
                         <style>
                           <class name="app-button"/>
                         </style>
