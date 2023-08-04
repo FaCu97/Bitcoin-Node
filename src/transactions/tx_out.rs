@@ -144,6 +144,15 @@ impl TxOut {
         }
         Ok(())
     }
+
+    /// Devuelve true o false dependiendo de si la transaccion fue enviada a la cuenta recibida por parametro
+    pub fn is_sent_to_account(&self, address: &String) -> Result<bool, &'static str> {
+        let tx_asociate_address = self.get_address()?;
+        if tx_asociate_address.eq(address) {
+            return Ok(true);
+        }
+        Ok(false)
+    }
 }
 
 #[cfg(test)]

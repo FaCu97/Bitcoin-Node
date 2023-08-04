@@ -370,6 +370,17 @@ impl Transaction {
     pub fn get_height(&self) -> u32 {
         self.tx_in[0].get_height()
     }
+
+    /// Devuelve el monto enviado a direcciones distintas de la recibida por parámetro
+    pub fn amount_spent_by_account(&self, address: &String) -> Result<i64, Box<dyn Error>> {
+        let mut amount = 0;
+        for txout in &self.tx_out {
+            if !txout.is_sent_to_account(address)? {
+                amount += txout.value();
+            }
+        }
+        Ok(amount)
+    }
 }
 
 #[cfg(test)]

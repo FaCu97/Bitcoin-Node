@@ -33,7 +33,7 @@ pub enum UIEvent {
     ActualizeBlocksDownloaded(usize, usize),
     MakeTransactionStatus(String),
     NewPendingTx(),
-    UpdateTransactions(Vec<(String, Transaction)>),
+    UpdateTransactions(Vec<(String, Transaction, i64)>),
     BlockFound(Block),
     HeaderFound(BlockHeader, Height),
     POIResult(String),

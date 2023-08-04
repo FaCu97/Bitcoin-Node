@@ -159,8 +159,9 @@ impl Account {
     }
 
     /// Devuelve las transacciones pendientes y las confirmadas de la cuenta
-    pub fn get_transactions(&self) -> Result<Vec<(String, Transaction)>, Box<dyn Error>> {
-        let mut transactions: Vec<(String, Transaction)> = Vec::new();
+    /// Devuelve una lista de tuplas con el estado, transaccion y monto enviado por la cuenta
+    pub fn get_transactions(&self) -> Result<Vec<(String, Transaction, i64)>, Box<dyn Error>> {
+        let mut transactions: Vec<(String, Transaction, i64)> = Vec::new();
         // itero las pending tx
         for tx in self
             .pending_transactions
@@ -168,7 +169,11 @@ impl Account {
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .iter()
         {
-            transactions.push(("Pending".to_string(), tx.clone()));
+            transactions.push((
+                "Pending".to_string(),
+                tx.clone(),
+                tx.amount_spent_by_account(&self.address)?,
+            ));
         }
 
         for tx in self
@@ -177,7 +182,11 @@ impl Account {
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
             .iter()
         {
-            transactions.push(("Confirmed".to_string(), tx.clone()));
+            transactions.push((
+                "Confirmed".to_string(),
+                tx.clone(),
+                tx.amount_spent_by_account(&self.address)?,
+            ));
         }
 
         Ok(transactions)
