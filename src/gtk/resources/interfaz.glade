@@ -105,6 +105,23 @@
           </packing>
         </child>
         <child>
+          <object class="GtkBox" id="headers-box">
+            <property name="width-request">360</property>
+            <property name="height-request">60</property>
+            <property name="visible">False</property>
+            <property name="can-focus">False</property>
+            <property name="halign">center</property>
+            <property name="valign">center</property>
+            <style>
+              <class name="box"/>
+            </style>
+          </object>
+          <packing>
+            <property name="x">235</property>
+            <property name="y">40</property>
+          </packing>
+        </child>
+        <child>
           <object class="GtkSpinner" id="header-spin">
             <property name="width-request">50</property>
             <property name="height-request">50</property>
@@ -115,8 +132,8 @@
             </style>
           </object>
           <packing>
-            <property name="x">207</property>
-            <property name="y">50</property>
+            <property name="x">245</property>
+            <property name="y">43</property>
           </packing>
         </child>
         <child>
@@ -130,7 +147,40 @@
             </style>
           </object>
           <packing>
-            <property name="x">304</property>
+            <property name="x">300</property>
+            <property name="y">54</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkBox" id="total-box">
+            <property name="width-request">430</property>
+            <property name="height-request">60</property>
+            <property name="visible">False</property>
+            <property name="can-focus">False</property>
+            <property name="halign">center</property>
+            <property name="valign">center</property>
+            <style>
+              <class name="box"/>
+            </style>
+          </object>
+          <packing>
+            <property name="x">205</property>
+            <property name="y">40</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="total-headers">
+            <property name="width-request">200</property>
+            <property name="height-request">35</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes"></property>
+            <property name="visible">False</property>
+            <style>
+              <class name="fonts"/>
+            </style>
+          </object>
+          <packing>
+            <property name="x">218</property>
             <property name="y">54</property>
           </packing>
         </child>
