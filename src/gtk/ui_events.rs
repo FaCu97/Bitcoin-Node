@@ -35,6 +35,7 @@ pub enum UIEvent {
     UpdateTransactions(Vec<(String, Transaction)>),
     BlockFound(Block),
     HeaderFound(BlockHeader, Height),
+    POIResult(String),
     NotFound,
 }
 
