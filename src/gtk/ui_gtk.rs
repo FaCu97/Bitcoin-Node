@@ -50,6 +50,7 @@ fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<W
         handle_ui_event(builder_clone.clone(), msg, tx_to_node.clone());
         Continue(true)
     });
+
     connect_ui_callbacks(&builder, sender_to_node);
     gtk::main();
 }
