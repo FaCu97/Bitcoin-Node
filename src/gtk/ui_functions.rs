@@ -287,9 +287,12 @@ fn actualize_message_header(builder: &Builder, msg: &str) {
 }
 
 fn actualize_message_and_spinner(builder: &Builder, visible: bool, msg: &str) {
+    let total_headers_label: gtk::Label = builder.object("total-headers").unwrap();
     let message_header: gtk::Label = builder.object("message-header").unwrap();
     let spinner: Spinner = builder.object("header-spin").unwrap();
-    message_header.set_label(msg);
+    total_headers_label.set_label(msg);
+    total_headers_label.set_visible(true);
+    message_header.set_visible(visible);
     spinner.set_visible(visible);
 }
 

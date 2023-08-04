@@ -130,7 +130,23 @@
             </style>
           </object>
           <packing>
-            <property name="x">304</property>
+            <property name="x">290</property>
+            <property name="y">54</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="total-headers">
+            <property name="width-request">211</property>
+            <property name="height-request">35</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes"></property>
+            <property name="visible">False</property>
+            <style>
+              <class name="fonts"/>
+            </style>
+          </object>
+          <packing>
+            <property name="x">215</property>
             <property name="y">54</property>
           </packing>
         </child>
