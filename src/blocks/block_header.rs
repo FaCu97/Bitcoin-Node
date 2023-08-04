@@ -1,5 +1,5 @@
 use bitcoin_hashes::{sha256d, Hash};
-use chrono::{TimeZone, Utc};
+use chrono::{TimeZone, Utc, DateTime, Local};
 
 /// Representa el Block Header del protocolo bitcoin
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -147,8 +147,9 @@ impl BlockHeader {
 }
 /// Recibe el tiempo en formato UTC y lo devuelve en formato String
 fn utc_time_to_string(time: i64) -> String {
-    let dt = Utc.timestamp_opt(time, 0).unwrap();
-    dt.format("%Y-%m-%d %H:%M:%S").to_string()
+    let dt_utc = Utc.timestamp_opt(time, 0).unwrap();
+    let dt_local: DateTime<_> = Utc.from_utc_datetime(&dt_utc.naive_utc()).with_timezone(&Local);
+    dt_local.format("%Y-%m-%d %H:%M:%S").to_string()
 }
 
 /// Convierte un vector de bytes a un string que representa el hash en hexadecimal,
