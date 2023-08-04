@@ -7,7 +7,10 @@ use std::{
 };
 
 use gtk::{
-    gdk, prelude::*, Builder, CssProvider, ProgressBar, Spinner, StyleContext, TreeView, Window, gdk_pixbuf::{self, Pixbuf},
+    gdk,
+    gdk_pixbuf::{self, Pixbuf},
+    prelude::*,
+    Builder, CssProvider, ProgressBar, Spinner, StyleContext, TreeView, Window,
 };
 
 use crate::{
@@ -197,20 +200,44 @@ fn render_transactions(transactions: &Vec<(String, Transaction)>, tx_table: Tree
 }
 
 /// Shows the recent transactions in the overview tab
-fn render_recent_transactions(transactions: &Vec<(String,  Transaction)>, builder: &Builder) {
-     // Get the last five elements or all elements if there are fewer than five
-     let recent_transactions = if transactions.len() <= 5 {
+fn render_recent_transactions(transactions: &Vec<(String, Transaction)>, builder: &Builder) {
+    // Get the last five elements or all elements if there are fewer than five
+    let recent_transactions = if transactions.len() <= 5 {
         &transactions[..]
     } else {
         &transactions[transactions.len() - 5..]
     };
-    let amount_labels = ["amount-tx-1", "amount-tx-2", "amount-tx-3", "amount-tx-4", "amount-tx-5"];
-    let icons = ["icon-tx-1", "icon-tx-2", "icon-tx-3", "icon-tx-4", "icon-tx-5"];
-    let type_labels = ["type-tx-1", "type-tx-2", "type-tx-3", "type-tx-4", "type-tx-5"];
-    let recent_tx = ["recent-tx-1", "recent-tx-2", "recent-tx-3", "recent-tx-4", "recent-tx-5"];
+    let amount_labels = [
+        "amount-tx-1",
+        "amount-tx-2",
+        "amount-tx-3",
+        "amount-tx-4",
+        "amount-tx-5",
+    ];
+    let icons = [
+        "icon-tx-1",
+        "icon-tx-2",
+        "icon-tx-3",
+        "icon-tx-4",
+        "icon-tx-5",
+    ];
+    let type_labels = [
+        "type-tx-1",
+        "type-tx-2",
+        "type-tx-3",
+        "type-tx-4",
+        "type-tx-5",
+    ];
+    let recent_tx = [
+        "recent-tx-1",
+        "recent-tx-2",
+        "recent-tx-3",
+        "recent-tx-4",
+        "recent-tx-5",
+    ];
     for (i, tx) in recent_transactions.iter().enumerate() {
         let hash: gtk::AccelLabel = builder.object(recent_tx[i]).unwrap();
-        hash.set_label(format!("{}", tx.1.hex_hash()).as_str());
+        hash.set_label(&tx.1.hex_hash());
         hash.set_visible(true);
         let amount_label: gtk::AccelLabel = builder.object(amount_labels[i]).unwrap();
         amount_label.set_label(format!("{}", tx.1.amount()).as_str());
@@ -225,26 +252,18 @@ fn render_recent_transactions(transactions: &Vec<(String,  Transaction)>, builde
         let type_label: gtk::AccelLabel = builder.object(type_labels[i]).unwrap();
         type_label.set_visible(true);
     }
-
-    
 }
 
 /// Agrega el bloque y header a las pestañas.
 /// Solicita a la wallet la cuenta para actualizar la información
-fn handle_add_block(
-    sender_to_node: mpsc::Sender<WalletEvent>,
-    builder: &Builder,
-    block: &Block,
-) {
+fn handle_add_block(sender_to_node: mpsc::Sender<WalletEvent>, builder: &Builder, block: &Block) {
     let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
     let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
 
     add_row_first_to_liststore_block(&liststore_blocks, block);
     add_row_first_to_liststore_headers(&liststore_headers, &block.block_header, block.get_height());
 
-    sender_to_node
-        .send(WalletEvent::GetAccountRequest)
-        .unwrap();
+    sender_to_node.send(WalletEvent::GetAccountRequest).unwrap();
 }
 
 /// Esta funcion renderiza la barra de carga de bloques descargados
@@ -472,10 +491,34 @@ fn add_header_row(
 
 fn update_overview(account: &Account, available_label: &gtk::Label, builder: &Builder) {
     available_label.set_label(format!("{}", account.balance()).as_str());
-    let amount_labels = ["amount-tx-1", "amount-tx-2", "amount-tx-3", "amount-tx-4", "amount-tx-5"];
-    let icons = ["icon-tx-1", "icon-tx-2", "icon-tx-3", "icon-tx-4", "icon-tx-5"];
-    let type_labels = ["type-tx-1", "type-tx-2", "type-tx-3", "type-tx-4", "type-tx-5"];
-    let recent_tx = ["recent-tx-1", "recent-tx-2", "recent-tx-3", "recent-tx-4", "recent-tx-5"];
+    let amount_labels = [
+        "amount-tx-1",
+        "amount-tx-2",
+        "amount-tx-3",
+        "amount-tx-4",
+        "amount-tx-5",
+    ];
+    let icons = [
+        "icon-tx-1",
+        "icon-tx-2",
+        "icon-tx-3",
+        "icon-tx-4",
+        "icon-tx-5",
+    ];
+    let type_labels = [
+        "type-tx-1",
+        "type-tx-2",
+        "type-tx-3",
+        "type-tx-4",
+        "type-tx-5",
+    ];
+    let recent_tx = [
+        "recent-tx-1",
+        "recent-tx-2",
+        "recent-tx-3",
+        "recent-tx-4",
+        "recent-tx-5",
+    ];
     for i in 0..5 {
         let hash: gtk::AccelLabel = builder.object(recent_tx[i]).unwrap();
         hash.set_visible(false);
@@ -558,6 +601,3 @@ pub fn add_css_to_screen() {
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
 }
-
-
-

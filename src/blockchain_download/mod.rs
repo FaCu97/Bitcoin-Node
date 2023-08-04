@@ -62,7 +62,7 @@ pub fn initial_block_download(
     heights_hashmap.insert([0u8; 32], 0); // genesis hash
     let header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>> =
         Arc::new(RwLock::new(heights_hashmap));
-    /* 
+
     get_initial_headers(
         config,
         log_sender,
@@ -97,7 +97,7 @@ pub fn initial_block_download(
             utxo_set.clone(),
         )?;
     }
-    */
+
     let (amount_of_headers, amount_of_blocks) =
         get_amount_of_headers_and_blocks(&pointer_to_headers, &pointer_to_blocks)?;
     write_in_log(

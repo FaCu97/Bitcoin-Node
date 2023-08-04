@@ -82,12 +82,10 @@ fn run_node(
     let nodes = handshake_with_nodes(&config, &log_sender, node_ips)?;
     let blockchain = initial_block_download(&config, &log_sender, &ui_sender, nodes.clone())?;
     let mut node = Node::new(&log_sender, &ui_sender, nodes, blockchain.clone())?;
-    /* 
     send_event_to_ui(
         &ui_sender,
         UIEvent::InitializeUITabs((blockchain.headers, blockchain.blocks)),
     );
-    */
     let mut wallet = Wallet::new(node.clone())?;
     let server = NodeServer::new(&config, &log_sender, &ui_sender, &mut node)?;
     handle_ui_events(&ui_sender, node_rx, &mut wallet);
