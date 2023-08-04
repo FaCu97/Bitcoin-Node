@@ -281,7 +281,7 @@ pub fn download_blocks_single_node(
     (blocks, headers): BlocksAndHeaders,
     block_headers: Vec<BlockHeader>,
     node: &mut TcpStream,
-    tx: Sender<Vec<Block>>,
+    tx_utxo_set: Sender<Vec<Block>>,
 ) -> Result<(), NodeCustomErrors> {
     let mut current_blocks: HashMap<[u8; 32], Block> = HashMap::new();
     write_in_log(
@@ -308,7 +308,8 @@ pub fn download_blocks_single_node(
             block_headers.clone(),
             None,
         )?;
-        tx.send(received_blocks.clone())
+        tx_utxo_set
+            .send(received_blocks.clone())
             .map_err(|err| NodeCustomErrors::ThreadChannelError(err.to_string()))?;
         for block in received_blocks.into_iter() {
             current_blocks.insert(block.hash(), block);
