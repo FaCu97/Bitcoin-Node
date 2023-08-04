@@ -86,7 +86,6 @@ pub fn handle_ui_event(
             sender_to_node
                 .send(WalletEvent::GetTransactionsRequest)
                 .unwrap();
-            // TODO: Actualizar Overview --> Balance y recent transactions y pestana transactions
         }
         UIEvent::MakeTransactionStatus(status) => {
             show_dialog_message_pop_up(status.as_str(), "transaction's status");
@@ -150,10 +149,10 @@ pub fn handle_ui_event(
         UIEvent::HeaderFound(header, height) => {
             show_dialog_message_pop_up(
                 format!(
-                    "Height: {} \nHash: {} \nTime (UTC): {}",
+                    "Height: {} \nHash: {} \nTime: {}",
                     height,
                     header.hex_hash(),
-                    header.utc_time()
+                    header.local_time()
                 )
                 .as_str(),
                 "Header found",
@@ -240,7 +239,7 @@ fn render_recent_transactions(transactions: &Vec<(String, Transaction, i64)>, bu
         "recent-tx-4",
         "recent-tx-5",
     ];
-    for (i, tx) in recent_transactions.iter().enumerate() {
+    for (i, tx) in recent_transactions.iter().enumerate().rev() {
         let hash: gtk::AccelLabel = builder.object(recent_tx[i]).unwrap();
         hash.set_label(&tx.1.hex_hash());
         hash.set_visible(true);
@@ -497,7 +496,7 @@ fn add_header_row(
         &[
             (0, &height.to_value()),
             (1, &header.hex_hash()),
-            (2, &header.utc_time()),
+            (2, &header.local_time()),
         ],
     );
 }
