@@ -141,12 +141,12 @@ impl BlockHeader {
     }
 
     /// Devuelve un string que representa el timestamp del bloque en formato UTC
-    pub fn utc_time(&self) -> String {
-        utc_time_to_string(self.time as i64)
+    pub fn local_time(&self) -> String {
+        local_time_to_string(self.time as i64)
     }
 }
 /// Recibe el tiempo en formato UTC y lo devuelve en formato String
-fn utc_time_to_string(time: i64) -> String {
+fn local_time_to_string(time: i64) -> String {
     let dt_utc = Utc.timestamp_opt(time, 0).unwrap();
     let dt_local: DateTime<_> = Utc.from_utc_datetime(&dt_utc.naive_utc()).with_timezone(&Local);
     dt_local.format("%Y-%m-%d %H:%M:%S").to_string()

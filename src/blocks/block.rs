@@ -256,7 +256,7 @@ impl Block {
 
     /// Devuelve un string que representa el timestamp del bloque en formato UTC
     pub fn utc_time(&self) -> String {
-        self.block_header.utc_time()
+        self.block_header.local_time()
     }
 
     /// Devuelve la altura del bloque
