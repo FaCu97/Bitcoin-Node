@@ -49,13 +49,13 @@ fn sync_balance_labels(builder: &Builder) {
 }
 
 fn sync_account_labels(builder: &Builder) {
+    let account_login: gtk::Label = builder.object("status-login").unwrap();
     let overview_account: gtk::Label = builder.object("overview-account").unwrap();
-    let account_login: gtk::AccelLabel = builder.object("status-login").unwrap();
-    let ref_to_overview_account = overview_account;
+    let ref_to_account = account_login;
     // cuando cambia uno, cambia el otro automaticamente
-    ref_to_overview_account.connect_notify_local(Some("label"), move |label, _| {
+    ref_to_account.connect_notify_local(Some("label"), move |label, _| {
         let new_text = label.text().to_string();
-        account_login.set_label(new_text.as_str());
+        overview_account.set_label(new_text.as_str());
     });
 }
 

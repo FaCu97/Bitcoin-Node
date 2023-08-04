@@ -206,11 +206,6 @@
                     <property name="visible">True</property>
                     <property name="can-focus">False</property>
                     <property name="halign">start</property>
-
-
-
-
-
                     <child>
                       <object class="GtkSeparator" id="balance-box">
                         <property name="width-request">320</property>
@@ -300,15 +295,6 @@
                         <property name="y">130</property>
                       </packing>
                     </child>
-
-
-
-
-
-
-
-
-
                     <child>
                       <object class="GtkSeparator" id="account-box">
                         <property name="width-request">320</property>
@@ -325,7 +311,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel" id="overview-account">
+                      <object class="GtkAccelLabel" id="overview-account-title">
                         <property name="width-request">100</property>
                         <property name="height-request">50</property>
                         <property name="visible">True</property>
@@ -357,10 +343,10 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkLabel">
+                      <object class="GtkLabel" id="overview-account">
                         <property name="visible">True</property>
                         <property name="can-focus">False</property>
-                        <property name="label" translatable="yes">mpwiQrE8D1P9ESgKbU5r9tSmKUFS2muTxS</property>
+                        <property name="label" translatable="yes"></property>
                         <attributes>
                           <attribute name="font-desc" value="Sans 11"/>
                         </attributes>
@@ -370,13 +356,6 @@
                         <property name="y">250</property>
                       </packing>
                     </child>
-                    
-
-
-
-
-
-
                     <child>
                       <object class="GtkSeparator" id="tx-box">
                         <property name="width-request">420</property>
@@ -408,9 +387,6 @@
                         <property name="y">65</property>
                       </packing>
                     </child>
-
-
-
                     <child>
                       <object class="GtkAccelLabel" id="recent-tx-1">
                         <property name="visible">False</property>
@@ -425,7 +401,6 @@
                         <property name="y">150</property>
                       </packing>
                     </child>
-
                     <child>
                       <object class="GtkImage" id="icon-tx-1">
                         <property name="visible">False</property>
@@ -437,7 +412,6 @@
                         <property name="y">127</property>
                       </packing>
                     </child>
-
                     <child>
                       <object class="GtkAccelLabel" id="type-tx-1">
                         <property name="visible">False</property>
@@ -449,7 +423,6 @@
                         <property name="y">125</property>
                       </packing>
                     </child>
-
                     <child>
                       <object class="GtkAccelLabel" id="amount-tx-1">
                         <property name="visible">False</property>
@@ -461,8 +434,6 @@
                         <property name="y">125</property>
                       </packing>
                     </child>
-
-
                     <child>
                       <object class="GtkAccelLabel" id="recent-tx-2">
                         <property name="visible">False</property>
@@ -488,7 +459,6 @@
                         <property name="y">187</property>
                       </packing>
                     </child>
-
                     <child>
                       <object class="GtkAccelLabel" id="type-tx-2">
                         <property name="visible">False</property>
@@ -500,7 +470,6 @@
                         <property name="y">185</property>
                       </packing>
                     </child>
-
                     <child>
                       <object class="GtkAccelLabel" id="amount-tx-2">
                         <property name="visible">False</property>
@@ -512,17 +481,15 @@
                         <property name="y">185</property>
                       </packing>
                     </child>
-
-
                     <child>
                       <object class="GtkAccelLabel" id="recent-tx-3">
                         <property name="visible">False</property>
                         <property name="can-focus">False</property>
                         <property name="label" translatable="yes">5d9ed1b504054680e5d35432241f9cd1417f6df3774195fe558440368ea493f3</property>
+                        <style>
+                          <class name="recent-txs"/>
+                        </style>
                       </object>
-                      <style>
-                        <class name="recent-txs"/>
-                      </style>
                       <packing>
                         <property name="x">398</property>
                         <property name="y">270</property>
@@ -539,7 +506,6 @@
                         <property name="y">247</property>
                       </packing>
                     </child>
-
                     <child>
                       <object class="GtkAccelLabel" id="type-tx-3">
                         <property name="visible">False</property>
@@ -562,14 +528,6 @@
                         <property name="y">245</property>
                       </packing>
                     </child>
-
-
-
-
-
-
-
-
                     <child>
                       <object class="GtkAccelLabel" id="recent-tx-4">
                         <property name="visible">False</property>
@@ -595,7 +553,6 @@
                         <property name="y">307</property>
                       </packing>
                     </child>
-
                     <child>
                       <object class="GtkAccelLabel" id="type-tx-4">
                         <property name="visible">False</property>
@@ -621,9 +578,6 @@
                         <property name="y">305</property>
                       </packing>
                     </child>
-
-
-
                     <child>
                       <object class="GtkAccelLabel" id="recent-tx-5">
                         <property name="visible">False</property>
@@ -638,7 +592,6 @@
                         <property name="y">390</property>
                       </packing>
                     </child>
-
                     <child>
                       <object class="GtkImage" id="icon-tx-5">
                         <property name="visible">False</property>
@@ -650,7 +603,6 @@
                         <property name="y">367</property>
                       </packing>
                     </child>
-
                     <child>
                       <object class="GtkAccelLabel" id="type-tx-5">
                         <property name="visible">False</property>
@@ -662,7 +614,6 @@
                         <property name="y">365</property>
                       </packing>
                     </child>
-
                     <child>
                       <object class="GtkAccelLabel" id="amount-tx-5">
                         <property name="visible">False</property>
@@ -674,9 +625,6 @@
                         <property name="y">365</property>
                       </packing>
                     </child>
-
-
-
                     <style>
                       <class name="frames"/>
                     </style>
@@ -1471,7 +1419,7 @@
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkAccelLabel" id="status-login">
+                      <object class="GtkLabel" id="status-login">
                         <property name="width-request">300</property>
                         <property name="height-request">34</property>
                         <property name="can-focus">False</property>
