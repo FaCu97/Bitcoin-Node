@@ -40,10 +40,12 @@ fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<W
     ui_sender.send(tx).expect("could not send sender to client");
     let builder = gtk::Builder::from_string(GLADE_FILE);
     add_css_to_screen();
-    let initial_window: Window = builder.object("initial-window").unwrap();
+    let initial_window: Window = builder
+        .object("initial-window")
+        .expect("no se pudo cargar la ventana inicial");
+    initial_window.set_title("Bitcoin Wallet");
     initial_window.show();
-    //let main_window: gtk::Window = builder.object("main-window").unwrap();
-    //main_window.show();
+
     let tx_to_node = sender_to_node.clone();
     let builder_clone = builder.clone();
     rx.attach(None, move |msg| {
