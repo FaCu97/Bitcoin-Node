@@ -32,7 +32,9 @@ pub fn handle_ui_event(
     ui_event: UIEvent,
     sender_to_node: mpsc::Sender<WalletEvent>,
 ) {
-    let tx_table: TreeView = builder.object("tx_table").unwrap();
+    let tx_table: TreeView = builder
+        .object("tx_table")
+        .expect("Error al obtener la tabla de tx");
     match ui_event {
         UIEvent::ActualizeBlocksDownloaded(blocks_downloaded, blocks_to_download) => {
             actualize_progress_bar(&builder, blocks_downloaded, blocks_to_download);
@@ -50,9 +52,15 @@ pub fn handle_ui_event(
             render_main_window(&builder, &headers, &blocks);
         }
         UIEvent::StartDownloadingHeaders => {
-            let message_header: gtk::Label = builder.object("message-header").unwrap();
-            let spinner: Spinner = builder.object("header-spin").unwrap();
-            let headers_box: gtk::Box = builder.object("headers-box").unwrap();
+            let message_header: gtk::Label = builder
+                .object("message-header")
+                .expect("No se pudo obtener el label de message-header");
+            let spinner: Spinner = builder
+                .object("header-spin")
+                .expect("No se pudo obtener el spinner de headers");
+            let headers_box: gtk::Box = builder
+                .object("headers-box")
+                .expect("No se pudo obtener el box de headers");
             headers_box.set_visible(true);
             message_header.set_visible(true);
             spinner.set_visible(true);
@@ -79,13 +87,17 @@ pub fn handle_ui_event(
         }
         UIEvent::AccountChanged(account) => {
             println!("Account changed to: {}", account.address);
-            let available_label = builder.object("available label").unwrap();
+            let available_label = builder
+                .object("available label")
+                .expect("No se pudo obtener el label de available account");
             update_overview(&account, &available_label, &builder);
 
             // actualiza la pestana de transacciones
             sender_to_node
                 .send(WalletEvent::GetTransactionsRequest)
-                .unwrap();
+                .expect(
+                    "Error al enviar el evento de get transactions request al cambiar de cuenta",
+                );
             // TODO: Actualizar Overview --> Balance y recent transactions y pestana transactions
         }
         UIEvent::MakeTransactionStatus(status) => {
@@ -106,7 +118,7 @@ pub fn handle_ui_event(
             );
             sender_to_node
                 .send(WalletEvent::GetTransactionsRequest)
-                .unwrap();
+                .expect("Error al enviar el evento de get transactions request al mostrar transaccion pendiente");
         }
 
         UIEvent::UpdateTransactions(transactions) => {
@@ -117,7 +129,7 @@ pub fn handle_ui_event(
         UIEvent::NewPendingTx() => {
             sender_to_node
                 .send(WalletEvent::GetTransactionsRequest)
-                .unwrap();
+                .expect("Error al enviar el evento de get transactions request al mostrar una nueva transaccion pendiente");
         }
         UIEvent::ShowConfirmedTransaction(block, account, transaction) => {
             show_dialog_message_pop_up(
@@ -132,7 +144,7 @@ pub fn handle_ui_event(
             );
             sender_to_node
                 .send(WalletEvent::GetTransactionsRequest)
-                .unwrap();
+                .expect("Error al enviar el evento de get transactions request al mostrar transacciones confirmadas");
         }
         UIEvent::BlockFound(block) => {
             show_dialog_message_pop_up(
@@ -241,20 +253,28 @@ fn render_recent_transactions(transactions: &Vec<(String, Transaction, i64)>, bu
         "recent-tx-5",
     ];
     for (i, tx) in recent_transactions.iter().enumerate() {
-        let hash: gtk::AccelLabel = builder.object(recent_tx[i]).unwrap();
+        let hash: gtk::AccelLabel = builder
+            .object(recent_tx[i])
+            .expect("error al obtener el label del hash de la transaccion reciente");
         hash.set_label(&tx.1.hex_hash());
         hash.set_visible(true);
-        let amount_label: gtk::AccelLabel = builder.object(amount_labels[i]).unwrap();
+        let amount_label: gtk::AccelLabel = builder
+            .object(amount_labels[i])
+            .expect("error al obtener el label del monto de la transaccion reciente");
         amount_label.set_label(format!("{} Satoshis", tx.2).as_str());
         amount_label.set_visible(true);
-        let icon: gtk::Image = builder.object(icons[i]).unwrap();
+        let icon: gtk::Image = builder
+            .object(icons[i])
+            .expect("error al obtener el icono de la transaccion reciente");
         if tx.0 == "Pending" {
             icon.set_from_file(Some("src/gtk/resources/ov_pending.png"));
         } else {
             icon.set_from_file(Some("src/gtk/resources/ov_confirmed.png"));
         }
         icon.set_visible(true);
-        let type_label: gtk::AccelLabel = builder.object(type_labels[i]).unwrap();
+        let type_label: gtk::AccelLabel = builder
+            .object(type_labels[i])
+            .expect("error al obtener el label del tipo de la transaccion reciente");
         type_label.set_visible(true);
     }
 }
@@ -262,18 +282,26 @@ fn render_recent_transactions(transactions: &Vec<(String, Transaction, i64)>, bu
 /// Agrega el bloque y header a las pestañas.
 /// Solicita a la wallet la cuenta para actualizar la información
 fn handle_add_block(sender_to_node: mpsc::Sender<WalletEvent>, builder: &Builder, block: &Block) {
-    let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
-    let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
+    let liststore_blocks: gtk::ListStore = builder
+        .object("liststore-blocks")
+        .expect("Error al obtener el liststore de bloques");
+    let liststore_headers: gtk::ListStore = builder
+        .object("liststore-headers")
+        .expect("Error al obtener el liststore de headers");
 
     add_row_first_to_liststore_block(&liststore_blocks, block);
     add_row_first_to_liststore_headers(&liststore_headers, &block.block_header, block.get_height());
 
-    sender_to_node.send(WalletEvent::GetAccountRequest).unwrap();
+    sender_to_node
+        .send(WalletEvent::GetAccountRequest)
+        .expect("Error al enviar el evento de solicitud de cuenta");
 }
 
 /// Esta funcion renderiza la barra de carga de bloques descargados
 fn actualize_progress_bar(builder: &Builder, blocks_downloaded: usize, blocks_to_download: usize) {
-    let progress_bar: ProgressBar = builder.object("block-bar").unwrap();
+    let progress_bar: ProgressBar = builder
+        .object("block-bar")
+        .expect("Error al obtener la barra de progreso");
     progress_bar.set_fraction(blocks_downloaded as f64 / blocks_to_download as f64);
     progress_bar.set_text(Some(
         format!(
@@ -284,16 +312,28 @@ fn actualize_progress_bar(builder: &Builder, blocks_downloaded: usize, blocks_to
     ));
 }
 fn actualize_message_header(builder: &Builder, msg: &str) {
-    let message_header: gtk::Label = builder.object("message-header").unwrap();
+    let message_header: gtk::Label = builder
+        .object("message-header")
+        .expect("Error al obtener el label del header mensaje");
     message_header.set_label(msg);
 }
 
 fn actualize_message_and_spinner(builder: &Builder, visible: bool, msg: &str) {
-    let total_headers_label: gtk::Label = builder.object("total-headers").unwrap();
-    let total_headers_box: gtk::Box = builder.object("total-box").unwrap();
-    let message_header: gtk::Label = builder.object("message-header").unwrap();
-    let headers_box: gtk::Box = builder.object("headers-box").unwrap();
-    let spinner: Spinner = builder.object("header-spin").unwrap();
+    let total_headers_label: gtk::Label = builder
+        .object("total-headers")
+        .expect("Error al obtener el label del total de headers");
+    let total_headers_box: gtk::Box = builder
+        .object("total-box")
+        .expect("Error al obtener el box del total de headers");
+    let message_header: gtk::Label = builder
+        .object("message-header")
+        .expect("Error al obtener el label del header mensaje");
+    let headers_box: gtk::Box = builder
+        .object("headers-box")
+        .expect("Error al obtener el box de headers");
+    let spinner: Spinner = builder
+        .object("header-spin")
+        .expect("Error al obtener el header spinner");
     message_header.set_visible(visible);
     spinner.set_visible(visible);
     headers_box.set_visible(visible);
@@ -303,18 +343,32 @@ fn actualize_message_and_spinner(builder: &Builder, visible: bool, msg: &str) {
 }
 
 fn render_progress_bar(builder: &Builder) {
-    let progress_bar: ProgressBar = builder.object("block-bar").unwrap();
+    let progress_bar: ProgressBar = builder
+        .object("block-bar")
+        .expect("Error al obtener la barra de progreso");
     progress_bar.set_visible(true);
     progress_bar.set_text(Some("Blocks downloaded: 0"));
 }
 
 fn render_main_window(builder: &Builder, headers: &Headers, blocks: &Blocks) {
-    let initial_window: gtk::Window = builder.object("initial-window").unwrap();
-    let main_window: gtk::Window = builder.object("main-window").unwrap();
-    let liststore_blocks: gtk::ListStore = builder.object("liststore-blocks").unwrap();
-    let liststore_headers: gtk::ListStore = builder.object("liststore-headers").unwrap();
-    let header_table: TreeView = builder.object("header_table").unwrap();
-    let block_table: TreeView = builder.object("block_table").unwrap();
+    let initial_window: gtk::Window = builder
+        .object("initial-window")
+        .expect("Error al obtener la ventana inicial");
+    let main_window: gtk::Window = builder
+        .object("main-window")
+        .expect("Error al obtener la ventana principal");
+    let liststore_blocks: gtk::ListStore = builder
+        .object("liststore-blocks")
+        .expect("Error al obtener el liststore de bloques");
+    let liststore_headers: gtk::ListStore = builder
+        .object("liststore-headers")
+        .expect("Error al obtener el liststore de headers");
+    let header_table: TreeView = builder
+        .object("header_table")
+        .expect("Error al obtener la tabla de headers");
+    let block_table: TreeView = builder
+        .object("block_table")
+        .expect("Error al obtener la tabla de bloques");
 
     initial_window.close();
     main_window.show();
@@ -323,9 +377,15 @@ fn render_main_window(builder: &Builder, headers: &Headers, blocks: &Blocks) {
 }
 
 fn update_account_tab(builder: &Builder, account: Account) {
-    let account_loading_spinner: Spinner = builder.object("account-spin").unwrap();
-    let loading_account_label: gtk::Label = builder.object("load-account").unwrap();
-    let dropdown: gtk::ComboBoxText = builder.object("dropdown-menu").unwrap();
+    let account_loading_spinner: Spinner = builder
+        .object("account-spin")
+        .expect("Error al obtener el spinner de la cuenta");
+    let loading_account_label: gtk::Label = builder
+        .object("load-account")
+        .expect("Error al obtener el label de la cuenta");
+    let dropdown: gtk::ComboBoxText = builder
+        .object("dropdown-menu")
+        .expect("Error al obtener el dropdown menu");
     account_loading_spinner.set_visible(false);
     loading_account_label.set_visible(false);
     let buttons = get_buttons(builder);
@@ -340,9 +400,15 @@ fn update_account_tab(builder: &Builder, account: Account) {
 }
 
 fn render_account_tab(builder: &Builder) {
-    let account_loading_spinner: Spinner = builder.object("account-spin").unwrap();
-    let loading_account_label: gtk::Label = builder.object("load-account").unwrap();
-    let dropdown: gtk::ComboBoxText = builder.object("dropdown-menu").unwrap();
+    let account_loading_spinner: Spinner = builder
+        .object("account-spin")
+        .expect("Error al obtener el spinner de la cuenta");
+    let loading_account_label: gtk::Label = builder
+        .object("load-account")
+        .expect("Error al obtener el label de la cuenta");
+    let dropdown: gtk::ComboBoxText = builder
+        .object("dropdown-menu")
+        .expect("Error al obtener el dropdown menu");
     let buttons = get_buttons(builder);
     let entries = get_entries(builder);
     enable_buttons_and_entries(&buttons, &entries);
@@ -354,25 +420,51 @@ fn render_account_tab(builder: &Builder) {
 /// Esta funcion obtiene los botones de la interfaz
 pub fn get_buttons(builder: &Builder) -> Vec<gtk::Button> {
     let buttons = vec![
-        builder.object("send-button").unwrap(),
-        builder.object("search-tx-button").unwrap(),
-        builder.object("search-blocks-button").unwrap(),
-        builder.object("search-header-button").unwrap(),
-        builder.object("login-button").unwrap(),
+        builder
+            .object("send-button")
+            .expect("Error al obtener el boton de enviar"),
+        builder
+            .object("search-tx-button")
+            .expect("Error al obtener el boton de buscar tx"),
+        builder
+            .object("search-blocks-button")
+            .expect("Error al obtener el boton de buscar bloques"),
+        builder
+            .object("search-header-button")
+            .expect("Error al obtener el boton de buscar headers"),
+        builder
+            .object("login-button")
+            .expect("Error al obtener el boton de login"),
     ];
     buttons
 }
 /// Esta funcion obtiene los entries de la interfaz
 pub fn get_entries(builder: &Builder) -> Vec<gtk::Entry> {
     let entries = vec![
-        builder.object("pay to entry").unwrap(),
-        builder.object("amount-entry").unwrap(),
-        builder.object("fee").unwrap(),
-        builder.object("search-tx").unwrap(),
-        builder.object("search-block").unwrap(),
-        builder.object("search-block-headers").unwrap(),
-        builder.object("address").unwrap(),
-        builder.object("private-key").unwrap(),
+        builder
+            .object("pay to entry")
+            .expect("Error al obtener el entry de pay to"),
+        builder
+            .object("amount-entry")
+            .expect("Error al obtener el entry de amount"),
+        builder
+            .object("fee")
+            .expect("Error al obtener el entry de fee"),
+        builder
+            .object("search-tx")
+            .expect("Error al obtener el entry de search tx"),
+        builder
+            .object("search-block")
+            .expect("Error al obtener el entry de search block"),
+        builder
+            .object("search-block-headers")
+            .expect("Error al obtener el entry de search block headers"),
+        builder
+            .object("address")
+            .expect("Error al obtener el entry de address"),
+        builder
+            .object("private-key")
+            .expect("Error al obtener el entry de private key"),
     ];
     entries
 }
@@ -432,7 +524,7 @@ fn initialize_headers_tab(
         .unwrap()
         .iter()
         .enumerate()
-        .skip(1)  // Salteo primer header
+        .skip(1) // Salteo primer header
         .take(AMOUNT_TO_SHOW / 2)
         .rev()
     {
@@ -533,13 +625,21 @@ fn update_overview(account: &Account, available_label: &gtk::Label, builder: &Bu
         "recent-tx-5",
     ];
     for i in 0..5 {
-        let hash: gtk::AccelLabel = builder.object(recent_tx[i]).unwrap();
+        let hash: gtk::AccelLabel = builder
+            .object(recent_tx[i])
+            .expect("Error al obtener label de hash");
         hash.set_visible(false);
-        let amount_label: gtk::AccelLabel = builder.object(amount_labels[i]).unwrap();
+        let amount_label: gtk::AccelLabel = builder
+            .object(amount_labels[i])
+            .expect("Error al obtener label de amount");
         amount_label.set_visible(false);
-        let icon: gtk::Image = builder.object(icons[i]).unwrap();
+        let icon: gtk::Image = builder
+            .object(icons[i])
+            .expect("Error al obtener label de icon");
         icon.set_visible(false);
-        let type_label: gtk::AccelLabel = builder.object(type_labels[i]).unwrap();
+        let type_label: gtk::AccelLabel = builder
+            .object(type_labels[i])
+            .expect("Error al obtener label de type");
         type_label.set_visible(false);
     }
 }
