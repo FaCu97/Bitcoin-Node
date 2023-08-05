@@ -251,15 +251,10 @@ fn render_recent_transactions(transactions: &Vec<(String, Transaction, i64)>, bu
         "recent-tx-4",
         "recent-tx-5",
     ];
-<<<<<<< HEAD
-    for (i, tx) in recent_transactions.iter().enumerate().rev() {
-        let hash: gtk::AccelLabel = builder.object(recent_tx[i]).unwrap();
-=======
     for (i, tx) in recent_transactions.iter().enumerate() {
         let hash: gtk::AccelLabel = builder
             .object(recent_tx[i])
             .expect("error al obtener el label del hash de la transaccion reciente");
->>>>>>> main
         hash.set_label(&tx.1.hex_hash());
         hash.set_visible(true);
         let amount_label: gtk::AccelLabel = builder
