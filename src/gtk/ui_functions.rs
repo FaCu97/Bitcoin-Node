@@ -370,6 +370,7 @@ fn render_main_window(builder: &Builder, headers: &Headers, blocks: &Blocks) {
         .expect("Error al obtener la tabla de bloques");
 
     initial_window.close();
+    main_window.set_title("Bitcoin Wallet");
     main_window.show();
     initialize_headers_tab(&liststore_headers, &header_table, headers);
     initialize_blocks_tab(&liststore_blocks, &block_table, headers, blocks);
