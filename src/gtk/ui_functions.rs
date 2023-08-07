@@ -26,6 +26,7 @@ type Blocks = Arc<RwLock<HashMap<[u8; 32], Block>>>;
 type Headers = Arc<RwLock<Vec<BlockHeader>>>;
 
 const AMOUNT_TO_SHOW: usize = 500;
+const ICON_FILE: &str = "src/gtk/resources/icon.png";
 
 pub fn handle_ui_event(
     builder: Builder,
@@ -371,6 +372,7 @@ fn render_main_window(builder: &Builder, headers: &Headers, blocks: &Blocks) {
 
     initial_window.close();
     main_window.set_title("Bitcoin Wallet");
+    set_icon(&main_window);
     main_window.show();
     initialize_headers_tab(&liststore_headers, &header_table, headers);
     initialize_blocks_tab(&liststore_blocks, &block_table, headers, blocks);
@@ -713,4 +715,13 @@ pub fn add_css_to_screen() {
         &css_provider,
         gtk::STYLE_PROVIDER_PRIORITY_USER,
     );
+}
+
+/// Setea el icono a la app
+pub fn set_icon(window: &gtk::Window) {
+    if let Ok(icon_pixbuf) = Pixbuf::from_file(ICON_FILE) {
+            if let Some(icon) = icon_pixbuf.scale_simple(64, 64, gdk_pixbuf::InterpType::Bilinear) {
+                window.set_icon(Some(&icon));
+                }
+    }
 }
