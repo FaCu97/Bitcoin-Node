@@ -195,6 +195,10 @@ pub fn handle_messages_from_node(
                 }
             }
             let header = match read_header(&mut node, finish.clone()) {
+                Err(NodeCustomErrors::OtherError(_)) => {
+                    //No hay suficientes datos disponibles, continuar
+                    continue;
+                }
                 Err(err) => {
                     error = Some(err);
                     break;
@@ -344,7 +348,10 @@ fn read_header(
     while !is_terminated(finish.clone()) {
         match node.read_exact(&mut buffer_num) {
             Ok(_) => break, // Lectura exitosa, salimos del bucle
-            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => continue, // No hay suficientes datos disponibles, continuar esperando
+            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
+                //No hay suficientes datos disponibles, continuar esperando
+                return Err(NodeCustomErrors::OtherError(err.to_string()));
+            }
             Err(err) => return Err(NodeCustomErrors::ReadNodeError(err.to_string())), // Error inesperado, devolverlo
         }
     }
