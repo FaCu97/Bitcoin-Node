@@ -3,15 +3,23 @@
   <p align="center">
     <h1> BITCOIN NODE <h1 />
   </p>
-  <a href="https://github.com/othneildrew/Best-README-Template">
-    <img src="src/readme_images/icon.gif" alt="Logo" width="80" height="80">
-  </a>
+  <img src="src/readme_images/icon.gif" alt="Logo" width="80" height="80">
 </div>
 
 ## Sobre el proyecto
 El objetivo principal del proyecto fue la creacion de un nodo de bitcoin siguiendo las [guias de desarrollo](https://developer.bitcoin.org/devguide/index.html) y las [guias de especificacion](https://developer.bitcoin.org/reference/index.html). El proyecto se realizo con el lenguaje de programacion [Rust](https://www.rust-lang.org/) y para la interfaz grafica se utilzo [Gtk](https://www.gtk.org/) y el modulo [Gtk-rs](https://gtk-rs.org/).
 
-## Funcionalidades del Nodo
+
+
+
+
+
+
+<div align="center">
+
+## Funcionalidades del nodo 
+
+</div>
 
 * **Descarga de Headers y Bloques**: El nodo es capaz de descargar y almacenar la cadena completa de `Headers` desde el inicio de la blockchain y los `bloques` completos a partir de la fecha de inicio del proyecto (10/04/23)
 * **Conexion a otros Nodos peers**: El nodo es capaz de obtener mediante una DNS configurada ips de nodos activos y conectarse a estos realizando el `handshake` segun indica el protocolo de bitcoin.
@@ -20,7 +28,16 @@ El objetivo principal del proyecto fue la creacion de un nodo de bitcoin siguien
 * **Seguimiento del UTXO set**: El nodo es capaz de mantener en todo momento la lista de `unspent transactions` de manera de poder utilizar la misma para realizar transacciones
 * **Merkle proof of inclusion**: El nodo es capaz de, dada una transaccion y un bloque, devolver una merkle proof of inclusion, para que el usuario pueda verificar la existencia de la transaccion en el bloque.
 
-## Funcionalidades de la Wallet
+<div align="center">
+
+## Funcionalidades de la Wallet 
+
+</div>
+<p align="center">
+  <img src="src/readme_images/wallet.png" alt="Logo" width="80" height="80">
+</p>
+
+
 
 * **Soporte para multiples cuentas**: El usuario puede ingresar una o mas cuentas que controla, especificando la clave publica y privada de cada una.
 * **Balance de cuenta**: Para cada cuenta se puede visualizar el balance de la misma.
