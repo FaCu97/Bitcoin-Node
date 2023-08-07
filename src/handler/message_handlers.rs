@@ -440,15 +440,15 @@ fn update_accounts_utxo_set(
     accounts: Arc<RwLock<Arc<RwLock<Vec<Account>>>>>,
     utxo_set: Arc<RwLock<HashMap<[u8; 32], UtxoTuple>>>,
 ) -> Result<(), NodeCustomErrors> {
-    for account in accounts
+    let accounts_lock = accounts
         .read()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .read()
-        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?
-        .iter()
-    {
-        account
-            .clone()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
+    let mut accounts_inner_lock = accounts_lock
+        .write()
+        .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
+
+    for account_lock in accounts_inner_lock.iter_mut() {
+        account_lock
             .set_utxos(utxo_set.clone())
             .map_err(|err| NodeCustomErrors::LockError(err.to_string()))?;
     }
