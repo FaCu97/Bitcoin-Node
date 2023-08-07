@@ -43,7 +43,7 @@ El programa cuenta con una interfaz grafica muy user-friendly en la cual el usua
 * **Account**: Muestra la cuenta que esta seleccionada y permite ingresar una nueva cuenta a la wallet.
 ## Requisitos
 * Tener instalado `Rust` (se puede descargar de la pagina oficial https://www.rust-lang.org/tools/install)
-* Tener insalado Gtk3 (https://www.gtk.org/docs/installations/linux)
+* Tener insalado `Gtk3` (https://www.gtk.org/docs/installations/linux)
 ## Modo de uso
 Para ejecutar el programa con UI es necesario navegar al directorio donde se encuentra el proyecto y correr en la terminal
 ```sh
