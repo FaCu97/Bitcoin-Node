@@ -1,6 +1,7 @@
 use std::sync::mpsc::Sender;
 
 use super::ui_events::UIEvent;
+use super::ui_functions::set_icon;
 use super::{
     callbacks::connect_ui_callbacks,
     ui_functions::{add_css_to_screen, handle_ui_event},
@@ -44,6 +45,7 @@ fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<W
         .object("initial-window")
         .expect("no se pudo cargar la ventana inicial");
     initial_window.set_title("Bitcoin Wallet");
+    set_icon(&initial_window);
     initial_window.show();
 
     let tx_to_node = sender_to_node.clone();
