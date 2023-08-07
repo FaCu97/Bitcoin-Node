@@ -9,6 +9,10 @@
 ## Sobre el proyecto
 El objetivo principal del proyecto fue la creacion de un nodo de bitcoin siguiendo las [guias de desarrollo](https://developer.bitcoin.org/devguide/index.html) y las [guias de especificacion](https://developer.bitcoin.org/reference/index.html). El proyecto se realizo con el lenguaje de programacion [Rust](https://www.rust-lang.org/) y para la interfaz grafica se utilzo [Gtk](https://www.gtk.org/) y el modulo [Gtk-rs](https://gtk-rs.org/).
 
+<div style="display: flex; justify-content: space-between;">
+    <img src="src/readme_images/send.png" alt="Send Image">
+    <img src="src/readme_images/send.png" alt="Account Image">
+</div>
 
 
 
