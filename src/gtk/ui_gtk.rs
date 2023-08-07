@@ -6,6 +6,7 @@ use super::{
     ui_functions::{add_css_to_screen, handle_ui_event},
 };
 use crate::wallet_event::WalletEvent;
+use gtk::gdk_pixbuf::{self, Pixbuf};
 use gtk::{
     glib::{self, Priority},
     prelude::*,
@@ -44,6 +45,20 @@ fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<W
         .object("initial-window")
         .expect("no se pudo cargar la ventana inicial");
     initial_window.set_title("Bitcoin Wallet");
+    // Cargar el icono
+    match Pixbuf::from_file("src/gtk/resources/icon.png") {
+        Ok(icon_pixbuf) => {
+            println!("OK");
+            match icon_pixbuf.scale_simple(16, 16, gdk_pixbuf::InterpType::Bilinear) {
+                Some(icon) => {
+                    println!("OK");
+                    initial_window.set_icon(Some(&icon));
+                }
+                None => println!("Error en icon"),
+            }
+        }
+        Err(e) => println!("Error en pixbuf {}", e),
+    }
     initial_window.show();
 
     let tx_to_node = sender_to_node.clone();
