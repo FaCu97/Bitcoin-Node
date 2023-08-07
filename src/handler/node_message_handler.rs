@@ -345,9 +345,9 @@ fn read_header(
     finish: Option<Arc<RwLock<bool>>>,
 ) -> Result<HeaderMessage, NodeCustomErrors> {
     let mut buffer_num = [0; 24];
-    while !is_terminated(finish.clone()) {
+    if !is_terminated(finish.clone()) {
         match node.read_exact(&mut buffer_num) {
-            Ok(_) => break, // Lectura exitosa, salimos del bucle
+            Ok(_) => {} // Lectura exitosa, continuar
             Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
                 //No hay suficientes datos disponibles, continuar esperando
                 return Err(NodeCustomErrors::OtherError(err.to_string()));
