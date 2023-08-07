@@ -49,7 +49,7 @@ fn build_ui(ui_sender: &Sender<glib::Sender<UIEvent>>, sender_to_node: &Sender<W
     match Pixbuf::from_file("src/gtk/resources/icon.png") {
         Ok(icon_pixbuf) => {
             println!("OK");
-            match icon_pixbuf.scale_simple(16, 16, gdk_pixbuf::InterpType::Bilinear) {
+            match icon_pixbuf.scale_simple(64, 64, gdk_pixbuf::InterpType::Bilinear) {
                 Some(icon) => {
                     println!("OK");
                     initial_window.set_icon(Some(&icon));
