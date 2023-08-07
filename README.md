@@ -21,6 +21,10 @@ El objetivo principal del proyecto fue la creacion de un nodo de bitcoin siguien
 
 </div>
 
+<p align="center">
+  <img src="src/readme_images/node.png" alt="Logo" width="80" height="80">
+</p>
+
 * **Descarga de Headers y Bloques**: El nodo es capaz de descargar y almacenar la cadena completa de `Headers` desde el inicio de la blockchain y los `bloques` completos a partir de la fecha de inicio del proyecto (10/04/23)
 * **Conexion a otros Nodos peers**: El nodo es capaz de obtener mediante una DNS configurada ips de nodos activos y conectarse a estos realizando el `handshake` segun indica el protocolo de bitcoin.
 * **Recibimiento de nuevos bloques**: El nodo es capaz de recibir nuevos bloques boradcasteados por otros nodos y guardarlos en la cadena de bloques y headers local
