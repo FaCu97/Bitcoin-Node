@@ -304,8 +304,8 @@ pub fn download_missing_headers(
         node = get_node(nodes.clone())?;
     }
     // return node again to the list of nodes
-    return_node_to_vec(nodes.clone(), node)?;
-    /* 
+    return_node_to_vec(nodes, node)?;
+    /*
     let last_headers =
         compare_and_ask_for_last_headers(config, log_sender, ui_sender, nodes, headers.clone(), header_heights)?;
     if !last_headers.is_empty() {
@@ -582,8 +582,7 @@ pub fn amount_of_headers(
     Ok(amount_of_headers)
 }
 
-
-/* 
+/*
 /// Once the headers are downloaded, this function recieves the nodes and headers  downloaded
 /// and sends a getheaders message to each node to compare and get a header that was not downloaded.
 /// it returns error in case of failure.

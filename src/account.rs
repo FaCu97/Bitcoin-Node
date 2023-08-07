@@ -20,6 +20,7 @@ pub struct Account {
     pub confirmed_transactions: Arc<RwLock<Vec<Transaction>>>,
 }
 
+type TransactionInfo = (String, Transaction, i64);
 impl Account {
     /// Recibe la address en formato comprimido
     /// Y la WIF private key, ya sea en formato comprimido o no comprimido
@@ -160,7 +161,7 @@ impl Account {
 
     /// Devuelve las transacciones pendientes y las confirmadas de la cuenta
     /// Devuelve una lista de tuplas con el estado, transaccion y monto enviado por la cuenta
-    pub fn get_transactions(&self) -> Result<Vec<(String, Transaction, i64)>, Box<dyn Error>> {
+    pub fn get_transactions(&self) -> Result<Vec<TransactionInfo>, Box<dyn Error>> {
         let mut transactions: Vec<(String, Transaction, i64)> = Vec::new();
         // itero las pending tx
         for tx in self
