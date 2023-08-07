@@ -447,7 +447,7 @@
                         </style>
                       </object>
                       <packing>
-                        <property name="x">398</property>
+                        <property name="x">388</property>
                         <property name="y">150</property>
                       </packing>
                     </child>
@@ -494,7 +494,7 @@
                         </style>
                       </object>
                       <packing>
-                        <property name="x">398</property>
+                        <property name="x">388</property>
                         <property name="y">210</property>
                       </packing>
                     </child>
@@ -541,7 +541,7 @@
                         </style>
                       </object>
                       <packing>
-                        <property name="x">398</property>
+                        <property name="x">388</property>
                         <property name="y">270</property>
                       </packing>
                     </child>
@@ -588,7 +588,7 @@
                         </style>
                       </object>
                       <packing>
-                        <property name="x">398</property>
+                        <property name="x">388</property>
                         <property name="y">330</property>
                       </packing>
                     </child>
@@ -638,7 +638,7 @@
                         </style>
                       </object>
                       <packing>
-                        <property name="x">398</property>
+                        <property name="x">388</property>
                         <property name="y">390</property>
                       </packing>
                     </child>
@@ -1130,7 +1130,7 @@
                                 </child>
                                 <child>
                                   <object class="GtkTreeViewColumn" id="time">
-                                    <property name="title" translatable="yes">Time (UTC)</property>
+                                    <property name="title" translatable="yes">Time (Local)</property>
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>
@@ -1259,7 +1259,7 @@
                                 </child>
                                 <child>
                                   <object class="GtkTreeViewColumn" id="header-time">
-                                    <property name="title" translatable="yes">Time (UTC)</property>
+                                    <property name="title" translatable="yes">Time (Local)</property>
                                     <property name="expand">True</property>
                                     <child>
                                       <object class="GtkCellRendererText"/>

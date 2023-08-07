@@ -304,10 +304,10 @@ pub fn download_missing_headers(
         node = get_node(nodes.clone())?;
     }
     // return node again to the list of nodes
-    return_node_to_vec(nodes, node)?;
-    /*
+    return_node_to_vec(nodes.clone(), node)?;
+    /* 
     let last_headers =
-        compare_and_ask_for_last_headers(config, log_sender, nodes, headers_clone)?;
+        compare_and_ask_for_last_headers(config, log_sender, ui_sender, nodes, headers.clone(), header_heights)?;
     if !last_headers.is_empty() {
         write_in_log(
             &log_sender.info_log_sender,
@@ -581,3 +581,80 @@ pub fn amount_of_headers(
         .len();
     Ok(amount_of_headers)
 }
+
+
+/* 
+/// Once the headers are downloaded, this function recieves the nodes and headers  downloaded
+/// and sends a getheaders message to each node to compare and get a header that was not downloaded.
+/// it returns error in case of failure.
+fn compare_and_ask_for_last_headers(
+    config: &Arc<Config>,
+    log_sender: &LogSender,
+    ui_sender: &Option<glib::Sender<UIEvent>>,
+    nodes: Arc<RwLock<Vec<TcpStream>>>,
+    headers: Arc<RwLock<Vec<BlockHeader>>>,
+    header_heights: Arc<RwLock<HashMap<[u8; 32], usize>>>,
+) -> Result<Vec<BlockHeader>, NodeCustomErrors> {
+    // voy guardando los nodos que saco aca para despues agregarlos al puntero
+    let mut nodes_vec: Vec<TcpStream> = vec![];
+    let mut new_headers = vec![];
+    // recorro todos los nodos
+    while !nodes
+        .read()
+        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
+        .is_empty()
+    {
+        let mut node = nodes
+            .write()
+            .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
+            .pop()
+            .ok_or("Error no hay mas nodos para comparar y descargar ultimos headers!\n")
+            .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?;
+        let last_header = headers
+            .read()
+            .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
+            .last()
+            .ok_or("Error no hay headers guardados, no tengo para comparar...\n")
+            .map_err(|err| NodeCustomErrors::CanNotRead(err.to_string()))?
+            .hash();
+        GetHeadersMessage::build_getheaders_message(config, vec![last_header])
+            .write_to(&mut node)
+            .map_err(|err| NodeCustomErrors::WriteNodeError(err.to_string()))?;
+        let headers_read = match HeadersMessage::read_from(log_sender, &mut node, None) {
+            Ok(headers) => headers,
+            Err(err) => {
+                write_in_log(
+                    &log_sender.error_log_sender,
+                    format!("Error al tratar de leer nuevos headers, descarto nodo. Error: {err}")
+                        .as_str(),
+                );
+                continue;
+            }
+        };
+        // si se recibio un header nuevo lo agrego
+        if !headers_read.is_empty() {
+            headers
+                .write()
+                .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
+                .extend_from_slice(&headers_read);
+            write_in_log(
+                &log_sender.info_log_sender,
+                format!(
+                    "{} headers encontrados al comparar el ultimo mio con el nodo: {:?}",
+                    headers_read.len(),
+                    node
+                )
+                .as_str(),
+            );
+            new_headers.extend_from_slice(&headers_read);
+        }
+        nodes_vec.push(node);
+    }
+    // devuelvo todos los nodos a su puntero
+    nodes
+        .write()
+        .map_err(|err| NodeCustomErrors::LockError(format!("{:?}", err)))?
+        .extend(nodes_vec);
+    Ok(new_headers)
+}
+*/

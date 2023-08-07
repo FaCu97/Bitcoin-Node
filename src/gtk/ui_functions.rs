@@ -98,7 +98,6 @@ pub fn handle_ui_event(
                 .expect(
                     "Error al enviar el evento de get transactions request al cambiar de cuenta",
                 );
-            // TODO: Actualizar Overview --> Balance y recent transactions y pestana transactions
         }
         UIEvent::MakeTransactionStatus(status) => {
             show_dialog_message_pop_up(status.as_str(), "transaction's status");
@@ -162,10 +161,10 @@ pub fn handle_ui_event(
         UIEvent::HeaderFound(header, height) => {
             show_dialog_message_pop_up(
                 format!(
-                    "Height: {} \nHash: {} \nTime (UTC): {}",
+                    "Height: {} \nHash: {} \nTime: {}",
                     height,
                     header.hex_hash(),
-                    header.utc_time()
+                    header.local_time()
                 )
                 .as_str(),
                 "Header found",
@@ -589,7 +588,7 @@ fn add_header_row(
         &[
             (0, &height.to_value()),
             (1, &header.hex_hash()),
-            (2, &header.utc_time()),
+            (2, &header.local_time()),
         ],
     );
 }
